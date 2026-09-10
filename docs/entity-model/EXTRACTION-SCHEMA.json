@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "VaaniCallExtractionSchema",
+  "description": "Structured JSON schema for extraction from phone conversations by Vaani (AI Used Excavator Sales Agent). Missing or unmentioned values must strictly be null, never hallucinated.",
+  "type": "object",
+  "properties": {
+    "caller_name": {
+      "type": ["string", "null"],
+      "description": "Explicit full or business name of the caller. Set to null if not stated."
+    },
+    "callback_number": {
+      "type": ["string", "null"],
+      "description": "Phone number for callback or communication. If not stated, set to null."
+    },
+    "whatsapp_number": {
+      "type": ["string", "null"],
+      "description": "Explicit WhatsApp number if confirmed by caller. If caller says WhatsApp is the same as calling number, use callback_number."
+    },
+    "customer_type": {
+      "type": "string",
+      "enum": ["seller", "buyer", "other", "unknown"],
+      "description": "Whether caller is looking to sell equipment ('seller'), buy equipment ('buyer'), or neither."
+    },
+    "ownership_type": {
+      "type": "string",
+      "enum": ["direct_owner", "broker_munim", "authorized_representative", "unknown"],
+      "description": "For sellers: whether caller is direct machine owner, broker/munim, or authorized agent."
+    },
+    "machine_details": {
+      "type": "object",
+      "description": "Details of the machine being sold (for sellers) or desired (for buyers).",
+      "properties": {
+        "brand": {
+          "type": ["string", "null"],
+          "description": "Normalized brand (e.g. 'Tata Hitachi', 'JCB', 'Hyundai', 'Komatsu', 'Kobelco', 'Sany')."
+        },
+        "model": {
+          "type": ["string", "null"],
+          "description": "Normalized model (e.g. 'EX 200 LC', 'JS 205', 'Robex R210', 'ZAXIS 370')."
+        },
+        "model_year": {
+          "type": ["integer", "null"],
+          "minimum": 2005,
+          "maximum": 2026,
+          "description": "Manufacturing or RTO registration year. Null if unstated."
+        },
+        "running_hours": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 50000,
+          "description": "Hour meter reading in operating hours. Null if unstated."
+        },
+        "tonnage_class": {
+          "type": "string",
+          "enum": ["20_ton_class", "21_ton_class", "30_plus_ton_class", "mini_sub_10t", "any", "unknown"],
+          "description": "Weight classification of the machine."
+        },
+        "application_history": {
+          "type": "string",
+          "enum": ["soil_earthwork", "quarry_rock", "rock_breaker", "mixed", "unknown"],
+          "description": "Operational history: soil/earthwork ('mitti') vs stone quarry/breaker ('pahad')."
+        },
+        "machine_condition_summary": {
+          "type": ["string", "null"],
+          "description": "Brief verbal description of machine mechanical health given by caller."
+        },
+        "location_city": {
+          "type": ["string", "null"],
+          "description": "City where machine is parked or where buyer requires delivery (e.g. 'Jaipur', 'Satara', 'Singrauli')."
+        },
+        "location_state": {
+          "type": ["string", "null"],
+          "description": "State where machine is located or required (e.g. 'Rajasthan', 'Madhya Pradesh', 'Maharashtra')."
+        },
+        "document_status": {
+          "type": "string",
+          "enum": ["all_clear_noc_ready", "loan_hypothecation_active", "tax_due", "rc_lost_duplicate", "unknown"],
+          "description": "Legal/RTO status of vehicle registration and finance."
+        }
+      },
+      "required": ["brand", "model", "tonnage_class", "application_history", "location_city", "document_status"]
+    },
+    "commercial_terms": {
+      "type": "object",
+      "description": "Price, budget, and commercial expectations.",
+      "properties": {
+        "expected_price_inr": {
+          "type": ["integer", "null"],
+          "description": "Parsed integer value in INR for seller asking price (e.g. 2500000)."
+        },
+        "budget_max_inr": {
+          "type": ["integer", "null"],
+          "description": "Parsed integer value in INR for buyer maximum budget ceiling."
+        },
+        "price_or_budget_raw": {
+          "type": ["string", "null"],
+          "description": "Raw verbatim spoken quote (e.g. '25 Lakh', '33-35 Lakh', '20 se 22 Lakh')."
+        },
+        "purchase_timeline": {
+          "type": "string",
+          "enum": ["immediate_within_7_days", "within_15_30_days", "future_1_3_months", "exploring_market", "not_applicable"],
+          "description": "Purchase urgency for buyer leads."
+        },
+        "yard_visit_agreed": {
+          "type": "boolean",
+          "description": "Whether buyer agreed to visit Jaipur yard for physical machine inspection."
+        },
+        "yard_visit_schedule": {
+          "type": ["string", "null"],
+          "description": "Date or time agreed for physical inspection visit."
+        }
+      },
+      "required": ["expected_price_inr", "budget_max_inr", "price_or_budget_raw", "yard_visit_agreed"]
+    },
+    "evidence_readiness": {
+      "type": "object",
+      "description": "Status of digital asset exchange via WhatsApp.",
+      "properties": {
+        "photos_agreed": {
+          "type": "boolean",
+          "description": "Whether caller agreed to send machine photos via WhatsApp."
+        },
+        "running_video_agreed": {
+          "type": "boolean",
+          "description": "Whether caller agreed to send a 30-second operational running video."
+        },
+        "rc_copy_agreed": {
+          "type": "boolean",
+          "description": "Whether seller agreed to share RC/NOC document photo."
+        }
+      },
+      "required": ["photos_agreed", "running_video_agreed", "rc_copy_agreed"]
+    },
+    "conversation_outcome": {
+      "type": "string",
+      "enum": ["lead_qualified", "price_discussion", "callback_requested", "appointment_requested", "inquiry", "opt_out"],
+      "description": "Primary conversational routing outcome."
+    },
+    "lead_temperature": {
+      "type": "string",
+      "enum": ["HOT", "WARM", "COLD"],
+      "description": "Deterministic sales priority tier based on qualification rules."
+    },
+    "qualification_state": {
+      "type": "string",
+      "enum": ["QUALIFIED", "PARTIALLY_QUALIFIED", "UNQUALIFIED", "DISQUALIFIED"],
+      "description": "QUALIFIED only if target specification, price/budget, and location are fully captured."
+    },
+    "next_action": {
+      "type": "string",
+      "description": "Actionable next operational task for the sales team."
+    },
+    "follow_up_required": {
+      "type": "boolean",
+      "description": "True if an automated or human callback is needed."
+    },
+    "follow_up_datetime": {
+      "type": ["string", "null"],
+      "description": "Promised callback date/time in ISO 8601 string or verbal descriptor."
+    },
+    "call_notes": {
+      "type": "string",
+      "description": "Concise summary of key customer requests, machine quirks, or deal notes."
+    },
+    "dnc_requested": {
+      "type": "boolean",
+      "description": "True if caller asked not to be contacted or requested number deletion."
+    }
+  },
+  "required": [
+    "customer_type",
+    "conversation_outcome",
+    "lead_temperature",
+    "qualification_state",
+    "next_action",
+    "follow_up_required",
+    "call_notes",
+    "dnc_requested"
+  ]
+}
