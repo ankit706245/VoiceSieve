@@ -3,6 +3,7 @@
 *.log
 data/
 node_modules/
+.venv/
 .DS_Store
 *.pem
 *.key
