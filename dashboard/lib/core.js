@@ -31,16 +31,19 @@ const ROOT = path.join(__dirname, '..');
    Reads ROOT/.env once. Existing process.env wins, so real shell vars override.
    ========================================================================== */
 function loadEnv() {
-  try {
-    const txt = fs.readFileSync(path.join(ROOT, '.env'), 'utf8');
-    for (const line of txt.split('\n')) {
-      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-      if (m && !(m[1] in process.env)) {
-        process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+  const candidates = [path.join(ROOT, '.env'), path.join(ROOT, '..', '.env')];
+  for (const envPath of candidates) {
+    try {
+      const txt = fs.readFileSync(envPath, 'utf8');
+      for (const line of txt.split('\n')) {
+        const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
+        if (m && !(m[1] in process.env)) {
+          process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+        }
       }
+    } catch (_) {
+      // .env is optional when the vars are already in the environment.
     }
-  } catch (_) {
-    // .env is optional when the vars are already in the environment.
   }
 }
 

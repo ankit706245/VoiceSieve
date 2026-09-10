@@ -22,6 +22,32 @@
 'use strict';
 
 const { httpsPost, httpsGet } = require('./core');
+const { execFile } = require('child_process');
+const os = require('os');
+const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+
+function synthesizeLocalLekha(text) {
+  return new Promise((resolve, reject) => {
+    const id = crypto.randomBytes(6).toString('hex');
+    const aiffPath = path.join(os.tmpdir(), `lekha_${id}.aiff`);
+    const wavPath = path.join(os.tmpdir(), `lekha_${id}.wav`);
+
+    execFile('say', ['-v', 'Lekha', '-o', aiffPath, text], (err1) => {
+      if (err1) return reject(new Error(`say failed: ${err1.message}`));
+      execFile('afconvert', ['-f', 'WAVE', '-c', '1', '-d', 'LEI16@24000', aiffPath, wavPath], (err2) => {
+        fs.unlink(aiffPath, () => {});
+        if (err2) return reject(new Error(`afconvert failed: ${err2.message}`));
+        fs.readFile(wavPath, (err3, buf) => {
+          fs.unlink(wavPath, () => {});
+          if (err3) return reject(err3);
+          resolve(buf);
+        });
+      });
+    });
+  });
+}
 
 // Rumik sits behind Cloudflare, which 403s non-browser user-agents. NEVER remove.
 const BROWSER_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
@@ -126,17 +152,44 @@ const ttsRumik = {
       if (Number.isFinite(opts[k])) payload[k] = opts[k];
     }
 
+    if (process.env.USE_LOCAL_TTS === 'true' || opts.local) {
+      const localBuf = await synthesizeLocalLekha(text);
+      return {
+        buffer: localBuf,
+        credits: '0 (local)',
+        chars: text.length,
+        local: true,
+      };
+    }
+
     const buf = Buffer.from(JSON.stringify(payload));
-    const up = await httpsPost(RUMIK_HOST, '/v1/tts', {
-      'Authorization': `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'Content-Length': buf.length,
-      'User-Agent': BROWSER_UA,
-    }, buf);
+    let up;
+    try {
+      up = await httpsPost(RUMIK_HOST, '/v1/tts', {
+        'Authorization': `Bearer ${key}`,
+        'Content-Type': 'application/json',
+        'Content-Length': buf.length,
+        'User-Agent': BROWSER_UA,
+      }, buf);
+    } catch (netErr) {
+      // Fallback on network failure
+      const localBuf = await synthesizeLocalLekha(text);
+      return { buffer: localBuf, credits: '0 (local fallback)', chars: text.length, local: true };
+    }
 
     if (up.status !== 200) {
+      const errStr = up.buffer.toString('utf8');
+      if (up.status === 402 || /balance|credit/i.test(errStr)) {
+        const localBuf = await synthesizeLocalLekha(text);
+        return {
+          buffer: localBuf,
+          credits: '0 (local fallback)',
+          chars: text.length,
+          local: true,
+        };
+      }
       throw new ProviderError('rumik synthesis failed', up.status, 'upstream',
-        up.buffer.toString('utf8').slice(0, 300));
+        errStr.slice(0, 300));
     }
     return {
       buffer: up.buffer,
@@ -232,13 +285,13 @@ const sttDeepgram = {
 
 const llmGroq = {
   id: 'groq',
-  label: 'Groq Llama 3.3 70B',
+  label: 'Groq Qwen 3.8 27B',
   layer: 'llm',
   needs: ['GROQ_API_KEY'],
   implemented: true,
   modelAllowlistEnv: 'GROQ_ALLOWED_MODELS',
   get live() { return hasEnv(this.needs); },
-  get model() { return process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'; },
+  get model() { return process.env.GROQ_MODEL || 'qwen/qwen3.8-27b'; },
 
   async chat(opts) {
     const key = process.env.GROQ_API_KEY;
@@ -612,6 +665,7 @@ module.exports = {
   ProviderError,
   registries, registerProvider, get, resolveSelection, describeProviders,
   stt, tts, llm, telephony,
+  synthesizeLocalLekha,
   MAX_TEXT, TTS_MODELS, TTS_SPEAKERS,
   BROWSER_UA, MODEL_ID_RE,
 };

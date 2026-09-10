@@ -17,6 +17,7 @@ const http = require('http');
 const net = require('net');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 const { WebSocketServer, WebSocket } = require('ws');
 
 const core = require('./lib/core');
@@ -412,6 +413,59 @@ function apiHvacDesk(req, res, ctx) {
   const count = (outcome) => jobs.filter((job) => job.outcome === outcome).length;
   core.sendJson(res, 200, { timezone: HVAC_TIMEZONE, calendarConfigured: Boolean(process.env.CALCOM_API_KEY), jobs: jobs.map(publicHvacJob), stats: { calls: jobs.length, booked: count('booked'), routed: count('routed'), followUp: count('follow_up') } });
 }
+
+function queryVaaniLeads() {
+  return new Promise((resolve, reject) => {
+    const sql = `
+      SELECT json_build_object(
+        'stats', json_build_object(
+          'total', (SELECT COUNT(*) FROM vaani_customer_leads),
+          'inquiry', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'inquiry'),
+          'lead_qualified', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'lead_qualified'),
+          'callback_requested', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'callback_requested'),
+          'appointment_requested', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'appointment_requested'),
+          'opt_out', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'opt_out')
+        ),
+        'interactions', COALESCE(
+          (SELECT json_agg(t) FROM (
+            SELECT 
+              run_id,
+              created_at,
+              to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') AS formatted_time,
+              caller_name,
+              callback_number,
+              requirement,
+              callback_requested,
+              appointment_type,
+              preferred_date,
+              preferred_time,
+              conversation_outcome
+            FROM vaani_customer_leads
+            ORDER BY run_id DESC
+          ) t), '[]'::json
+        )
+      );
+    `;
+    execFile('docker', ['exec', 'dograh-local-postgres-1', 'psql', '-U', 'postgres', '-d', 'postgres', '-t', '-A', '-c', sql], { timeout: 8000 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(stderr || err.message));
+      try {
+        const parsed = JSON.parse(stdout.trim());
+        resolve(parsed);
+      } catch (e) {
+        reject(e);
+      }
+    });
+  });
+}
+
+async function apiVaaniLeads(req, res) {
+  try {
+    const data = await queryVaaniLeads();
+    core.sendJson(res, 200, data);
+  } catch (err) {
+    core.sendJson(res, 500, { error: err.message, code: 'db_error' });
+  }
+}
 async function apiHvacEventTypes(req, res) {
   try { const result = await calRequest('GET', '/v2/event-types', '2024-06-14'); core.sendJson(res, 200, { eventTypes: (result.data || []).map((event) => ({ id: event.id, title: event.title, slug: event.slug, lengthInMinutes: event.lengthInMinutes, locations: event.locations || [] })) }); }
   catch (e) { handleProviderError(res, e); }
@@ -550,6 +604,22 @@ async function apiTts(req, res, ctx) {
     });
   } catch (e) {
     handleProviderError(res, e);
+  }
+}
+
+// GET or POST /api/tts/local -> synthesized local Hindi audio WAV using Lekha
+async function apiTtsLocal(req, res, queryOrBody) {
+  const text = String((queryOrBody && queryOrBody.text) || '').slice(0, 2000).trim();
+  if (!text) return core.sendJson(res, 400, { error: 'text is required', code: 'no_text' });
+  try {
+    const wavBuf = await providers.synthesizeLocalLekha(text);
+    core.send(res, 200, wavBuf, {
+      'Content-Type': 'audio/wav',
+      'Content-Length': wavBuf.length,
+      'X-Voice': 'Lekha (Local macOS)',
+    });
+  } catch (err) {
+    core.sendJson(res, 500, { error: err.message || 'local tts failed', code: 'tts_failed' });
   }
 }
 
@@ -1504,9 +1574,17 @@ const server = http.createServer(async (req, res) => {
         return (route.endsWith('/callback') || route.endsWith('/webhook')) ? apiPayuCallback(req, res, form) : apiPayuReturn(req, res, form);
       }
 
-      // ---- Public GET routes ----
+      // ---- Public GET / helper routes ----
       if (route === '/api/health' && req.method === 'GET') return apiHealth(req, res);
       if (route === '/api/providers' && req.method === 'GET') return apiProviders(req, res);
+      if (route === '/api/tts/local' && req.method === 'GET') {
+        const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        const text = urlObj.searchParams.get('text') || '';
+        return apiTtsLocal(req, res, { text });
+      }
+      if (route === '/api/vaani/leads' && req.method === 'GET') {
+        return apiVaaniLeads(req, res);
+      }
       if (route.startsWith('/api/public/demo/') && req.method === 'GET') {
         const token = decodeURIComponent(route.slice('/api/public/demo/'.length));
         if (token.includes('/')) return core.sendJson(res, 404, { error: 'demo link not found', code: 'not_found' });
@@ -1570,6 +1648,7 @@ const server = http.createServer(async (req, res) => {
         if (token.includes('/') || !core.rateOk(`demo-start:${ip}`, 5, 5)) return core.sendJson(res, token.includes('/') ? 404 : 429, { error: token.includes('/') ? 'demo link not found' : 'too many demo starts, try again shortly', code: token.includes('/') ? 'not_found' : 'demo_rate' });
         return apiPublicDemoSession(req, res, token);
       }
+      if (route === '/api/tts/local') return apiTtsLocal(req, res, body);
 
       // Authed POST routes (tenant scoped through requireAuth).
       if (route === '/api/agents') return core.requireAuth(req, res, apiAgentsCreate, body);
@@ -1611,6 +1690,10 @@ const server = http.createServer(async (req, res) => {
 
     if (req.method === 'GET' && route.startsWith('/demo/')) {
       req.url = '/demo.html';
+    }
+    if (['GET', 'HEAD'].includes(req.method || '') && (route === '/vaani' || route === '/vaani.html')) {
+      req.url = '/vaani.html';
+      return core.serveStatic(req, res);
     }
     if (['GET', 'HEAD'].includes(req.method || '') && route === '/console.html') {
       res.writeHead(302, { Location: '/app.html', 'Cache-Control': 'no-store' });

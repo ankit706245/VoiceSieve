@@ -504,7 +504,7 @@ function onRoute() {
   view.appendChild(wrap);
   ({
     overview: viewOverview, agents: viewAgents, presets: viewPresets, studio: viewStudio, demos: viewDemoLinks,
-    talk: viewTalk, telephony: viewTelephony, invoices: viewInvoices, integrations: viewIntegrations,
+    talk: viewTalkLegacy, 'talk-dograh': viewTalk, telephony: viewTelephony, invoices: viewInvoices, integrations: viewIntegrations,
     'agency-prompt': viewAgencyPrompt, billing: viewBilling,
     support: viewSupport, admin: viewAdmin, settings: viewSettings
   }[id] || viewOverview)(wrap);
@@ -1579,7 +1579,7 @@ async function viewTalkLegacy(root) {
   const statusDot = el('span', { class: 'conversation-dot', 'aria-hidden': 'true' });
   const statusText = el('span', {}, 'Ready');
   const statusPill = el('div', { class: 'conversation-status idle', role: 'status' }, [statusDot, statusText]);
-  const pipelinePill = el('div', { class: 'conversation-pipeline' }, 'Deepgram Nova-3 → Groq Llama 3.3 70B → Rumik Mulberry');
+  const pipelinePill = el('div', { class: 'conversation-pipeline' }, 'Deepgram Nova-3 \u2192 Groq Qwen 3.8 27B \u2192 Rumik Mulberry');
   const timingText = el('div', { class: 'conversation-timing', 'aria-live': 'polite' }, 'Latency appears after the first turn');
 
   function getActiveAgent() { return State.agents.find((a) => a.id === State.activeAgentId) || State.agents[0]; }

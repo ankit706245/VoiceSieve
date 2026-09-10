@@ -1,0 +1,218 @@
+{
+  "id": "VaaniLeadAutomationPhase5D",
+  "name": "Vaani — Lead Automation — Phase 5D",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "id": "node-schedule-trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT run_id, created_at, caller_name, callback_number, requirement, callback_requested, appointment_type, preferred_date, preferred_time, conversation_outcome FROM public.vaani_customer_leads WHERE run_id > COALESCE(NULLIF($1, '')::integer, 0) ORDER BY run_id ASC;",
+        "options": {
+          "queryReplacement": "={{ $('Get High-Water Mark').item.json.last_run_id || 0 }}"
+        }
+      },
+      "id": "node-postgres",
+      "name": "PostgreSQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [540, 300],
+      "credentials": {
+        "postgres": {
+          "id": "VaaniPostgresCred123",
+          "name": "Vaani Postgres"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst lastRunId = staticData.lastProcessedRunId || 0;\nreturn [{ json: { last_run_id: lastRunId } }];"
+      },
+      "id": "node-hwm-get",
+      "name": "Get High-Water Mark",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300]
+    },
+    {
+      "parameters": {
+        "mode": "rules",
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conversation_outcome }}",
+                    "rightValue": "callback_requested",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "callback_requested"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conversation_outcome }}",
+                    "rightValue": "appointment_requested",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "appointment_requested"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conversation_outcome }}",
+                    "rightValue": "lead_qualified",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lead_qualified"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.conversation_outcome }}",
+                    "rightValue": "opt_out",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "opt_out"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "default"
+        }
+      },
+      "id": "node-switch",
+      "name": "Switch: conversation_outcome",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [760, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\n\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const row = item.json;\n  results.push({\n    json: {\n      run_id: row.run_id,\n      created_at: row.created_at,\n      caller_name: row.caller_name || '',\n      callback_number: row.callback_number || '',\n      requirement: row.requirement || '',\n      callback_requested: row.callback_requested ?? true,\n      conversation_outcome: row.conversation_outcome,\n      type: 'callback_task',\n      status: 'pending'\n    }\n  });\n  \n  if (row.run_id && (!staticData.lastProcessedRunId || row.run_id > staticData.lastProcessedRunId)) {\n    staticData.lastProcessedRunId = row.run_id;\n  }\n}\n\nreturn results;"
+      },
+      "id": "node-callback-task",
+      "name": "Callback Task (DRY RUN)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1020, 180]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get High-Water Mark",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get High-Water Mark": {
+      "main": [
+        [
+          {
+            "node": "PostgreSQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostgreSQL": {
+      "main": [
+        [
+          {
+            "node": "Switch: conversation_outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch: conversation_outcome": {
+      "main": [
+        [
+          {
+            "node": "Callback Task (DRY RUN)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,811 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Vaani AI Voice Agent — Customer & Lead Capture</title>
+  <meta name="description" content="Vaani Customer & Lead Capture Dashboard. Real-time structured conversation outcomes, lead qualification, and bookings." />
+  <meta name="theme-color" content="#0c0d14" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/assets/brand.css" />
+  <style>
+    :root {
+      --bg-base: #0a0b10;
+      --bg-surface: #12141d;
+      --bg-card: #171a26;
+      --bg-card-hover: #1e2233;
+      --border-subtle: rgba(255, 255, 255, 0.07);
+      --border-focus: rgba(210, 174, 89, 0.5);
+      --text-main: #f3f4f6;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --gold: #d2ae59;
+      --gold-dim: rgba(210, 174, 89, 0.15);
+      --green: #10b981;
+      --green-dim: rgba(16, 185, 129, 0.15);
+      --blue: #38bdf8;
+      --blue-dim: rgba(56, 189, 248, 0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168, 85, 247, 0.15);
+      --rose: #f43f5e;
+      --rose-dim: rgba(244, 63, 94, 0.15);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --radius: 12px;
+      --radius-sm: 6px;
+      --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      line-height: 1.5;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    /* Backdrop subtle glow */
+    .glow-layer {
+      position: fixed;
+      top: 0; left: 0; right: 0; height: 350px;
+      background: radial-gradient(circle at 50% -20%, rgba(210, 174, 89, 0.12), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Top Nav */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 28px;
+    }
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-logo {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      background: #1a1c26;
+      border: 1px solid rgba(210, 174, 89, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      font-weight: bold;
+      font-size: 18px;
+    }
+    .brand-info h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: #fff;
+    }
+    .brand-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .badge-live {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      background: var(--green-dim);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      color: #34d399;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      background: #10b981;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #10b981;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.9); }
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .btn-gold {
+      background: var(--gold-dim);
+      border-color: rgba(210, 174, 89, 0.35);
+      color: var(--gold);
+    }
+    .btn-gold:hover {
+      background: rgba(210, 174, 89, 0.25);
+      border-color: var(--gold);
+    }
+
+    /* Summary Cards */
+    .section-title {
+      font-size: 15px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: var(--border-subtle);
+    }
+    .stat-card.total::before { background: var(--gold); }
+    .stat-card.inquiry::before { background: var(--blue); }
+    .stat-card.lead::before { background: var(--green); }
+    .stat-card.callback::before { background: var(--purple); }
+    .stat-card.appointment::before { background: var(--amber); }
+    .stat-card.optout::before { background: var(--rose); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .card-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .card-icon {
+      font-size: 16px;
+      opacity: 0.8;
+    }
+    .card-val {
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .card-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pill {
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pill:hover {
+      background: var(--bg-card-hover);
+      color: #fff;
+    }
+    .pill.active {
+      background: var(--gold-dim);
+      border-color: var(--gold);
+      color: #fff;
+      font-weight: 600;
+    }
+    .pill .count {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 11px;
+    }
+    .pill.active .count {
+      background: rgba(210, 174, 89, 0.35);
+      color: var(--gold);
+    }
+
+    .search-box {
+      position: relative;
+      min-width: 260px;
+    }
+    .search-box input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: #fff;
+      padding: 8px 12px 8px 34px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box input:focus {
+      border-color: var(--gold);
+    }
+    .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-dim);
+      font-size: 14px;
+      pointer-events: none;
+    }
+
+    /* Table */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    thead {
+      background: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    th {
+      padding: 14px 16px;
+      font-weight: 600;
+      color: var(--text-muted);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      vertical-align: middle;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr {
+      transition: background 0.15s;
+    }
+    tbody tr:hover {
+      background: var(--bg-card-hover);
+    }
+    tbody tr.opt-out-row {
+      background: rgba(244, 63, 94, 0.04);
+    }
+    tbody tr.opt-out-row:hover {
+      background: rgba(244, 63, 94, 0.08);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .badge-inquiry {
+      background: var(--blue-dim);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .badge-lead {
+      background: var(--green-dim);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-callback {
+      background: var(--purple-dim);
+      color: #c084fc;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .badge-appointment {
+      background: var(--amber-dim);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-optout {
+      background: var(--rose-dim);
+      color: #fb7185;
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      font-weight: 600;
+    }
+    .badge-neutral {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text-muted);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .lead-status-tag {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 3px 8px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+    .lead-status-active {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .lead-status-suppressed {
+      background: rgba(244, 63, 94, 0.2);
+      color: #f43f5e;
+      border: 1px solid rgba(244, 63, 94, 0.5);
+    }
+    .lead-status-inquiry {
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+    }
+    .lead-status-booking {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+    }
+
+    .caller-col {
+      font-weight: 600;
+      color: #fff;
+    }
+    .time-sub {
+      display: block;
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+    .req-text {
+      max-width: 260px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: normal;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.35;
+      color: #e2e8f0;
+    }
+    .phone-tag {
+      font-family: monospace;
+      font-size: 12px;
+      color: #cbd5e1;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-block;
+      margin-top: 3px;
+    }
+
+    .empty-state {
+      padding: 48px 20px;
+      text-align: center;
+      color: var(--text-dim);
+    }
+    .empty-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+      opacity: 0.6;
+    }
+
+    /* Footer meta */
+    .dash-footer {
+      margin-top: 28px;
+      padding-top: 18px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    .spin {
+      animation: rotate 1s linear infinite;
+    }
+    @keyframes rotate {
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-layer"></div>
+
+  <div class="wrap">
+    <!-- Top Nav -->
+    <header class="top-nav">
+      <div class="nav-left">
+        <div class="brand-logo">V</div>
+        <div class="brand-info">
+          <h1>Vaani Leads & Customer Capture</h1>
+          <p>Local operations view powered by PostgreSQL <code>vaani_customer_leads</code></p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <span class="badge-live">
+          <span class="live-dot"></span> PostgreSQL Active
+        </span>
+        <button id="refreshBtn" class="btn btn-gold" onclick="loadData()">
+          <span id="refreshIcon">↻</span> Refresh
+        </button>
+        <a href="/" class="btn">Website</a>
+        <a href="/app.html" class="btn">Agency OS</a>
+      </div>
+    </header>
+
+    <!-- Summary Cards -->
+    <div class="section-title">
+      <span>Summary Metrics</span>
+      <span id="lastUpdated" style="font-size:12px; font-weight:normal;">Updating...</span>
+    </div>
+    <div class="cards-grid">
+      <div class="stat-card total">
+        <div class="card-top">
+          <span class="card-label">Total Conversations</span>
+          <span class="card-icon">📞</span>
+        </div>
+        <div class="card-val" id="statTotal">—</div>
+        <div class="card-sub">Recorded workflow interactions</div>
+      </div>
+
+      <div class="stat-card inquiry">
+        <div class="card-top">
+          <span class="card-label">Inquiries</span>
+          <span class="card-icon">💬</span>
+        </div>
+        <div class="card-val" id="statInquiry">—</div>
+        <div class="card-sub">Features & pricing queries</div>
+      </div>
+
+      <div class="stat-card lead">
+        <div class="card-top">
+          <span class="card-label">Qualified Leads</span>
+          <span class="card-icon">⭐</span>
+        </div>
+        <div class="card-val" id="statLead">—</div>
+        <div class="card-sub">High-intent business inquiries</div>
+      </div>
+
+      <div class="stat-card callback">
+        <div class="card-top">
+          <span class="card-label">Callback Requests</span>
+          <span class="card-icon">📲</span>
+        </div>
+        <div class="card-val" id="statCallback">—</div>
+        <div class="card-sub">Callers requesting follow-up</div>
+      </div>
+
+      <div class="stat-card appointment">
+        <div class="card-top">
+          <span class="card-label">Appointment Requests</span>
+          <span class="card-icon">📅</span>
+        </div>
+        <div class="card-val" id="statAppointment">—</div>
+        <div class="card-sub">Salon / clinic booking slots</div>
+      </div>
+
+      <div class="stat-card optout">
+        <div class="card-top">
+          <span class="card-label">Opt-Outs (Do Not Call)</span>
+          <span class="card-icon">🚫</span>
+        </div>
+        <div class="card-val" id="statOptout">—</div>
+        <div class="card-sub">Suppressed · Do not contact</div>
+      </div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <div class="filter-pills" id="filterPills">
+        <button class="pill active" data-filter="all">All <span class="count" id="countAll">0</span></button>
+        <button class="pill" data-filter="inquiry">Inquiry <span class="count" id="countInquiry">0</span></button>
+        <button class="pill" data-filter="lead_qualified">Lead Qualified <span class="count" id="countLead">0</span></button>
+        <button class="pill" data-filter="callback_requested">Callback Requested <span class="count" id="countCallback">0</span></button>
+        <button class="pill" data-filter="appointment_requested">Appointment Requested <span class="count" id="countAppointment">0</span></button>
+        <button class="pill" data-filter="opt_out">Opt-Out <span class="count" id="countOptout">0</span></button>
+      </div>
+
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search caller, requirement, phone..." oninput="renderTable()" />
+      </div>
+    </div>
+
+    <!-- Table Section -->
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Date / Time</th>
+            <th>Caller Name</th>
+            <th>Stated Requirement</th>
+            <th>Callback</th>
+            <th>Appointment</th>
+            <th>Preferred Slot</th>
+            <th>Outcome</th>
+            <th>Lead Status</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="8" class="empty-state">
+              <div class="empty-icon">⏳</div>
+              <div>Loading Vaani interactions...</div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer Meta -->
+    <div class="dash-footer">
+      <div>Source: PostgreSQL View <code>public.vaani_customer_leads</code> &middot; Workflow ID 3</div>
+      <div>Security: Zero financial or payment data stored &middot; Opt-out suppression enforced</div>
+    </div>
+  </div>
+
+  <script>
+    let rawData = { stats: {}, interactions: [] };
+    let activeFilter = 'all';
+
+    function esc(str) {
+      if (!str) return '—';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    async function loadData() {
+      const refreshBtn = document.getElementById('refreshBtn');
+      const refreshIcon = document.getElementById('refreshIcon');
+      refreshIcon.classList.add('spin');
+      refreshBtn.disabled = true;
+
+      try {
+        const res = await fetch('/api/vaani/leads');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        rawData = await res.json();
+        updateStats();
+        renderTable();
+        document.getElementById('lastUpdated').textContent = 'Last synced: ' + new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' });
+      } catch (e) {
+        console.error('Error fetching leads:', e);
+        document.getElementById('tableBody').innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              <div class="empty-icon">⚠️</div>
+              <div style="color:var(--rose);">Failed to load data from server. ${esc(e.message)}</div>
+            </td>
+          </tr>
+        `;
+      } finally {
+        refreshIcon.classList.remove('spin');
+        refreshBtn.disabled = false;
+      }
+    }
+
+    function updateStats() {
+      const s = rawData.stats || {};
+      document.getElementById('statTotal').textContent = s.total || 0;
+      document.getElementById('statInquiry').textContent = s.inquiry || 0;
+      document.getElementById('statLead').textContent = s.lead_qualified || 0;
+      document.getElementById('statCallback').textContent = s.callback_requested || 0;
+      document.getElementById('statAppointment').textContent = s.appointment_requested || 0;
+      document.getElementById('statOptout').textContent = s.opt_out || 0;
+
+      // Update pill counts
+      document.getElementById('countAll').textContent = s.total || 0;
+      document.getElementById('countInquiry').textContent = s.inquiry || 0;
+      document.getElementById('countLead').textContent = s.lead_qualified || 0;
+      document.getElementById('countCallback').textContent = s.callback_requested || 0;
+      document.getElementById('countAppointment').textContent = s.appointment_requested || 0;
+      document.getElementById('countOptout').textContent = s.opt_out || 0;
+    }
+
+    function getOutcomeBadge(outcome) {
+      switch (outcome) {
+        case 'inquiry':
+          return '<span class="badge badge-inquiry">💬 Inquiry</span>';
+        case 'lead_qualified':
+          return '<span class="badge badge-lead">⭐ Lead Qualified</span>';
+        case 'callback_requested':
+          return '<span class="badge badge-callback">📲 Callback</span>';
+        case 'appointment_requested':
+          return '<span class="badge badge-appointment">📅 Appointment</span>';
+        case 'opt_out':
+          return '<span class="badge badge-optout">🚫 Opt-Out</span>';
+        default:
+          return `<span class="badge badge-neutral">${esc(outcome || 'Completed')}</span>`;
+      }
+    }
+
+    function getLeadStatusTag(outcome, callbackRequested) {
+      if (outcome === 'opt_out') {
+        return '<span class="lead-status-tag lead-status-suppressed">🚫 SUPPRESSED (DO NOT CALL)</span>';
+      }
+      if (outcome === 'lead_qualified' || callbackRequested) {
+        return '<span class="lead-status-tag lead-status-active">⭐ ACTIVE LEAD</span>';
+      }
+      if (outcome === 'appointment_requested') {
+        return '<span class="lead-status-tag lead-status-booking">📅 BOOKING REQUEST</span>';
+      }
+      return '<span class="lead-status-tag lead-status-inquiry">ℹ️ INFORMATION</span>';
+    }
+
+    function renderTable() {
+      const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+      const list = rawData.interactions || [];
+
+      const filtered = list.filter(item => {
+        // Filter pill match
+        if (activeFilter !== 'all') {
+          if (item.conversation_outcome !== activeFilter) return false;
+        }
+        // Search query match
+        if (q) {
+          const matchCaller = (item.caller_name || '').toLowerCase().includes(q);
+          const matchReq = (item.requirement || '').toLowerCase().includes(q);
+          const matchPhone = (item.callback_number || '').toLowerCase().includes(q);
+          const matchOutcome = (item.conversation_outcome || '').toLowerCase().includes(q);
+          if (!matchCaller && !matchReq && !matchPhone && !matchOutcome) return false;
+        }
+        return true;
+      });
+
+      const tbody = document.getElementById('tableBody');
+      if (!filtered.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" class="empty-state">
+              <div class="empty-icon">🔍</div>
+              <div>No interactions match the selected filter.</div>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(item => {
+        const isOptOut = item.conversation_outcome === 'opt_out';
+        const rowClass = isOptOut ? 'class="opt-out-row"' : '';
+        
+        let slot = '—';
+        if (item.preferred_date || item.preferred_time) {
+          slot = `${item.preferred_date || ''} ${item.preferred_time || ''}`.trim();
+        }
+
+        let callbackHtml = '<span style="color:var(--text-dim)">—</span>';
+        if (item.callback_requested) {
+          callbackHtml = `
+            <div>
+              <span class="badge badge-lead" style="font-size:11px; padding:2px 8px;">✓ Yes</span>
+              ${item.callback_number ? `<div class="phone-tag">${esc(item.callback_number)}</div>` : ''}
+            </div>
+          `;
+        } else if (isOptOut) {
+          callbackHtml = '<span class="badge badge-neutral" style="color:var(--rose);">Declined</span>';
+        }
+
+        return `
+          <tr ${rowClass}>
+            <td>
+              <div>${esc(item.formatted_time || item.created_at)}</div>
+              <span class="time-sub">Run #${item.run_id}</span>
+            </td>
+            <td>
+              <div class="caller-col">${esc(item.caller_name)}</div>
+            </td>
+            <td>
+              <div class="req-text" title="${esc(item.requirement)}">${esc(item.requirement)}</div>
+            </td>
+            <td>${callbackHtml}</td>
+            <td>${esc(item.appointment_type)}</td>
+            <td>${esc(slot)}</td>
+            <td>${getOutcomeBadge(item.conversation_outcome)}</td>
+            <td>${getLeadStatusTag(item.conversation_outcome, item.callback_requested)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Set up filter buttons
+    document.querySelectorAll('#filterPills .pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#filterPills .pill').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeFilter = btn.dataset.filter;
+        renderTable();
+      });
+    });
+
+    // Initial load
+    loadData();
+  </script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+{
+  "nodes": [
+    {
+      "id": "0",
+      "type": "globalNode",
+      "position": {
+        "x": -380,
+        "y": 420
+      },
+      "data": {
+        "name": "Global Persona",
+        "allow_interrupt": true,
+        "prompt": "# WHO YOU ARE\nYou are Vaani (वाणी), a warm, professional, and courteous AI Receptionist for businesses.\n\n# LANGUAGE & CONVERSATION STYLE\n- Always speak in natural, fluent, and polite Hindi.\n- Understand Hindi and Hinglish effortlessly, and always reply in natural Hindi.\n- Brevity constraint: Strictly 1 to 2 short sentences per turn. Never speak long monologues or lists.\n- Speak like an attentive, professional front-desk receptionist.\n\n# CORE CAPABILITIES & BUSINESS SERVICES\n- Vaani is an AI voice agent that answers business calls, handles customer queries, qualifies leads, takes appointment booking requests (e.g. for salons and clinics), and arranges team callbacks.\n- For salons, clinics, and businesses, Vaani handles customer calls, inquiries, and booking requests.\n\n# PRICING RULES (CRITICAL)\n- Promotional pricing for the AI voice layer starts from ₹1 per minute.\n- Standard permanent AI voice layer rate is ₹1.90 per minute. Telephony/carrier charges are separate (~₹0.70/min).\n- NEVER claim that ₹1 per minute is the complete phone call cost. Strictly specify that ₹1/min is for the promotional AI voice layer, and carrier telephony charges are separate.\n\n# APPOINTMENT HANDLING GUARDRAIL\n- When a caller wants an appointment (e.g., for a salon), ask for their preferred service, date, time, and name.\n- NEVER invent calendar availability or claim the appointment is confirmed. State honestly that the request has been recorded and the salon team will confirm the final slot.\n\n# UNKNOWN INFORMATION & NEGATIVE GUARDRAILS\n- If asked for unknown information (such as the founder's personal phone number, private email, or internal contacts), refuse politely and honestly:\n  \"माफ़ कीजिए, मेरे पास संस्थापक का व्यक्तिगत नंबर नहीं है, लेकिन मैं हमारी टीम से आपको संपर्क करने के लिए कह सकती हूँ।\"\n- Offer a human callback whenever information is unknown.\n\n# CALLBACK & EXIT\n- When a caller requests a callback (e.g., Rahul), capture their name and confirm that our team will call them back shortly.\n- When the caller wants to end the call (e.g., \"Bas itna hi, thank you\"), say a warm goodbye:\n  \"Vaani में संपर्क करने के लिए धन्यवाद! आपका दिन शुभ हो।\""
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "1",
+      "type": "startCall",
+      "position": {
+        "x": 120,
+        "y": 40
+      },
+      "data": {
+        "name": "Start / Greeting",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "delayed_start": false,
+        "is_start": true,
+        "prompt": "# THIS STAGE\nGreet the caller warmly in one natural sentence:\n\"नमस्ते! Vaani में आपका स्वागत है। मैं आपकी कैसे मदद कर सकती हूँ?\""
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "2",
+      "type": "agentNode",
+      "position": {
+        "x": 120,
+        "y": 260
+      },
+      "data": {
+        "name": "Discover Intent",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "extraction_enabled": false,
+        "extraction_prompt": "",
+        "extraction_variables": [],
+        "prompt": "# THIS STAGE\nUnderstand why the caller contacted Vaani today.\nReply politely in 1 to 2 short sentences in Hindi to answer their inquiry or question."
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "3",
+      "type": "agentNode",
+      "position": {
+        "x": 120,
+        "y": 480
+      },
+      "data": {
+        "name": "Answer / Qualify",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "extraction_enabled": false,
+        "extraction_prompt": "",
+        "extraction_variables": [],
+        "prompt": "# THIS STAGE\nAnswer the caller's question clearly or qualify their need in 1 to 2 short sentences in Hindi.\nStrictly follow the pricing policy (₹1/min promotional AI voice layer, carrier charges separate) and appointment rules (record details, never invent calendar availability).\nIf asked about unknown details (such as founder's personal phone number), refuse politely and offer a callback."
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "4",
+      "type": "agentNode",
+      "position": {
+        "x": 120,
+        "y": 700
+      },
+      "data": {
+        "name": "Capture Outcome",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "extraction_enabled": true,
+        "extraction_prompt": "Capture the caller's name, requirement, and callback request.",
+        "extraction_variables": [
+          {
+            "name": "caller_name",
+            "type": "string",
+            "description": "Name of the caller"
+          },
+          {
+            "name": "requirement",
+            "type": "string",
+            "description": "What they need from RapidX"
+          },
+          {
+            "name": "callback_requested",
+            "type": "boolean",
+            "description": "Whether callback is needed"
+          }
+        ],
+        "prompt": "# THIS STAGE\nAcknowledge the caller's details (such as salon appointment request or callback request) in 1 to 2 short sentences in Hindi.\nConfirm that their request is noted and our team will follow up."
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "5",
+      "type": "agentNode",
+      "position": {
+        "x": 560,
+        "y": 920
+      },
+      "data": {
+        "name": "Transfer / Callback",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "extraction_enabled": false,
+        "extraction_prompt": "",
+        "extraction_variables": [],
+        "prompt": "# THIS STAGE\nConfirm that a team member will call them back shortly to assist them.\nKeep it polite, warm, and within one sentence in Hindi:\n\"धन्यवाद, हमारी टीम जल्द ही आपसे संपर्क करेगी।\""
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "6",
+      "type": "endCall",
+      "position": {
+        "x": 120,
+        "y": 1140
+      },
+      "data": {
+        "name": "End Call",
+        "allow_interrupt": false,
+        "add_global_prompt": false,
+        "extraction_enabled": false,
+        "extraction_prompt": "",
+        "extraction_variables": [],
+        "is_end": true,
+        "prompt": "# THIS STAGE\nPolitely thank the caller and say goodbye in one short Hindi sentence:\n\"Vaani में संपर्क करने के लिए धन्यवाद! आपका दिन शुभ हो।\"\nSay nothing after this."
+      },
+      "measured": {
+        "width": 320,
+        "height": 128
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "1-2",
+      "source": "1",
+      "target": "2",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Caller responds",
+        "condition": "Move here as soon as the caller responds to the greeting."
+      }
+    },
+    {
+      "id": "2-3",
+      "source": "2",
+      "target": "3",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Intent understood",
+        "condition": "Move here once the caller's inquiry or need is stated."
+      }
+    },
+    {
+      "id": "2-6",
+      "source": "2",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Call finished",
+        "condition": "Move here if the caller says goodbye, thank you, or has no more questions."
+      }
+    },
+    {
+      "id": "3-4",
+      "source": "3",
+      "target": "4",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Capture details",
+        "condition": "Move here when the caller provides appointment details or requests a callback."
+      }
+    },
+    {
+      "id": "3-6",
+      "source": "3",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Call finished",
+        "condition": "Move here if the caller says goodbye, thank you, or has no more questions."
+      }
+    },
+    {
+      "id": "4-5",
+      "source": "4",
+      "target": "5",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Callback handoff",
+        "condition": "Move here when callback or team follow-up is confirmed."
+      }
+    },
+    {
+      "id": "4-6",
+      "source": "4",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Call finished",
+        "condition": "Move here if the caller says goodbye, thank you, or has no more questions."
+      }
+    },
+    {
+      "id": "5-6",
+      "source": "5",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Handoff completed",
+        "condition": "Move here once the callback handoff is complete or caller says goodbye."
+      }
+    }
+  ],
+  "viewport": {
+    "x": 150,
+    "y": 30,
+    "zoom": 0.55
+  }
+}
