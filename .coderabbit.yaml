@@ -1,0 +1,93 @@
+# CodeRabbit Configuration for Vaani AI Voice Agent
+# Docs: https://docs.coderabbit.ai/guides/configure-coderabbit
+
+version: "2"
+
+# Language / Tone
+language: "en-US"
+
+# Review Profile
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - "main"
+      - "dev"
+      - "feature/.*"
+
+  path_filters:
+    - "!**/.env"
+    - "!**/.env.*"
+    - "!**/pnpm-lock.yaml"
+    - "!**/package-lock.json"
+    - "!**/*.log"
+    - "!**/node_modules/**"
+    - "!**/__pycache__/**"
+    - "!**/*.pyc"
+    - "!**/n8n_data/**"
+
+  path_instructions:
+    - path: "workflows/**"
+      instructions: |
+        This is an AI voice agent pipeline (Dograh + Groq LLM + Deepgram STT + Rumik TTS).
+        Review for:
+        - Prompt injection risks in system prompts
+        - Sensitive data leakage (phone numbers, passwords, API keys in logs)
+        - Missing input sanitisation before passing caller text to LLM
+        - Unhandled edge cases (empty transcript, Deepgram timeout, TTS failure)
+        - LLM output not being validated before TTS playback
+        - Barge-in / interruption handling correctness
+
+    - path: "dashboard/**"
+      instructions: |
+        This is the Vaani leads dashboard (Node.js + PostgreSQL).
+        Review for:
+        - SQL injection risks in any raw query construction
+        - Missing authentication/authorisation on API endpoints
+        - Sensitive customer data (caller_name, callback_number) exposed in logs
+        - CORS misconfiguration
+        - Missing rate limiting on public endpoints
+
+    - path: "test_*.py"
+      instructions: |
+        These are integration tests for the Vaani voice agent.
+        Review for:
+        - Hardcoded API keys or phone numbers (should use env vars)
+        - Tests that make real API calls without mocking
+        - Missing cleanup/teardown for database state
+
+    - path: "deploy/**"
+      instructions: |
+        Deployment config for the voice agent stack.
+        Review for:
+        - Secrets committed in plain text
+        - Insecure defaults (e.g. open ports, no auth)
+        - Missing health checks
+
+  finishing_touches:
+    docstrings:
+      enabled: true
+
+  poem: false
+  collapse_walkthrough: false
+
+# Chat / Interactive
+chat:
+  auto_reply: true
+
+# Commit message linting
+commit_message:
+  enabled: true
+
+# Knowledge base (per-repo memory)
+knowledge_base:
+  learnings:
+    scope: "local"
+  issues:
+    scope: "local"
+  pull_requests:
+    scope: "local"
