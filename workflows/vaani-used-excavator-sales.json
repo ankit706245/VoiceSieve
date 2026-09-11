@@ -1,0 +1,400 @@
+{
+  "nodes": [
+    {
+      "id": "0",
+      "type": "globalNode",
+      "position": {
+        "x": -380,
+        "y": 420
+      },
+      "data": {
+        "name": "Vaani Master Sales Persona",
+        "allow_interrupt": true,
+        "prompt": "# WHO YOU ARE\nYou are Vaani (वाणी), a senior sales and equipment sourcing specialist for RapidX Heavy Equipment Network (Used Excavator Division). You represent RapidX's certified used machinery division with inspection and yard hubs in Jaipur (Loha Mandi / VKI Area) and partner networks across Rajasthan, MP, Maharashtra, and North India.\n\n# HOW YOU SPEAK — VOICE RULES\n- Speak strictly in natural, polite Hindi and Hinglish.\n- BREVITY: Exactly 1 to 2 short sentences per turn. Never speak long monologues or bullet lists.\n- ONE QUESTION AT A TIME: Always ask only one clear, useful question per turn.\n- CONVERSATIONAL MEMORY: If the caller already provided information (such as machine brand, model, year, hours, or mitti/breaker history), NEVER ask for it again. Acknowledge and move to the next missing detail.\n- NEVER REPEAT: If speech is noisy, make a sensible guess and keep the conversation moving.\n\n# TRADE VOCABULARY\n- Natural terms: 'excavator', 'Poclain machine' (पोकलेन), 'mitti mein chali hui' (soil), 'pahad mein chali hui' (quarry), 'breaker pe chali hui' (rock hammer), 'ghante' (hours), 'pump', 'chain', 'kagaz / NOC / RC', 'party', 'munim ji'.\n\n# ZERO-HALLUCINATION GUARDRAILS\n- NEVER claim a machine is physically waiting in the yard unless verified.\n- NEVER invent fixed valuations or quote guaranteed prices without on-site technical inspection.\n- NEVER pretend to see photos or videos until received.\n\n# COMPLIANCE & DNC OVERRIDE\n- If the caller says not to call, requests number deletion, or declines contact, immediately acknowledge politely without argument, mark DNC, and end the call:\n  \"ज़रूर सर, मैंने आपका अनुरोध नोट कर लिया है। हम आपको दोबारा संपर्क नहीं करेंगे। आपका दिन शुभ हो।\""
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "1",
+      "type": "startCall",
+      "position": {
+        "x": 120,
+        "y": 40
+      },
+      "data": {
+        "name": "Start / Greeting & Intent",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "delayed_start": false,
+        "is_start": true,
+        "prompt": "# THIS STAGE: Greeting & Intent\nGreet the caller warmly in ONE natural sentence:\n\"नमस्ते! RapidX heavy machinery division se Vaani baat kar rahi hoon. Sir, aapko excavator machine sale karni thi ya purchase karni hai?\"\n\nIf the caller already states what they need in the first sentence (e.g. \"Tata 200 bechni hai, 2019 model, mitti mein chali\"), acknowledge immediately and move to the missing details (such as current location or asking price).",
+        "extraction_enabled": true,
+        "extraction_prompt": "Extract explicit caller facts. Any missing field must strictly be null (or false for booleans). Never invent. Follow EXTRACTION-SCHEMA.json.",
+        "extraction_variables": [
+          {"name": "customer_type", "type": "string", "description": "Strictly: seller, buyer, other, unknown"},
+          {"name": "caller_name", "type": "string", "description": "Caller full name if stated, else null"},
+          {"name": "callback_number", "type": "string", "description": "Phone number if stated, else null"},
+          {"name": "whatsapp_number", "type": "string", "description": "WhatsApp number if confirmed"},
+          {"name": "ownership_type", "type": "string", "description": "direct_owner, broker_munim, authorized_representative, unknown"},
+          {"name": "machine_brand", "type": "string", "description": "Tata Hitachi, JCB, Hyundai, Komatsu, Kobelco, Sany, Other, null"},
+          {"name": "machine_model", "type": "string", "description": "EX 200 LC, JS 205, Robex R210, etc., null"},
+          {"name": "model_year", "type": "integer", "description": "Year of manufacturing/registration, null"},
+          {"name": "running_hours", "type": "integer", "description": "Operating hours on meter, null"},
+          {"name": "tonnage_class", "type": "string", "description": "20_ton_class, 21_ton_class, 30_plus_ton_class, mini_sub_10t, any, unknown"},
+          {"name": "application_history", "type": "string", "description": "soil_earthwork, quarry_rock, rock_breaker, mixed, unknown"},
+          {"name": "machine_condition_summary", "type": "string", "description": "Verbal health summary, null"},
+          {"name": "location_city", "type": "string", "description": "City where machine is parked or required, null"},
+          {"name": "location_state", "type": "string", "description": "State where machine is located, null"},
+          {"name": "document_status", "type": "string", "description": "all_clear_noc_ready, loan_hypothecation_active, tax_due, rc_lost_duplicate, unknown"},
+          {"name": "expected_price_inr", "type": "integer", "description": "Seller asking price integer INR, null"},
+          {"name": "budget_max_inr", "type": "integer", "description": "Buyer maximum budget integer INR, null"},
+          {"name": "price_or_budget_raw", "type": "string", "description": "Spoken quote string, null"},
+          {"name": "purchase_timeline", "type": "string", "description": "immediate_within_7_days, within_15_30_days, future_1_3_months, exploring_market, not_applicable"},
+          {"name": "yard_visit_agreed", "type": "boolean", "description": "Whether buyer agreed to Jaipur yard visit"},
+          {"name": "yard_visit_schedule", "type": "string", "description": "Date or time for yard visit, null"},
+          {"name": "photos_agreed", "type": "boolean", "description": "Whether seller agreed to WhatsApp photos"},
+          {"name": "running_video_agreed", "type": "boolean", "description": "Whether seller agreed to WhatsApp 30s video"},
+          {"name": "rc_copy_agreed", "type": "boolean", "description": "Whether seller agreed to send RC/NOC"},
+          {"name": "conversation_outcome", "type": "string", "description": "lead_qualified, price_discussion, callback_requested, appointment_requested, inquiry, opt_out"},
+          {"name": "lead_temperature", "type": "string", "description": "HOT, WARM, COLD"},
+          {"name": "qualification_state", "type": "string", "description": "QUALIFIED, PARTIALLY_QUALIFIED, UNQUALIFIED, DISQUALIFIED"},
+          {"name": "next_action", "type": "string", "description": "Operational action item"},
+          {"name": "follow_up_required", "type": "boolean", "description": "Whether follow-up needed"},
+          {"name": "follow_up_datetime", "type": "string", "description": "Follow-up ISO timestamp, null"},
+          {"name": "call_notes", "type": "string", "description": "Concise call notes"},
+          {"name": "dnc_requested", "type": "boolean", "description": "True if caller asked for DNC/opt-out"}
+        ]
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "2",
+      "type": "agentNode",
+      "position": {
+        "x": -180,
+        "y": 280
+      },
+      "data": {
+        "name": "Seller Sourcing Flow",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "prompt": "# THIS STAGE: Seller Sourcing & Qualification\nYou are qualifying a machine owner or broker who wants to sell used equipment.\n\nKey sequence (skip any items caller already answered!):\n1. Intermediary check: If broker/munim, politely ask: \"Kya rate direct party ke saath baith ke final ho sakta hai?\"\n2. Machine Make/Model/Year: Ask model and manufacturing year if unknown.\n3. Application: Ask if machine worked in \"mitti\" (soil) or \"pahad/breaker\" (rock quarry).\n4. Operating hours & condition: Ask meter reading and pump/engine status.\n5. Location: Ask city/district. If ambiguous (like Kishangarh), clarify: \"Kishangarh Ajmer wala ya Alwar wala?\"\n6. Ownership/Documents: Check if loan is clear or NOC available.\n7. Asking Price: Discover expected price. If 2019 asking ₹25L+, anchor politely: \"2019 model ke hisaab se ₹25L thoda zyada hai, hum margin nikal kar resell karte hain. Lekin inspection ke baad best rate denge.\"\n8. WhatsApp Assets: Request 4-5 photos, meter photo, and 30-sec running video.\n\nKeep to 1-2 short sentences per turn.",
+        "extraction_enabled": true,
+        "extraction_prompt": "Extract all seller dimensions strictly from caller speech. Missing values must be null. Set conversation_outcome to lead_qualified ONLY if model, price, and location are captured.",
+        "extraction_variables": [
+          {"name": "customer_type", "type": "string", "description": "Strictly: seller"},
+          {"name": "caller_name", "type": "string", "description": "Caller full name"},
+          {"name": "callback_number", "type": "string", "description": "Phone number"},
+          {"name": "whatsapp_number", "type": "string", "description": "WhatsApp number"},
+          {"name": "ownership_type", "type": "string", "description": "direct_owner, broker_munim, authorized_representative, unknown"},
+          {"name": "machine_brand", "type": "string", "description": "Tata Hitachi, JCB, Hyundai, Komatsu, Kobelco, Sany, Other"},
+          {"name": "machine_model", "type": "string", "description": "Model series"},
+          {"name": "model_year", "type": "integer", "description": "Year"},
+          {"name": "running_hours", "type": "integer", "description": "Hours"},
+          {"name": "application_history", "type": "string", "description": "soil_earthwork, quarry_rock, rock_breaker, mixed, unknown"},
+          {"name": "machine_condition_summary", "type": "string", "description": "Condition summary"},
+          {"name": "location_city", "type": "string", "description": "City"},
+          {"name": "location_state", "type": "string", "description": "State"},
+          {"name": "document_status", "type": "string", "description": "Document/NOC status"},
+          {"name": "expected_price_inr", "type": "integer", "description": "Expected price in INR"},
+          {"name": "price_or_budget_raw", "type": "string", "description": "Raw spoken price"},
+          {"name": "photos_agreed", "type": "boolean", "description": "Photos agreed"},
+          {"name": "running_video_agreed", "type": "boolean", "description": "Running video agreed"},
+          {"name": "rc_copy_agreed", "type": "boolean", "description": "RC copy agreed"},
+          {"name": "conversation_outcome", "type": "string", "description": "Outcome"},
+          {"name": "lead_temperature", "type": "string", "description": "HOT, WARM, COLD"},
+          {"name": "qualification_state", "type": "string", "description": "QUALIFIED, PARTIALLY_QUALIFIED, UNQUALIFIED"},
+          {"name": "next_action", "type": "string", "description": "Next action item"},
+          {"name": "follow_up_required", "type": "boolean", "description": "Follow-up required"},
+          {"name": "call_notes", "type": "string", "description": "Notes"},
+          {"name": "dnc_requested", "type": "boolean", "description": "DNC flag"}
+        ]
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "3",
+      "type": "agentNode",
+      "position": {
+        "x": 420,
+        "y": 280
+      },
+      "data": {
+        "name": "Buyer Sales Flow",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "prompt": "# THIS STAGE: Buyer Matchmaking & Yard Scheduling\nYou are helping a contractor or buyer acquire a certified used excavator.\n\nKey sequence (skip items already stated!):\n1. Equipment need: Ask preferred brand (Tata 200, JCB 205, Hyundai 210) and tonnage class (20-ton vs 30-ton).\n2. Application: Ask intended job site work (road, mitti excavation, stone quarry).\n3. Budget: Ask budget range (e.g. ₹20-25L vs ₹30L+).\n4. Location & Timeline: Ask delivery location and purchase urgency (immediate within 7 days vs next month).\n5. Jaipur Yard Visit: Invite for physical inspection at Jaipur Loha Mandi / VKI Area. Offer to send live Google Maps location on WhatsApp.\n6. Guardrail: Never promise a machine is physically waiting in stock; state that you will share catalog options.\n\nKeep to 1-2 short sentences per turn.",
+        "extraction_enabled": true,
+        "extraction_prompt": "Extract buyer parameters. If budget, machine need, and delivery city are present, set lead_qualified.",
+        "extraction_variables": [
+          {"name": "customer_type", "type": "string", "description": "Strictly: buyer"},
+          {"name": "caller_name", "type": "string", "description": "Caller full name"},
+          {"name": "callback_number", "type": "string", "description": "Phone number"},
+          {"name": "whatsapp_number", "type": "string", "description": "WhatsApp number"},
+          {"name": "machine_brand", "type": "string", "description": "Preferred brand"},
+          {"name": "machine_model", "type": "string", "description": "Preferred model"},
+          {"name": "tonnage_class", "type": "string", "description": "20_ton_class, 21_ton_class, 30_plus_ton_class, any"},
+          {"name": "application_history", "type": "string", "description": "Intended application"},
+          {"name": "location_city", "type": "string", "description": "Delivery city"},
+          {"name": "location_state", "type": "string", "description": "Delivery state"},
+          {"name": "budget_max_inr", "type": "integer", "description": "Budget ceiling in INR"},
+          {"name": "price_or_budget_raw", "type": "string", "description": "Raw budget string"},
+          {"name": "purchase_timeline", "type": "string", "description": "immediate_within_7_days, within_15_30_days, future_1_3_months"},
+          {"name": "yard_visit_agreed", "type": "boolean", "description": "Agreed to yard visit"},
+          {"name": "yard_visit_schedule", "type": "string", "description": "Visit date/time"},
+          {"name": "conversation_outcome", "type": "string", "description": "Outcome"},
+          {"name": "lead_temperature", "type": "string", "description": "HOT, WARM, COLD"},
+          {"name": "qualification_state", "type": "string", "description": "QUALIFIED, PARTIALLY_QUALIFIED"},
+          {"name": "next_action", "type": "string", "description": "Next action item"},
+          {"name": "follow_up_required", "type": "boolean", "description": "Follow-up required"},
+          {"name": "call_notes", "type": "string", "description": "Notes"},
+          {"name": "dnc_requested", "type": "boolean", "description": "DNC flag"}
+        ]
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "4",
+      "type": "agentNode",
+      "position": {
+        "x": 120,
+        "y": 520
+      },
+      "data": {
+        "name": "Objections & Price Grounding",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "prompt": "# THIS STAGE: Objection Handling & Price Grounding\nHandle customer objections based strictly on Phase 2 trade patterns:\n- 'Price too low': Explain transparent valuation with zero hidden deductions, invite photo/video for best evaluation.\n- 'Machine in another city': Reassure that inspection team visits sites once WhatsApp photos/video are received.\n- 'Photos later': Politely encourage sending on this WhatsApp number when available at site.\n- 'Need to ask owner': Respect munim, ask if owner can be connected or when to follow up.\n- 'Urgent machine needed': Prioritize ready-documentation machines and promise priority WhatsApp options.\n- 'Send details on WhatsApp': Confirm phone number and promise photos/pricing in 5 minutes.\n\nKeep to 1-2 short sentences.",
+        "extraction_enabled": true,
+        "extraction_prompt": "Update outcome to price_discussion or callback_requested if objection requires follow-up.",
+        "extraction_variables": [
+          {"name": "conversation_outcome", "type": "string", "description": "Outcome"},
+          {"name": "next_action", "type": "string", "description": "Action item"},
+          {"name": "call_notes", "type": "string", "description": "Objection details"}
+        ]
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "5",
+      "type": "agentNode",
+      "position": {
+        "x": 560,
+        "y": 740
+      },
+      "data": {
+        "name": "Callback & Inspection Handoff",
+        "allow_interrupt": true,
+        "add_global_prompt": true,
+        "prompt": "# THIS STAGE: Callback & Inspection Handoff\nConfirm that the technical team or senior procurement manager will follow up with the caller.\n\nExamples:\n- Seller: \"Dhanyawad sir, jaise hi aap WhatsApp pe machine ki video bhejenge, hamare technical officer valuation finalize karne ke liye call karenge.\"\n- Buyer: \"Maine aapka requirement note kar liya hai, hamare sales manager 10 minute mein matching catalog ke saath connect karenge.\"\n\nPolite and brief (1 sentence).",
+        "extraction_enabled": true,
+        "extraction_prompt": "Set follow_up_required = true, and set next_action to specific follow-up task.",
+        "extraction_variables": [
+          {"name": "conversation_outcome", "type": "string", "description": "callback_requested, appointment_requested"},
+          {"name": "follow_up_required", "type": "boolean", "description": "true"},
+          {"name": "next_action", "type": "string", "description": "Specific callback action"},
+          {"name": "call_notes", "type": "string", "description": "Handoff summary"}
+        ]
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "6",
+      "type": "endCall",
+      "position": {
+        "x": 120,
+        "y": 960
+      },
+      "data": {
+        "name": "End Call / Exit",
+        "allow_interrupt": false,
+        "add_global_prompt": false,
+        "is_end": true,
+        "prompt": "# THIS STAGE: Call Exit\nClose the call politely in one short sentence:\n- Normal Close: \"RapidX mein call karne ke liye dhanyawad! Aapka din shubh ho.\"\n- DNC / Opt-Out Close: \"ज़रूर सर, मैंने आपका अनुरोध नोट कर लिया है। हम आपको दोबारा संपर्क नहीं करेंगे। आपका दिन शुभ हो।\"\nSay nothing after this.",
+        "extraction_enabled": true,
+        "extraction_prompt": "Final extraction pass ensuring all captured fields comply with schema.",
+        "extraction_variables": [
+          {"name": "conversation_outcome", "type": "string", "description": "Final outcome"},
+          {"name": "lead_temperature", "type": "string", "description": "Final temperature"},
+          {"name": "qualification_state", "type": "string", "description": "Final qualification state"},
+          {"name": "dnc_requested", "type": "boolean", "description": "DNC flag"}
+        ]
+      },
+      "measured": {
+        "width": 340,
+        "height": 140
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "1-2",
+      "source": "1",
+      "target": "2",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Seller detected",
+        "condition": "Move here if caller wants to sell or mentions owning an excavator."
+      }
+    },
+    {
+      "id": "1-3",
+      "source": "1",
+      "target": "3",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Buyer detected",
+        "condition": "Move here if caller wants to buy or seeks used machinery."
+      }
+    },
+    {
+      "id": "1-6",
+      "source": "1",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Opt-out / End",
+        "condition": "Move here if caller asks not to call, is wrong number, or hangs up."
+      }
+    },
+    {
+      "id": "2-4",
+      "source": "2",
+      "target": "4",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Price objection / negotiation",
+        "condition": "Move here if asking price is disputed, photos delayed, or owner authority needed."
+      }
+    },
+    {
+      "id": "2-5",
+      "source": "2",
+      "target": "5",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Handoff / Inspection callback",
+        "condition": "Move here once seller specs and WhatsApp details are recorded."
+      }
+    },
+    {
+      "id": "2-6",
+      "source": "2",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Seller close",
+        "condition": "Move here when seller conversation is concluded."
+      }
+    },
+    {
+      "id": "3-4",
+      "source": "3",
+      "target": "4",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Buyer objection / rates",
+        "condition": "Move here if buyer raises rate questions or budget challenges."
+      }
+    },
+    {
+      "id": "3-5",
+      "source": "3",
+      "target": "5",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Yard visit / Sales callback",
+        "condition": "Move here once buyer requirement and budget or yard appointment are confirmed."
+      }
+    },
+    {
+      "id": "3-6",
+      "source": "3",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Buyer close",
+        "condition": "Move here when buyer conversation is concluded."
+      }
+    },
+    {
+      "id": "4-5",
+      "source": "4",
+      "target": "5",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Escalate to callback",
+        "condition": "Move here when objection requires senior sales or technical callback."
+      }
+    },
+    {
+      "id": "4-6",
+      "source": "4",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Objection resolved / close",
+        "condition": "Move here if caller ends call after objection handling."
+      }
+    },
+    {
+      "id": "5-6",
+      "source": "5",
+      "target": "6",
+      "type": "custom",
+      "animated": true,
+      "data": {
+        "label": "Handoff completed",
+        "condition": "Move here after callback confirmation is delivered."
+      }
+    }
+  ],
+  "viewport": {
+    "x": 150,
+    "y": 30,
+    "zoom": 0.55
+  }
+}
