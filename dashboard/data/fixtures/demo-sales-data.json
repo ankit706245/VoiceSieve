@@ -13,17 +13,17 @@
     "dnc_total": 1
   },
   "funnel": [
-    {"stage": "NEW", "count": 2, "percentage": 100},
-    {"stage": "CONTACTED", "count": 18, "percentage": 100},
-    {"stage": "CONNECTED", "count": 14, "percentage": 78},
-    {"stage": "INTERESTED", "count": 9, "percentage": 50},
-    {"stage": "QUALIFIED", "count": 7, "percentage": 39},
-    {"stage": "PRICE_DISCUSSION", "count": 5, "percentage": 28},
-    {"stage": "FOLLOW_UP", "count": 4, "percentage": 22},
-    {"stage": "NEGOTIATION", "count": 2, "percentage": 11},
-    {"stage": "CLOSED_WON", "count": 1, "percentage": 6},
-    {"stage": "CLOSED_LOST", "count": 1, "percentage": 6},
-    {"stage": "DO_NOT_CALL", "count": 1, "percentage": 6}
+    {"stage": "NEW", "count": 12, "percentage": 100},
+    {"stage": "CONTACTED", "count": 12, "percentage": 100},
+    {"stage": "CONNECTED", "count": 11, "percentage": 92},
+    {"stage": "INTERESTED", "count": 9, "percentage": 75},
+    {"stage": "QUALIFIED", "count": 7, "percentage": 58},
+    {"stage": "PRICE_DISCUSSION", "count": 5, "percentage": 42},
+    {"stage": "FOLLOW_UP", "count": 4, "percentage": 33},
+    {"stage": "NEGOTIATION", "count": 2, "percentage": 17},
+    {"stage": "CLOSED_WON", "count": 1, "percentage": 8},
+    {"stage": "CLOSED_LOST", "count": 1, "percentage": 8},
+    {"stage": "DO_NOT_CALL", "count": 1, "percentage": 8}
   ],
   "sellers": [
     {

@@ -16,7 +16,10 @@ test('overview KPI calculation and funnel structure', async () => {
   assert.ok(typeof overview.follow_ups_due === 'number');
   assert.ok(typeof overview.dnc_total === 'number');
 
-  // Verify funnel stages
+  // Verify connected_calls is allowed to exceed total_leads (multiple calls per unique lead)
+  assert.ok(overview.connected_calls >= overview.total_leads, 'Connected calls count can naturally exceed total unique leads');
+
+  // Verify funnel stages count unique leads
   assert.ok(Array.isArray(overview.funnel), 'Funnel must be an array');
   const stageNames = overview.funnel.map(f => f.stage);
   assert.ok(stageNames.includes('NEW'));
@@ -27,6 +30,11 @@ test('overview KPI calculation and funnel structure', async () => {
   assert.ok(stageNames.includes('PRICE_DISCUSSION'));
   assert.ok(stageNames.includes('FOLLOW_UP'));
   assert.ok(stageNames.includes('CLOSED_WON'));
+
+  // Every funnel stage count must be <= total_leads (proving it counts unique leads, not call attempts)
+  overview.funnel.forEach(step => {
+    assert.ok(step.count <= overview.total_leads, `Funnel stage ${step.stage} (${step.count}) must not exceed total unique leads (${overview.total_leads})`);
+  });
 });
 
 test('seller filtering by temperature, role, and brand', async () => {

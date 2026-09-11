@@ -135,26 +135,26 @@ async function getOverview(isDemo = false) {
   try {
     const sql = `
       SELECT json_build_object(
-        'total_leads', (SELECT COUNT(*) FROM vaani_excavator_sales_leads),
+        'total_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads),
         'connected_calls', (SELECT COUNT(*) FROM workflow_runs WHERE workflow_id = 3),
-        'hot_sellers', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE customer_type = 'seller' AND lead_temperature = 'HOT'),
-        'hot_buyers', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE customer_type = 'buyer' AND lead_temperature = 'HOT'),
-        'qualified_leads', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE qualification_state = 'QUALIFIED'),
-        'follow_ups_due', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE follow_up_required = true AND dnc_requested = false),
-        'closed_won', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT'),
-        'dnc_total', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE dnc_requested = true),
+        'hot_sellers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE customer_type = 'seller' AND lead_temperature = 'HOT'),
+        'hot_buyers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE customer_type = 'buyer' AND lead_temperature = 'HOT'),
+        'qualified_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE qualification_state = 'QUALIFIED'),
+        'follow_ups_due', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE follow_up_required = true AND dnc_requested = false),
+        'closed_won', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT'),
+        'dnc_total', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE dnc_requested = true),
         'funnel', json_build_array(
-          json_build_object('stage', 'NEW', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE customer_type = 'unknown')),
-          json_build_object('stage', 'CONTACTED', 'count', (SELECT COUNT(*) FROM workflow_runs WHERE workflow_id = 3)),
-          json_build_object('stage', 'CONNECTED', 'count', (SELECT COUNT(*) FROM workflow_runs WHERE workflow_id = 3)),
-          json_build_object('stage', 'INTERESTED', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE conversation_outcome IN ('inquiry', 'price_discussion', 'callback_requested'))),
-          json_build_object('stage', 'QUALIFIED', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE qualification_state = 'QUALIFIED')),
-          json_build_object('stage', 'PRICE_DISCUSSION', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'price_discussion')),
-          json_build_object('stage', 'FOLLOW_UP', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE follow_up_required = true)),
-          json_build_object('stage', 'NEGOTIATION', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE lead_temperature = 'HOT' AND qualification_state = 'QUALIFIED')),
-          json_build_object('stage', 'CLOSED_WON', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT')),
+          json_build_object('stage', 'NEW', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE customer_type = 'unknown' OR conversation_outcome = 'inquiry')),
+          json_build_object('stage', 'CONTACTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads)),
+          json_build_object('stage', 'CONNECTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome IS NOT NULL AND conversation_outcome != 'failed')),
+          json_build_object('stage', 'INTERESTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome IN ('inquiry', 'price_discussion', 'callback_requested', 'appointment_requested', 'lead_qualified'))),
+          json_build_object('stage', 'QUALIFIED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE qualification_state = 'QUALIFIED')),
+          json_build_object('stage', 'PRICE_DISCUSSION', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'price_discussion' OR price_raw IS NOT NULL)),
+          json_build_object('stage', 'FOLLOW_UP', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE follow_up_required = true)),
+          json_build_object('stage', 'NEGOTIATION', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE lead_temperature = 'HOT' AND qualification_state = 'QUALIFIED')),
+          json_build_object('stage', 'CLOSED_WON', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT')),
           json_build_object('stage', 'CLOSED_LOST', 'count', 0),
-          json_build_object('stage', 'DO_NOT_CALL', 'count', (SELECT COUNT(*) FROM vaani_excavator_sales_leads WHERE dnc_requested = true))
+          json_build_object('stage', 'DO_NOT_CALL', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE dnc_requested = true))
         ),
         'recent_leads', COALESCE(
           (SELECT json_agg(t) FROM (

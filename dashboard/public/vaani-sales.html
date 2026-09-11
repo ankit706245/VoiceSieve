@@ -905,8 +905,8 @@
       <button class="nav-tab" data-view="buyers">
         🛒 Buyers <span class="tab-badge" id="buyerTabCount">0</span>
       </button>
-      <button class="nav-tab" data-view="machines">
-        ⚙️ Machines <span class="tab-badge" id="machineTabCount">0</span>
+      <button class="nav-tab" data-view="machines" title="Physical yard inventory & canonical machine models">
+        ⚙️ Yard Stock & Models <span class="tab-badge" id="machineTabCount">0 in Yard</span>
       </button>
       <button class="nav-tab" data-view="demand">
         📈 Demand & Match
@@ -929,12 +929,12 @@
         <div class="kpi-card gold-accent">
           <div class="kpi-label">Total Inbound Leads</div>
           <div class="kpi-value" id="kpiTotalLeads">0</div>
-          <div class="kpi-sub">Captured by Vaani Agent</div>
+          <div class="kpi-sub">Unique customer records</div>
         </div>
         <div class="kpi-card blue-accent">
           <div class="kpi-label">Connected Calls</div>
           <div class="kpi-value" id="kpiConnectedCalls">0</div>
-          <div class="kpi-sub">Voice conversations logged</div>
+          <div class="kpi-sub">Total call sessions logged</div>
         </div>
         <div class="kpi-card gold-accent">
           <div class="kpi-label">Hot Sellers</div>
@@ -974,10 +974,10 @@
         <div class="panel-card">
           <div class="panel-header">
             <div>
-              <div class="panel-title">Pipeline Conversion Funnel</div>
-              <div class="panel-subtitle">Stage-by-stage progression through sales qualification</div>
+              <div class="panel-title">Lead Pipeline Conversion Funnel</div>
+              <div class="panel-subtitle">Stage-by-stage progression of unique leads (1 Lead = 1 Unit)</div>
             </div>
-            <span class="badge badge-owner" id="funnelTotalCount">0 Total</span>
+            <span class="badge badge-owner" id="funnelTotalCount">0 Unique Leads</span>
           </div>
           <div class="funnel-container" id="funnelBars">
             <!-- Rendered dynamically -->
@@ -1191,17 +1191,20 @@
 
     <!-- ==================== 4. MACHINES VIEW ==================== -->
     <main id="view-machines" class="view-content">
-      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
         <button id="subtabActualStock" class="nav-tab active">
-          📦 Actual Verified Stock (<span id="stockCountBadge">0</span>)
+          📦 Verified Yard Stock (<span id="stockCountBadge">0</span>)
         </button>
         <button id="subtabMachineMaster" class="nav-tab">
-          📘 Machine Master Catalog (<span id="masterCountBadge">5</span>)
+          📘 Machine Master Taxonomy (<span id="masterCountBadge">5</span>)
         </button>
       </div>
 
       <!-- Actual Verified Stock Section -->
       <div id="sectionActualStock">
+        <div style="font-size: 12px; color: var(--green); margin-bottom: 14px; background: var(--green-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(16,185,129,0.3);">
+          ✅ <strong>Physical Yard Inventory:</strong> Machines physically stationed at Jaipur/partner yards with verified mechanical fitness, load trial clearance, and clear NOC.
+        </div>
         <div id="stockGrid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
           <!-- Rendered dynamically -->
         </div>
@@ -1217,6 +1220,9 @@
 
       <!-- Machine Master Section -->
       <div id="sectionMachineMaster" style="display: none;">
+        <div style="font-size: 12px; color: var(--gold); margin-bottom: 14px; background: var(--gold-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(210,174,89,0.3);">
+          📘 <strong>Industry Reference Catalog:</strong> Canonical equipment models, contractor spoken aliases, and indicative market price benchmarks across India. (Reference Taxonomy only — Not Physical Yard Stock).
+        </div>
         <div class="panel-card" style="margin-bottom: 20px;">
           <div class="panel-title">Canonical Indian Market Taxonomy</div>
           <div class="panel-subtitle">Used by Vaani NLP normalization to map spoken contractor aliases to certified machine models.</div>
@@ -1853,7 +1859,8 @@
       // Update badge counts in tabs
       document.getElementById('sellerTabCount').textContent = state.sellers.length;
       document.getElementById('buyerTabCount').textContent = state.buyers.length;
-      document.getElementById('machineTabCount').textContent = (state.machines.actual_stock || []).length;
+      const stockUnits = (state.machines.actual_stock || []).length;
+      document.getElementById('machineTabCount').textContent = `${stockUnits} in Yard`;
       
       const totalFollowups = (state.followups.overdue || []).length + (state.followups.due_today || []).length + (state.followups.upcoming || []).length;
       document.getElementById('followupTabCount').textContent = totalFollowups;
@@ -1883,11 +1890,12 @@
       document.getElementById('kpiClosedWon').textContent = ov.closed_won || 0;
       document.getElementById('kpiDncTotal').textContent = ov.dnc_total || 0;
 
-      // Funnel
+      // Funnel (Counting Unique Leads)
       const funnel = ov.funnel || [];
       const funnelContainer = document.getElementById('funnelBars');
       const maxCount = Math.max(...funnel.map(f => f.count), 1);
-      document.getElementById('funnelTotalCount').textContent = `${ov.total_leads || 0} Total Leads`;
+      const totalUniqueLeads = ov.total_leads || maxCount;
+      document.getElementById('funnelTotalCount').textContent = `${ov.total_leads || 0} Unique Leads`;
 
       const colors = {
         NEW: 'var(--text-muted)',
@@ -1904,15 +1912,16 @@
       };
 
       funnelContainer.innerHTML = funnel.map(step => {
-        const pct = Math.max(Math.round((step.count / maxCount) * 100), 2);
+        const pct = totalUniqueLeads > 0 ? Math.round((step.count / totalUniqueLeads) * 100) : 0;
+        const fillWidth = step.count === 0 ? 0 : Math.max(pct, 3);
         const barColor = colors[step.stage] || 'var(--gold)';
         return `
           <div class="funnel-step">
             <div class="funnel-label">${step.stage.replace(/_/g, ' ')}</div>
             <div class="funnel-bar-bg">
-              <div class="funnel-bar-fill" style="width: ${step.count === 0 ? 0 : pct}%; background: ${barColor};"></div>
+              <div class="funnel-bar-fill" style="width: ${fillWidth}%; background: ${barColor};"></div>
             </div>
-            <div class="funnel-count">${step.count}</div>
+            <div class="funnel-count">${step.count} <span style="font-size: 10px; color: var(--text-dim); font-weight: normal;">(${pct}%)</span></div>
           </div>
         `;
       }).join('');
