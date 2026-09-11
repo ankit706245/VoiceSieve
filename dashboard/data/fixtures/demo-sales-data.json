@@ -401,7 +401,7 @@
       "has_audio": true,
       "audio_url": "/samples/sample_call.wav",
       "transcript": [
-        {"speaker": "agent", "text": "नमस्ते! RapidX heavy machinery division se Vaani baat kar rahi hoon. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"},
+        {"speaker": "agent", "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"},
         {"speaker": "caller", "text": "Haanji, mere paas Tata 200 hai 2019 model, bechni hai."},
         {"speaker": "agent", "text": "Bahut badhiya sir. Meter reading kitne ghante show kar rahi hai, aur machine mitti mein chali hai ya breaker pe?"},
         {"speaker": "caller", "text": "Meter 7200 ghante hai, poori canal excavation mitti ke kaam mein chali hai, breaker kabhi nahi laga."},
@@ -409,7 +409,7 @@
         {"speaker": "caller", "text": "Satara Maharashtra mein khadi hai, 22 Lakh expected rate hai."},
         {"speaker": "agent", "text": "Aap WhatsApp par machine ke chaar-paanch photo aur meter ka photo bhej dijiye. Ek 30-second ka running video bhi bhej dena."},
         {"speaker": "caller", "text": "Haan theek hai, main isi number se WhatsApp par bhej deta hoon."},
-        {"speaker": "agent", "text": "Dhanyawad sir, hamari technical team video review karke aapse call karegi. RapidX mein baat karne ke liye shukriya!"}
+        {"speaker": "agent", "text": "Dhanyawad sir, hamari technical team video review karke aapse call karegi. Shyam Earthmover mein baat karne ke liye shukriya!"}
       ]
     },
     {
@@ -429,7 +429,7 @@
       "has_audio": true,
       "audio_url": "/samples/sample_call.wav",
       "transcript": [
-        {"speaker": "agent", "text": "नमस्ते! RapidX heavy machinery division se Vaani baat kar rahi hoon. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"},
+        {"speaker": "agent", "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"},
         {"speaker": "caller", "text": "Mujhe 20-ton Poclain purchase karni hai canal work ke liye."},
         {"speaker": "agent", "text": "Humare paas Tata 200 aur JCB 205 options hain sir. Aapka tentative budget kitna ban raha hai?"},
         {"speaker": "caller", "text": "25 Lakh tak budget hai, machine Jaipur mein deliver honi chahiye."},

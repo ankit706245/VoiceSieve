@@ -343,7 +343,7 @@ class VaaniDialogueEngine:
             return "Bilkul sir! Main aapko WhatsApp par yard ki live Google Maps location aur inventory catalog share kar rahi hoon."
 
         # Fallback
-        return "RapidX used excavator division mein aapka swagat hai. Aap machine bechna chahte hain ya kharidna?"
+        return "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Aap machine bechna chahte hain ya kharidna?"
 
     def _update_qualification_and_temperature(self):
         """Calculates deterministic lead temperature and qualification state."""
