@@ -1628,6 +1628,23 @@ const server = http.createServer(async (req, res) => {
           if (!data) return core.sendJson(res, 404, { error: 'call not found', code: 'not_found' });
           return core.sendJson(res, 200, data);
         }
+        if (route.startsWith('/api/vaani/sales/leads/') && route.endsWith('/timeline') && req.method === 'GET') {
+          const raw = route.slice('/api/vaani/sales/leads/'.length);
+          const leadId = raw.replace(/\/timeline$/, '');
+          const data = await vaaniSales.getLeadTimeline(leadId, isDemo);
+          return core.sendJson(res, 200, data);
+        }
+        if (route.startsWith('/api/vaani/sales/leads/') && req.method === 'GET') {
+          const leadId = route.slice('/api/vaani/sales/leads/'.length);
+          const data = await vaaniSales.getLead360(leadId, isDemo);
+          if (!data) return core.sendJson(res, 404, { error: 'lead not found', code: 'not_found' });
+          return core.sendJson(res, 200, data);
+        }
+        if (route === '/api/vaani/sales/activities' && req.method === 'GET') {
+          const limit = parseInt(urlObj.searchParams.get('limit') || '15', 10);
+          const data = await vaaniSales.getRecentActivities(limit, isDemo);
+          return core.sendJson(res, 200, { total: data.length, activities: data });
+        }
         if (route === '/api/vaani/sales/dnc' && req.method === 'GET') {
           const data = await vaaniSales.getDncRegistry(isDemo);
           return core.sendJson(res, 200, { total: data.length, dnc_records: data });

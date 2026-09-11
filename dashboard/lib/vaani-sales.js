@@ -129,7 +129,15 @@ const localFollowUpOverrides = new Map();
 async function getOverview(isDemo = false) {
   if (isDemo) {
     const demo = loadDemoData();
-    if (demo) return { is_demo: true, ...demo.stats, funnel: demo.funnel, recent_leads: demo.sellers.concat(demo.buyers).slice(0, 8) };
+    if (demo) {
+      return {
+        is_demo: true,
+        ...demo.stats,
+        funnel: demo.funnel,
+        recent_leads: demo.sellers.concat(demo.buyers).slice(0, 8),
+        recent_activities: demo.recent_activities || []
+      };
+    }
   }
 
   try {
@@ -169,7 +177,8 @@ async function getOverview(isDemo = false) {
     `;
     const result = await queryPostgres(sql);
     if (result && typeof result === 'object') {
-      return { is_demo: false, ...result };
+      const activities = await getRecentActivities(10, false);
+      return { is_demo: false, ...result, recent_activities: activities };
     }
   } catch (err) {
     console.error('[VAANI SALES] Error querying overview from PG:', err.message);
@@ -199,7 +208,8 @@ async function getOverview(isDemo = false) {
       { stage: 'CLOSED_LOST', count: 0 },
       { stage: 'DO_NOT_CALL', count: 0 }
     ],
-    recent_leads: []
+    recent_leads: [],
+    recent_activities: []
   };
 }
 
@@ -678,6 +688,859 @@ function updateFollowUpStatus(followUpId, status) {
   return { success: true, id: followUpId, status, updated_at: new Date().toISOString() };
 }
 
+// -------------------------------------------------------------
+// Lead 360 & Activity Journey Helpers
+// -------------------------------------------------------------
+
+function buildExtractedVsMissing(lead) {
+  if (!lead) return { captured: [], missing: [] };
+  const isSeller = lead.customer_type === 'seller';
+  const captured = [];
+  const missing = [];
+
+  if (isSeller) {
+    // 1. Owner / Broker
+    if (lead.ownership_type || lead.caller_role) {
+      captured.push({ field: 'Owner / Broker', key: 'ownership_type', label: 'Owner / Broker', value: lead.ownership_type || lead.caller_role });
+    } else {
+      missing.push({ field: 'Owner / Broker', key: 'ownership_type', label: 'Owner / Broker', hint: 'Verify if direct owner or mediator munim' });
+    }
+
+    // 2. Brand
+    if (lead.machine_brand) {
+      captured.push({ field: 'Brand', key: 'machine_brand', label: 'Brand', value: lead.machine_brand });
+    } else {
+      missing.push({ field: 'Brand', key: 'machine_brand', label: 'Brand', hint: 'Ask brand (Tata Hitachi, JCB, Komatsu, Hyundai)' });
+    }
+
+    // 3. Model
+    if (lead.machine_model) {
+      captured.push({ field: 'Model', key: 'machine_model', label: 'Model', value: lead.machine_model });
+    } else {
+      missing.push({ field: 'Model', key: 'machine_model', label: 'Model', hint: 'Ask exact model series (e.g. EX 200, 210, JS 205)' });
+    }
+
+    // 4. Year
+    if (lead.model_year || lead.manufacturing_year) {
+      captured.push({ field: 'Manufacturing Year', key: 'model_year', label: 'Manufacturing Year', value: String(lead.model_year || lead.manufacturing_year) });
+    } else {
+      missing.push({ field: 'Manufacturing Year', key: 'model_year', label: 'Manufacturing Year', hint: 'Inquire year of purchase / invoice' });
+    }
+
+    // 5. Hours / HMR
+    if (lead.running_hours || lead.hour_meter_reading) {
+      const hrs = lead.running_hours || lead.hour_meter_reading;
+      captured.push({ field: 'Hour Meter Reading (HMR)', key: 'running_hours', label: 'Hours / HMR', value: `${Number(hrs).toLocaleString()} hrs` });
+    } else {
+      missing.push({ field: 'Hour Meter Reading (HMR)', key: 'running_hours', label: 'Hours / HMR', hint: 'Request current meter reading' });
+    }
+
+    // 6. Application (Soil vs Rock)
+    if (lead.application_history) {
+      const isRock = lead.application_history.includes('rock') || lead.application_history.includes('breaker');
+      captured.push({
+        field: 'Application (Soil vs Rock)',
+        key: 'application_history',
+        label: 'Application History',
+        value: isRock ? '⚠️ Rock Breaker / Quarry' : 'Soft Soil / Earthwork'
+      });
+    } else {
+      missing.push({ field: 'Application (Soil vs Rock)', key: 'application_history', label: 'Application (Soil vs Rock)', hint: 'Ask if breaker fitted or soil work only' });
+    }
+
+    // 7. Component condition
+    if (lead.component_condition || lead.machine_condition_summary) {
+      captured.push({ field: 'Component Condition', key: 'component_condition', label: 'Component Condition', value: lead.component_condition || lead.machine_condition_summary });
+    } else {
+      missing.push({ field: 'Component Condition', key: 'component_condition', label: 'Component Condition', hint: 'Verify pump, slew ring, and undercarriage' });
+    }
+
+    // 8. Location
+    const loc = lead.location_city || lead.machine_location_city;
+    if (loc) {
+      captured.push({ field: 'Machine Location', key: 'location', label: 'Machine Location', value: `${loc}${lead.location_state ? ', ' + lead.location_state : ''}` });
+    } else {
+      missing.push({ field: 'Exact Location', key: 'location', label: 'Exact Location', hint: 'Clarify district and yard/site location' });
+    }
+
+    // 9. Asking price
+    const price = lead.expected_selling_price_inr || lead.expected_price_inr || lead.price_raw;
+    if (price) {
+      const displayPrice = typeof price === 'number' ? `₹${(price / 100000).toFixed(2)} Lakh` : String(price);
+      captured.push({ field: 'Asking Price', key: 'expected_price', label: 'Asking Price', value: displayPrice });
+    } else {
+      missing.push({ field: 'Asking Price', key: 'expected_price', label: 'Asking Price', hint: 'Explore seller expected in-hand amount' });
+    }
+
+    // 10. Documents / RC / NOC
+    if (lead.document_status) {
+      captured.push({ field: 'Documents (RC/NOC)', key: 'document_status', label: 'Documents / RC / NOC', value: lead.document_status });
+    } else {
+      missing.push({ field: 'RC / NOC Status', key: 'document_status', label: 'RC / NOC Status', hint: 'Confirm RC ownership & bank NOC clearance' });
+    }
+
+    // 11. Evidence status
+    if (lead.evidence_checklist || lead.photos_agreed !== undefined) {
+      const hasAgreed = lead.photos_agreed || lead.running_video_agreed || lead.evidence_checklist;
+      captured.push({ field: 'Evidence Status', key: 'evidence_readiness', label: 'Evidence Status', value: hasAgreed ? 'Evidence package active' : 'Evidence requested' });
+    } else {
+      missing.push({ field: 'Machine Evidence', key: 'evidence_readiness', label: 'Machine Evidence', hint: 'Request 30s running video and 5 photos' });
+    }
+  } else {
+    // Buyer Leads
+    // 1. Required Brand
+    if (lead.machine_brand && lead.machine_brand !== 'Any') {
+      captured.push({ field: 'Required Brand', key: 'machine_brand', label: 'Required Brand', value: lead.machine_brand });
+    } else {
+      captured.push({ field: 'Required Brand', key: 'machine_brand', label: 'Required Brand', value: 'Any Reputed Brand (Tata/JCB/Komatsu)' });
+    }
+
+    // 2. Model
+    if (lead.machine_model) {
+      captured.push({ field: 'Model Requirement', key: 'machine_model', label: 'Model Requirement', value: lead.machine_model });
+    } else {
+      missing.push({ field: 'Model Requirement', key: 'machine_model', label: 'Model Requirement', hint: 'Clarify target model series' });
+    }
+
+    // 3. Tonnage
+    if (lead.required_tonnage_class || lead.tonnage_class) {
+      captured.push({ field: 'Tonnage Class', key: 'tonnage_class', label: 'Tonnage Class', value: lead.required_tonnage_class || lead.tonnage_class });
+    } else {
+      missing.push({ field: 'Tonnage Class', key: 'tonnage_class', label: 'Tonnage Class', hint: 'Ask required payload (e.g. 20-Ton)' });
+    }
+
+    // 4. Application
+    if (lead.application_history) {
+      captured.push({ field: 'Application Use Case', key: 'application_history', label: 'Application Use Case', value: lead.application_history });
+    } else {
+      missing.push({ field: 'Application Use Case', key: 'application_history', label: 'Application Use Case', hint: 'Determine canal, highway, or quarry project' });
+    }
+
+    // 5. Budget
+    const budget = lead.buyer_budget_max_inr || lead.budget_max_inr || lead.price_raw;
+    if (budget) {
+      const displayBudget = typeof budget === 'number' ? `₹${(budget / 100000).toFixed(2)} Lakh` : String(budget);
+      captured.push({ field: 'Maximum Budget', key: 'budget', label: 'Budget Ceiling', value: displayBudget });
+    } else {
+      missing.push({ field: 'Maximum Budget', key: 'budget', label: 'Budget Ceiling', hint: 'Establish buyer investment budget' });
+    }
+
+    // 6. Location
+    const bLoc = lead.location_city || lead.machine_location_city || lead.delivery_location;
+    if (bLoc) {
+      captured.push({ field: 'Delivery Destination', key: 'location', label: 'Delivery Destination', value: bLoc });
+    } else {
+      missing.push({ field: 'Delivery Destination', key: 'location', label: 'Delivery Destination', hint: 'Confirm machine destination city/state' });
+    }
+
+    // 7. Purchase Timeline
+    if (lead.purchase_timeline) {
+      captured.push({ field: 'Purchase Timeline', key: 'purchase_timeline', label: 'Purchase Timeline', value: lead.purchase_timeline });
+    } else {
+      missing.push({ field: 'Purchase Timeline', key: 'purchase_timeline', label: 'Purchase Timeline', hint: 'Clarify buying urgency (immediate vs 30 days)' });
+    }
+
+    // 8. Used / Refurbished Preference
+    if (lead.used_or_refurbished) {
+      captured.push({ field: 'Used / Refurbished Tier', key: 'used_or_refurbished', label: 'Used / Refurbished Tier', value: lead.used_or_refurbished });
+    } else {
+      missing.push({ field: 'Used / Refurbished Tier', key: 'used_or_refurbished', label: 'Used / Refurbished Tier', hint: 'Check interest in certified refurbished yard stock' });
+    }
+
+    // 9. Yard Visit
+    if (lead.yard_visit_agreed !== undefined) {
+      captured.push({
+        field: 'Yard Visit',
+        key: 'yard_visit',
+        label: 'Yard Visit',
+        value: lead.yard_visit_agreed ? `Agreed (${lead.yard_visit_schedule || 'Scheduled'})` : 'Not yet agreed'
+      });
+    } else {
+      missing.push({ field: 'Yard Visit', key: 'yard_visit', label: 'Yard Physical Visit', hint: 'Propose live machine trial at Jaipur yard' });
+    }
+
+    // 10. Requirement Status
+    if (lead.qualification_state) {
+      captured.push({ field: 'Requirement Status', key: 'qualification_state', label: 'Requirement Status', value: lead.qualification_state });
+    } else {
+      missing.push({ field: 'Requirement Status', key: 'qualification_state', label: 'Requirement Status', hint: 'Complete buyer qualification' });
+    }
+  }
+
+  return { captured, missing };
+}
+
+function buildJourneyProgression(lead) {
+  if (!lead) return { type: 'unknown', stages: [], current_stage: 'call_initial', current_index: 0 };
+  const isSeller = lead.customer_type === 'seller';
+
+  if (isSeller) {
+    const stages = [
+      { key: 'call_initial', id: 'CALL', label: 'Call' },
+      { key: 'machine_details', id: 'MACHINE_DETAILS', label: 'Machine Details' },
+      { key: 'application', id: 'APPLICATION', label: 'Application' },
+      { key: 'condition', id: 'CONDITION', label: 'Condition' },
+      { key: 'location', id: 'LOCATION', label: 'Location' },
+      { key: 'documents', id: 'DOCUMENTS', label: 'Documents' },
+      { key: 'asking_price', id: 'ASKING_PRICE', label: 'Asking Price' },
+      { key: 'evidence_collection', id: 'EVIDENCE', label: 'Evidence' },
+      { key: 'qualification', id: 'QUALIFICATION', label: 'Qualification' },
+      { key: 'follow_up', id: 'FOLLOW_UP', label: 'Follow-up' },
+      { key: 'buyer_matching', id: 'BUYER_MATCHING', label: 'Buyer Matching' },
+      { key: 'negotiation', id: 'NEGOTIATION', label: 'Negotiation' },
+      { key: 'inspection', id: 'INSPECTION', label: 'Inspection' },
+      { key: 'deal_closing', id: 'DEAL', label: 'Deal' }
+    ];
+
+    let current = 'call_initial';
+    // Priority status checks
+    if (lead.current_status?.includes('RC/NOC') || lead.current_status?.includes('Waiting for') || (lead.lead_id === 'demo_lead_s01')) {
+      current = 'evidence_collection';
+    } else if (lead.lifecycle_stage === 'CLOSED_WON' || lead.lifecycle_stage === 'DEAL') {
+      current = 'deal_closing';
+    } else if (lead.lifecycle_stage === 'INSPECTION') {
+      current = 'inspection';
+    } else if (lead.lifecycle_stage === 'NEGOTIATION') {
+      current = 'negotiation';
+    } else if (lead.lifecycle_stage === 'BUYER_MATCHING') {
+      current = 'buyer_matching';
+    } else if (lead.follow_up_required) {
+      current = 'follow_up';
+    } else if (lead.qualification_state === 'QUALIFIED') {
+      current = 'qualification';
+    } else if (lead.expected_selling_price_inr || lead.price_raw) {
+      current = 'asking_price';
+    } else if (lead.location_city || lead.machine_location_city) {
+      current = 'location';
+    } else if (lead.machine_model) {
+      current = 'machine_details';
+    }
+
+    const currentIndex = stages.findIndex((s) => s.key === current);
+    const enrichedStages = stages.map((s, idx) => ({
+      ...s,
+      status: idx < currentIndex ? 'completed' : idx === currentIndex ? 'active' : 'pending'
+    }));
+
+    return { type: 'seller', stages: enrichedStages, current_stage: current, current_index: currentIndex };
+  } else {
+    const stages = [
+      { key: 'call_initial', id: 'CALL', label: 'Call' },
+      { key: 'machine_requirement', id: 'MACHINE_REQUIREMENT', label: 'Machine Requirement' },
+      { key: 'brand_model', id: 'BRAND_MODEL', label: 'Brand / Model' },
+      { key: 'tonnage', id: 'TONNAGE', label: 'Tonnage' },
+      { key: 'application', id: 'APPLICATION', label: 'Application' },
+      { key: 'budget', id: 'BUDGET', label: 'Budget' },
+      { key: 'location', id: 'LOCATION', label: 'Location' },
+      { key: 'timeline', id: 'TIMELINE', label: 'Timeline' },
+      { key: 'qualification', id: 'QUALIFICATION', label: 'Qualification' },
+      { key: 'matching', id: 'MATCHING', label: 'Matching' },
+      { key: 'machine_options', id: 'MACHINE_OPTIONS', label: 'Machine Options' },
+      { key: 'yard_visit', id: 'YARD_VISIT', label: 'Yard Visit' },
+      { key: 'negotiation', id: 'NEGOTIATION', label: 'Negotiation' },
+      { key: 'deal', id: 'DEAL', label: 'Deal' }
+    ];
+
+    let current = 'call_initial';
+    if (lead.lifecycle_stage === 'CLOSED_WON' || lead.lifecycle_stage === 'DEAL') {
+      current = 'deal';
+    } else if (lead.lifecycle_stage === 'NEGOTIATION') {
+      current = 'negotiation';
+    } else if (lead.yard_visit_agreed) {
+      current = 'yard_visit';
+    } else if (lead.lead_id === 'demo_lead_b01' || lead.current_status?.includes('stock') || lead.current_status?.includes('matching')) {
+      current = 'matching';
+    } else if (lead.qualification_state === 'QUALIFIED') {
+      current = 'matching';
+    } else if (lead.purchase_timeline) {
+      current = 'timeline';
+    } else if (lead.buyer_budget_max_inr || lead.price_raw) {
+      current = 'budget';
+    } else if (lead.required_tonnage_class) {
+      current = 'tonnage';
+    } else if (lead.machine_brand || lead.machine_model) {
+      current = 'brand_model';
+    } else {
+      current = 'machine_requirement';
+    }
+
+    const currentIndex = stages.findIndex((s) => s.key === current);
+    const enrichedStages = stages.map((s, idx) => ({
+      ...s,
+      status: idx < currentIndex ? 'completed' : idx === currentIndex ? 'active' : 'pending'
+    }));
+
+    return { type: 'buyer', stages: enrichedStages, current_stage: current, current_index: currentIndex };
+  }
+}
+
+function buildDefaultEvidenceChecklist(lead) {
+  const rawEv = (lead && lead.evidence_checklist) ? lead.evidence_checklist : null;
+  const photosAgreed = lead && lead.photos_agreed;
+  const videoAgreed = lead && lead.running_video_agreed;
+  const rcAgreed = lead && lead.rc_copy_agreed;
+
+  const defaultDict = {
+    boom_photo: {
+      name: 'Boom structure photo',
+      status: photosAgreed ? 'received' : 'pending',
+      verified: false,
+      note: photosAgreed ? 'Seller agreed to submit photos' : 'Evidence upload pending'
+    },
+    undercarriage_photo: {
+      name: 'Undercarriage photo',
+      status: photosAgreed ? 'received' : 'pending',
+      verified: false,
+      note: photosAgreed ? 'Seller agreed to submit photos' : 'Evidence upload pending'
+    },
+    cabin_photo: {
+      name: 'Cabin & console photo',
+      status: photosAgreed ? 'received' : 'pending',
+      verified: false,
+      note: photosAgreed ? 'Seller agreed to submit photos' : 'Evidence upload pending'
+    },
+    counterweight_photo: {
+      name: 'Counterweight photo',
+      status: photosAgreed ? 'received' : 'pending',
+      verified: false,
+      note: photosAgreed ? 'Seller agreed to submit photos' : 'Evidence upload pending'
+    },
+    hmr_photo: {
+      name: 'Hour meter (HMR) photo',
+      status: photosAgreed ? 'received' : 'pending',
+      verified: false,
+      note: photosAgreed ? 'Meter reading photo pending' : 'Evidence upload pending'
+    },
+    running_video: {
+      name: '30s running & slew video',
+      status: videoAgreed ? 'received' : 'pending',
+      verified: false,
+      note: videoAgreed ? 'Video promised on WhatsApp' : 'WhatsApp action pending integration'
+    },
+    rc_copy: {
+      name: 'RC copy',
+      status: rcAgreed ? 'received' : 'pending',
+      verified: false,
+      note: rcAgreed ? 'RC document promised' : 'Evidence upload pending'
+    },
+    finance_noc: {
+      name: 'Clear finance NOC',
+      status: 'pending',
+      verified: false,
+      note: 'Finance clearance pending verification'
+    }
+  };
+
+  if (rawEv && typeof rawEv === 'object') {
+    return Object.entries(defaultDict).map(([key, defItem]) => {
+      const match = rawEv[key] || (key === 'finance_noc' ? (rawEv['noc_document'] || rawEv['finance_noc']) : null);
+      return {
+        key,
+        name: match?.name || defItem.name,
+        status: match?.status || defItem.status,
+        verified: !!match?.verified,
+        note: match?.note || defItem.note
+      };
+    });
+  }
+
+  return Object.entries(defaultDict).map(([key, defItem]) => ({
+    key,
+    ...defItem
+  }));
+}
+
+async function getLead360(leadId, isDemo = false) {
+  if (!leadId) return null;
+  const targetId = String(leadId).trim();
+
+  if (isDemo) {
+    const demo = loadDemoData();
+    if (!demo) return null;
+
+    const allLeads = [
+      ...(demo.sellers || []),
+      ...(demo.buyers || []),
+      ...(demo.inbound_leads || []),
+      ...(demo.dnc_registry || []).map((d) => ({ ...d, customer_type: 'dnc', lead_temperature: 'COLD', qualification_state: 'UNQUALIFIED' }))
+    ];
+
+    const found = allLeads.find((l) =>
+      String(l.lead_id) === targetId ||
+      String(l.run_id) === targetId ||
+      String(l.primary_phone) === targetId ||
+      String(l.phone_number) === targetId
+    );
+
+    if (!found) return null;
+
+    // Attach linked calls (multiple calls belonging to this lead)
+    const linkedCalls = (demo.calls || []).filter((c) =>
+      String(c.lead_id) === String(found.lead_id) ||
+      String(c.primary_phone) === String(found.primary_phone || found.phone_number) ||
+      String(c.run_id) === targetId
+    );
+
+    // Timeline retrieval
+    let timeline = demo.lead_timelines ? demo.lead_timelines[found.lead_id] : null;
+    if (!timeline) {
+      timeline = await getLeadTimeline(found.lead_id || targetId, true);
+    } else {
+      timeline = timeline.map((e) => {
+        const actorLower = (typeof e.actor === 'string' ? e.actor : (e.actor?.type || 'system')).toLowerCase();
+        const actorLabel = e.actor_label || (typeof e.actor === 'object' && e.actor?.label) ||
+          (actorLower === 'vaani' ? '🤖 VAANI' : actorLower === 'customer' ? '📞 CUSTOMER' : actorLower === 'operator' ? '👤 SALES OPERATOR' : '⚙️ SYSTEM');
+        const dayVal = e.day || e.day_label || 'DAY 1';
+        return {
+          ...e,
+          day: dayVal,
+          day_label: dayVal.replace(/day/i, 'Day'),
+          actor: actorLower,
+          actor_label: actorLabel,
+          customer_quote: e.customer_quote || null
+        };
+      });
+    }
+
+    const learned = buildExtractedVsMissing(found);
+    const journey = buildJourneyProgression(found);
+    const evidence = buildDefaultEvidenceChecklist(found);
+
+    const isDnc = !!found.dnc_requested || found.customer_type === 'dnc';
+    const dueTime = found.due_display || found.due_datetime || (found.follow_up_datetime ? new Date(found.follow_up_datetime).toLocaleDateString('en-GB') : 'Tomorrow, 11:00 AM');
+
+    return {
+      is_demo: true,
+      lead_id: found.lead_id || targetId,
+      customer_name: found.customer_name || found.caller_name || 'Customer',
+      primary_phone: found.primary_phone || found.callback_number || found.phone_number || 'N/A',
+      whatsapp_phone: found.whatsapp_phone || found.whatsapp_number || found.primary_phone || null,
+      customer_type: isDnc ? 'dnc' : (found.customer_type || 'unknown'),
+      lead_temperature: isDnc ? 'COLD' : (found.lead_temperature || 'WARM'),
+      lifecycle_stage: found.lifecycle_stage || found.journey_stage || 'QUALIFIED',
+      qualification_state: found.qualification_state || 'QUALIFIED',
+      conversation_outcome: found.conversation_outcome || 'lead_qualified',
+      current_status: found.current_status || (isDnc ? 'DNC Suppressed — Compliance Quarantine' : 'In active follow-up'),
+      next_action: found.next_action || (isDnc ? 'DO NOT CALL — Quarantined Number' : 'Follow up with customer'),
+      owner: found.owner || found.assigned_owner || 'Vaani / Sales Operator',
+      due_datetime: dueTime,
+      due_display: dueTime,
+      follow_up_datetime: found.follow_up_datetime || null,
+      call_count: linkedCalls.length || found.call_count || 1,
+      last_activity: timeline && timeline.length ? timeline[timeline.length - 1].title : 'Inbound conversation logged',
+      dnc_requested: isDnc,
+      raw_lead: found,
+      extracted_vs_missing: learned,
+      what_vaani_learned: learned,
+      journey_progression: Array.isArray(journey?.stages) ? journey.stages : (journey || []),
+      sales_journey: journey,
+      evidence_checklist: evidence,
+      evidence_integration_note: found.evidence_integration_note || 'WhatsApp action pending integration — Evidence manually received and indexed',
+      linked_calls: linkedCalls,
+      timeline
+    };
+  }
+
+  // Real DB mode: query PostgreSQL workflow_runs and sales views
+  try {
+    const isNum = /^\d+$/.test(targetId);
+    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}'`;
+    if (isNum) {
+      whereClause = `(r.id = ${parseInt(targetId, 10)} OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}')`;
+    }
+
+    const sql = `
+      SELECT json_build_object(
+        'runs', json_agg(json_build_object(
+          'run_id', r.id,
+          'created_at', r.created_at,
+          'caller_name', (r.gathered_context -> 'extracted_variables') ->> 'caller_name',
+          'callback_number', (r.gathered_context -> 'extracted_variables') ->> 'callback_number',
+          'customer_type', COALESCE((r.gathered_context -> 'extracted_variables') ->> 'customer_type', 'unknown'),
+          'machine_brand', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'brand', (r.gathered_context -> 'extracted_variables') ->> 'machine_brand'),
+          'machine_model', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'model', (r.gathered_context -> 'extracted_variables') ->> 'machine_model'),
+          'model_year', (r.gathered_context -> 'extracted_variables') ->> 'model_year',
+          'running_hours', (r.gathered_context -> 'extracted_variables') ->> 'running_hours',
+          'application_history', (r.gathered_context -> 'extracted_variables') ->> 'application_history',
+          'location_city', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'location_city', (r.gathered_context -> 'extracted_variables') ->> 'location_city'),
+          'location_state', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'location_state', (r.gathered_context -> 'extracted_variables') ->> 'location_state'),
+          'expected_selling_price_inr', (r.gathered_context -> 'extracted_variables') ->> 'expected_selling_price_inr',
+          'price_raw', (r.gathered_context -> 'extracted_variables') ->> 'price_or_budget_raw',
+          'lead_temperature', COALESCE((r.gathered_context -> 'extracted_variables') ->> 'lead_temperature', 'COLD'),
+          'qualification_state', COALESCE((r.gathered_context -> 'extracted_variables') ->> 'qualification_state', 'UNQUALIFIED'),
+          'conversation_outcome', (r.gathered_context -> 'extracted_variables') ->> 'conversation_outcome',
+          'next_action', (r.gathered_context -> 'extracted_variables') ->> 'next_action',
+          'follow_up_required', ((r.gathered_context -> 'extracted_variables') ->> 'follow_up_required')::boolean,
+          'follow_up_datetime', (r.gathered_context -> 'extracted_variables') ->> 'follow_up_datetime',
+          'dnc_requested', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'dnc_requested')::boolean, false),
+          'photos_agreed', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'photos_agreed')::boolean, false),
+          'running_video_agreed', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'running_video_agreed')::boolean, false),
+          'rc_copy_agreed', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'rc_copy_agreed')::boolean, false)
+        ) ORDER BY r.id DESC)
+      )
+      FROM workflow_runs r
+      WHERE r.workflow_id = 3 AND ${whereClause};
+    `;
+
+    const res = await queryPostgres(sql);
+    const runs = res && Array.isArray(res.runs) ? res.runs : [];
+    if (runs.length === 0) return null;
+
+    const latest = runs[0];
+    const phone = latest.callback_number || targetId;
+    const learned = buildExtractedVsMissing(latest);
+    const journey = buildJourneyProgression(latest);
+    const evidence = buildDefaultEvidenceChecklist(latest);
+    const timeline = await getLeadTimeline(targetId, false);
+    const isDnc = !!latest.dnc_requested || latest.customer_type === 'dnc';
+    const dueTime = latest.follow_up_datetime || 'Tomorrow, 11:00 AM';
+
+    return {
+      is_demo: false,
+      lead_id: phone || targetId,
+      customer_name: latest.caller_name || 'Customer',
+      primary_phone: phone,
+      whatsapp_phone: phone,
+      customer_type: isDnc ? 'dnc' : (latest.customer_type || 'unknown'),
+      lead_temperature: latest.lead_temperature || 'WARM',
+      lifecycle_stage: latest.qualification_state || 'NEW',
+      qualification_state: latest.qualification_state || 'UNQUALIFIED',
+      conversation_outcome: latest.conversation_outcome || 'inquiry',
+      current_status: isDnc ? 'DNC Suppressed — Quarantined' : (latest.next_action ? 'Action in progress' : 'New lead received'),
+      next_action: latest.next_action || (isDnc ? 'DO NOT CALL — Quarantined Number' : 'Initial qualification review'),
+      owner: isDnc ? 'Compliance' : 'Vaani / Sales Operator',
+      due_datetime: dueTime,
+      due_display: dueTime,
+      follow_up_datetime: latest.follow_up_datetime,
+      call_count: runs.length,
+      last_activity: timeline.length ? timeline[timeline.length - 1].title : 'Workflow session completed',
+      dnc_requested: isDnc,
+      raw_lead: latest,
+      extracted_vs_missing: learned,
+      what_vaani_learned: learned,
+      journey_progression: Array.isArray(journey?.stages) ? journey.stages : (journey || []),
+      sales_journey: journey,
+      evidence_checklist: evidence,
+      evidence_integration_note: 'WhatsApp action pending integration — Evidence status logged from voice responses',
+      linked_calls: runs.map((r) => ({
+        run_id: r.run_id,
+        created_at: r.created_at,
+        customer_name: r.caller_name,
+        primary_phone: r.callback_number,
+        conversation_outcome: r.conversation_outcome,
+        has_audio: false
+      })),
+      timeline
+    };
+  } catch (err) {
+    console.error(`[VAANI SALES] Error in getLead360 for ${targetId}:`, err.message);
+    return null;
+  }
+}
+
+async function getLeadTimeline(leadId, isDemo = false) {
+  if (!leadId) return [];
+  const targetId = String(leadId).trim();
+
+  if (isDemo) {
+    const demo = loadDemoData();
+    if (!demo) return [];
+
+    if (demo.lead_timelines && demo.lead_timelines[targetId]) {
+      return demo.lead_timelines[targetId].map((e) => {
+        const actorLower = (typeof e.actor === 'string' ? e.actor : (e.actor?.type || 'system')).toLowerCase();
+        const actorLabel = e.actor_label || (typeof e.actor === 'object' && e.actor?.label) ||
+          (actorLower === 'vaani' ? '🤖 VAANI' : actorLower === 'customer' ? '📞 CUSTOMER' : actorLower === 'operator' ? '👤 SALES OPERATOR' : '⚙️ SYSTEM');
+        const dayVal = e.day || e.day_label || 'DAY 1';
+        return {
+          ...e,
+          day: dayVal,
+          day_label: dayVal.replace(/day/i, 'Day'),
+          actor: actorLower,
+          actor_label: actorLabel,
+          customer_quote: e.customer_quote || null
+        };
+      });
+    }
+
+    const allLeads = [
+      ...(demo.sellers || []),
+      ...(demo.buyers || []),
+      ...(demo.inbound_leads || []),
+      ...(demo.dnc_registry || []).map((d) => ({ ...d, customer_type: 'dnc', dnc_requested: true }))
+    ];
+    const match = allLeads.find((l) => String(l.lead_id) === targetId || String(l.primary_phone) === targetId || String(l.phone_number) === targetId);
+    if (!match) return [];
+
+    const isSeller = match.customer_type === 'seller';
+    const calls = (demo.calls || []).filter((c) => String(c.lead_id) === targetId || String(c.primary_phone) === String(match.primary_phone || match.phone_number));
+
+    const events = [];
+    const createdDate = calls.length ? new Date(calls[0].created_at) : (match.opted_out_at ? new Date(match.opted_out_at) : new Date());
+    const formattedDate = createdDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+
+    events.push({
+      id: `synth_${targetId}_01`,
+      day: 'DAY 1',
+      day_label: 'Day 1',
+      timestamp: createdDate.toISOString(),
+      formatted_time: `${formattedDate}, 10:00 AM`,
+      activity_type: 'CALL_STARTED',
+      actor: 'vaani',
+      actor_label: '🤖 VAANI',
+      title: 'Inbound Conversation Initiated',
+      description: `Call received from ${match.primary_phone || match.phone_number} (${match.customer_name}).`
+    });
+
+    events.push({
+      id: `synth_${targetId}_02`,
+      day: 'DAY 1',
+      day_label: 'Day 1',
+      timestamp: new Date(createdDate.getTime() + 120000).toISOString(),
+      formatted_time: `${formattedDate}, 10:02 AM`,
+      activity_type: 'CALL_COMPLETED',
+      actor: 'vaani',
+      actor_label: '🤖 VAANI',
+      title: 'Qualification Call Completed',
+      description: match.dnc_requested
+        ? `Caller requested Do Not Call opt-out: ${match.reason || 'Opted out'}.`
+        : `Vaani identified customer as ${isSeller ? 'Machine Seller' : 'Excavator Buyer'}. Outcome: ${match.conversation_outcome || 'inquiry'}.`,
+      customer_quote: match.call_notes || match.reason || null
+    });
+
+    if (match.dnc_requested || match.customer_type === 'dnc') {
+      events.push({
+        id: `synth_${targetId}_dnc`,
+        day: 'DAY 1',
+        day_label: 'Day 1',
+        timestamp: new Date(createdDate.getTime() + 180000).toISOString(),
+        formatted_time: `${formattedDate}, 10:03 AM`,
+        activity_type: 'DNC_REGISTERED',
+        actor: 'vaani',
+        actor_label: '🤖 VAANI',
+        title: 'Do Not Call Registered',
+        description: 'Customer requested opt-out during call greeting. Quarantined in compliance registry.'
+      });
+      return events;
+    }
+
+    events.push({
+      id: `synth_${targetId}_03`,
+      day: 'DAY 1',
+      day_label: 'Day 1',
+      timestamp: new Date(createdDate.getTime() + 180000).toISOString(),
+      formatted_time: `${formattedDate}, 10:03 AM`,
+      activity_type: 'INFORMATION_EXTRACTED',
+      actor: 'vaani',
+      actor_label: '🤖 VAANI',
+      title: 'Specifications Extracted',
+      description: isSeller
+        ? `Machine: ${match.machine_brand || ''} ${match.machine_model || ''} (${match.model_year || ''}) | Hours: ${match.running_hours || 'N/A'} | Price: ${match.price_raw || 'N/A'}`
+        : `Requirement: ${match.machine_brand || ''} ${match.required_tonnage_class || '20-Ton'} | Budget: ${match.price_raw || 'N/A'}`
+    });
+
+    events.push({
+      id: `synth_${targetId}_04`,
+      day: 'DAY 1',
+      day_label: 'Day 1',
+      timestamp: new Date(createdDate.getTime() + 240000).toISOString(),
+      formatted_time: `${formattedDate}, 10:04 AM`,
+      activity_type: 'LEAD_QUALIFIED',
+      actor: 'vaani',
+      actor_label: '🤖 VAANI',
+      title: `Lead Qualified as ${match.lead_temperature || 'WARM'}`,
+      description: `Lifecycle stage updated to ${match.lifecycle_stage || 'QUALIFIED'}.`
+    });
+
+    if (match.follow_up_required) {
+      events.push({
+        id: `synth_${targetId}_05`,
+        day: 'DAY 2',
+        day_label: 'Day 2',
+        timestamp: new Date(createdDate.getTime() + 86400000).toISOString(),
+        formatted_time: 'Next Day, 11:00 AM',
+        activity_type: 'FOLLOW_UP_CREATED',
+        actor: 'system',
+        actor_label: '⚙️ SYSTEM',
+        title: 'Follow-up Task Scheduled',
+        description: `Action: ${match.next_action || 'Review and progress lead'}. Assigned to ${match.owner || 'Sales Operator'}.`
+      });
+    }
+
+    return events;
+  }
+
+  // Real DB mode
+  try {
+    const isNum = /^\d+$/.test(targetId);
+    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}'`;
+    if (isNum) {
+      whereClause = `(r.id = ${parseInt(targetId, 10)} OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}')`;
+    }
+
+    const sql = `
+      SELECT r.id, r.created_at,
+             to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
+             (r.gathered_context -> 'extracted_variables') as vars
+      FROM workflow_runs r
+      WHERE r.workflow_id = 3 AND ${whereClause}
+      ORDER BY r.id ASC;
+    `;
+
+    const runs = await queryPostgres(sql);
+    if (!Array.isArray(runs) || runs.length === 0) return [];
+
+    const events = [];
+    runs.forEach((run, idx) => {
+      const vars = run.vars || {};
+      const dayLabel = `Day ${idx + 1}`;
+
+      events.push({
+        id: `run_${run.id}_start`,
+        day: `DAY ${idx + 1}`,
+        day_label: dayLabel,
+        timestamp: run.created_at,
+        formatted_time: run.formatted_time,
+        activity_type: 'CALL_STARTED',
+        actor: 'vaani',
+        actor_label: '🤖 VAANI',
+        title: `Inbound Call #${run.id} Started`,
+        description: `Connected with ${vars.caller_name || 'caller'} from ${vars.callback_number || 'line'}.`
+      });
+
+      events.push({
+        id: `run_${run.id}_done`,
+        day: `DAY ${idx + 1}`,
+        day_label: dayLabel,
+        timestamp: run.created_at,
+        formatted_time: run.formatted_time,
+        activity_type: 'CALL_COMPLETED',
+        actor: 'vaani',
+        actor_label: '🤖 VAANI',
+        title: `Call #${run.id} Completed`,
+        description: `Outcome: ${vars.conversation_outcome || 'inquiry'}. Customer type: ${vars.customer_type || 'unknown'}.`,
+        customer_quote: vars.call_notes || null
+      });
+
+      if (vars.machine_brand || vars.machine_model || vars.required_tonnage_class) {
+        events.push({
+          id: `run_${run.id}_extracted`,
+          day: `DAY ${idx + 1}`,
+          day_label: dayLabel,
+          timestamp: run.created_at,
+          formatted_time: run.formatted_time,
+          activity_type: 'INFORMATION_EXTRACTED',
+          actor: 'vaani',
+          actor_label: '🤖 VAANI',
+          title: 'Machine Data Extracted',
+          description: `Brand: ${vars.machine_brand || 'N/A'} | Model: ${vars.machine_model || vars.required_tonnage_class || 'N/A'} | Price: ${vars.price_or_budget_raw || vars.expected_selling_price_inr || 'N/A'}`
+        });
+      }
+
+      if (vars.qualification_state) {
+        events.push({
+          id: `run_${run.id}_qual`,
+          day: `DAY ${idx + 1}`,
+          day_label: dayLabel,
+          timestamp: run.created_at,
+          formatted_time: run.formatted_time,
+          activity_type: 'LEAD_QUALIFIED',
+          actor: 'vaani',
+          actor_label: '🤖 VAANI',
+          title: `Lead Qualified as ${vars.lead_temperature || 'WARM'}`,
+          description: `State: ${vars.qualification_state}. Next action: ${vars.next_action || 'Follow up'}`
+        });
+      }
+
+      if (vars.dnc_requested) {
+        events.push({
+          id: `run_${run.id}_dnc`,
+          day: `DAY ${idx + 1}`,
+          day_label: dayLabel,
+          timestamp: run.created_at,
+          formatted_time: run.formatted_time,
+          activity_type: 'DNC_REGISTERED',
+          actor: 'vaani',
+          actor_label: '🤖 VAANI',
+          title: 'DNC Request Registered',
+          description: 'Caller requested not to be contacted. Number quarantined.'
+        });
+      }
+    });
+
+    return events;
+  } catch (err) {
+    console.error(`[VAANI SALES] Error generating timeline for ${targetId}:`, err.message);
+    return [];
+  }
+}
+
+async function getRecentActivities(limit = 15, isDemo = false) {
+  if (isDemo) {
+    const demo = loadDemoData();
+    return demo ? (demo.recent_activities || []).slice(0, limit) : [];
+  }
+
+  try {
+    const sql = `
+      SELECT json_agg(t) FROM (
+        SELECT r.id AS run_id,
+               r.created_at,
+               to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'hh12:MI AM') as formatted_time,
+               COALESCE((r.gathered_context -> 'extracted_variables') ->> 'caller_name', 'Caller') as caller_name,
+               COALESCE((r.gathered_context -> 'extracted_variables') ->> 'callback_number', 'Line') as callback_number,
+               (r.gathered_context -> 'extracted_variables') ->> 'customer_type' as customer_type,
+               (r.gathered_context -> 'extracted_variables') ->> 'machine_brand' as machine_brand,
+               (r.gathered_context -> 'extracted_variables') ->> 'machine_model' as machine_model,
+               (r.gathered_context -> 'extracted_variables') ->> 'conversation_outcome' as conversation_outcome,
+               (r.gathered_context -> 'extracted_variables') ->> 'lead_temperature' as lead_temperature,
+               COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'dnc_requested')::boolean, false) as dnc_requested
+        FROM workflow_runs r
+        WHERE r.workflow_id = 3
+        ORDER BY r.id DESC
+        LIMIT ${limit}
+      ) t;
+    `;
+
+    const runs = await queryPostgres(sql);
+    if (!Array.isArray(runs) || runs.length === 0) return [];
+
+    return runs.map((r, idx) => {
+      let actType = 'CALL_COMPLETED';
+      let title = `Vaani completed call with ${r.caller_name}`;
+      let desc = `${r.machine_brand || ''} ${r.machine_model || 'Excavator'} — Outcome: ${r.conversation_outcome || 'inquiry'}`;
+      let badge = 'badge-qualified';
+
+      if (r.dnc_requested) {
+        actType = 'DNC_REGISTERED';
+        title = `DNC Suppressed: ${r.callback_number}`;
+        desc = 'Caller requested opt-out. Quarantined in compliance registry.';
+        badge = 'badge-danger';
+      } else if (r.lead_temperature === 'HOT') {
+        badge = 'badge-hot';
+      }
+
+      return {
+        id: `real_act_${r.run_id}_${idx}`,
+        run_id: r.run_id,
+        activity_id: `real_act_${r.run_id}_${idx}`,
+        lead_id: r.run_id,
+        timestamp: r.created_at,
+        formatted_time: r.formatted_time,
+        actor: 'vaani',
+        actor_label: '🤖 VAANI',
+        activity_type: actType,
+        title,
+        description: desc,
+        badge_class: badge
+      };
+    });
+  } catch (err) {
+    console.error('[VAANI SALES] Error querying recent activities:', err.message);
+    return [];
+  }
+}
+
 module.exports = {
   MACHINE_MASTER_TAXONOMY,
   getOverview,
@@ -690,5 +1553,12 @@ module.exports = {
   getCallDetail,
   getDncRegistry,
   searchLeads,
-  updateFollowUpStatus
+  updateFollowUpStatus,
+  getLead360,
+  getLeadTimeline,
+  getRecentActivities,
+  buildExtractedVsMissing,
+  buildJourneyProgression,
+  buildDefaultEvidenceChecklist
 };
+

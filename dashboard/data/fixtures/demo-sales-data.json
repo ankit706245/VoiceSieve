@@ -1,7 +1,7 @@
 {
   "is_demo_fixture": true,
   "label": "DEMO DATA (Phase 2 WhatsApp Grounded)",
-  "generated_at": "2026-09-11T16:00:00.000Z",
+  "generated_at": "2026-09-11T17:30:00.000Z",
   "stats": {
     "total_leads": 12,
     "connected_calls": 18,
@@ -13,17 +13,61 @@
     "dnc_total": 1
   },
   "funnel": [
-    {"stage": "NEW", "count": 12, "percentage": 100},
-    {"stage": "CONTACTED", "count": 12, "percentage": 100},
-    {"stage": "CONNECTED", "count": 11, "percentage": 92},
-    {"stage": "INTERESTED", "count": 9, "percentage": 75},
-    {"stage": "QUALIFIED", "count": 7, "percentage": 58},
-    {"stage": "PRICE_DISCUSSION", "count": 5, "percentage": 42},
-    {"stage": "FOLLOW_UP", "count": 4, "percentage": 33},
-    {"stage": "NEGOTIATION", "count": 2, "percentage": 17},
-    {"stage": "CLOSED_WON", "count": 1, "percentage": 8},
-    {"stage": "CLOSED_LOST", "count": 1, "percentage": 8},
-    {"stage": "DO_NOT_CALL", "count": 1, "percentage": 8}
+    {
+      "stage": "NEW",
+      "count": 12,
+      "percentage": 100
+    },
+    {
+      "stage": "CONTACTED",
+      "count": 12,
+      "percentage": 100
+    },
+    {
+      "stage": "CONNECTED",
+      "count": 11,
+      "percentage": 92
+    },
+    {
+      "stage": "INTERESTED",
+      "count": 9,
+      "percentage": 75
+    },
+    {
+      "stage": "QUALIFIED",
+      "count": 7,
+      "percentage": 58
+    },
+    {
+      "stage": "PRICE_DISCUSSION",
+      "count": 5,
+      "percentage": 42
+    },
+    {
+      "stage": "FOLLOW_UP",
+      "count": 4,
+      "percentage": 33
+    },
+    {
+      "stage": "NEGOTIATION",
+      "count": 2,
+      "percentage": 17
+    },
+    {
+      "stage": "CLOSED_WON",
+      "count": 1,
+      "percentage": 8
+    },
+    {
+      "stage": "CLOSED_LOST",
+      "count": 1,
+      "percentage": 8
+    },
+    {
+      "stage": "DO_NOT_CALL",
+      "count": 1,
+      "percentage": 8
+    }
   ],
   "sellers": [
     {
@@ -31,128 +75,435 @@
       "customer_name": "Ramesh Patel",
       "primary_phone": "+919822104512",
       "whatsapp_phone": "+919822104512",
+      "customer_type": "seller",
       "ownership_type": "direct_owner",
       "machine_brand": "Tata Hitachi",
       "machine_model": "EX 200 LC",
       "model_year": 2019,
       "running_hours": 7200,
       "application_history": "soil_earthwork",
+      "component_condition": "Original pump & engine, soft canal soil history, track chain 75% life",
       "machine_condition_summary": "Original pump & engine, soft canal soil history, single owner",
       "location_city": "Satara",
       "location_state": "Maharashtra",
       "document_status": "all_clear_noc_ready",
+      "expected_selling_price_inr": 2200000,
       "expected_price_inr": 2200000,
       "price_raw": "22 Lakh",
-      "evidence_readiness": {
-        "photos_agreed": true,
-        "running_video_agreed": true,
-        "rc_copy_agreed": true,
-        "evidence_status": "complete_verified"
-      },
       "lead_temperature": "HOT",
       "lifecycle_stage": "NEGOTIATION",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "lead_qualified",
-      "next_action": "Review WhatsApp 30s boom running video and schedule Satara on-site inspection",
+      "current_status": "Waiting for RC/NOC verification",
+      "next_action": "Follow up with seller and complete document verification",
+      "owner": "Vaani / Sales Operator",
+      "assigned_owner": "Vikram (Procurement Lead)",
+      "due_datetime": "12 Sep 2026, 11:00 AM",
       "follow_up_required": true,
-      "follow_up_datetime": "2026-09-11T17:30:00.000Z",
-      "call_notes": "Clean machine in soft soil work. Asking ₹22L, within ₹19L-₹24L benchmark. Video promised."
+      "follow_up_datetime": "2026-09-12T11:00:00.000Z",
+      "call_notes": "Clean machine in soft soil work. Asking ₹22L, within ₹19L-₹24L benchmark. Video promised.",
+      "call_count": 3,
+      "dnc_requested": false,
+      "evidence_checklist": {
+        "boom_photo": {
+          "name": "Boom structure photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Clear photo; no bend or crack welding"
+        },
+        "undercarriage_photo": {
+          "name": "Undercarriage photo",
+          "status": "received",
+          "verified": true,
+          "note": "Track link & sprockets show 75% life"
+        },
+        "cabin_photo": {
+          "name": "Cabin & console photo",
+          "status": "received",
+          "verified": true,
+          "note": "Operator seat and gauge display in good order"
+        },
+        "counterweight_photo": {
+          "name": "Counterweight photo",
+          "status": "received",
+          "verified": true,
+          "note": "Original paint, minor cosmetic scratches only"
+        },
+        "hmr_photo": {
+          "name": "Hour meter (HMR) photo",
+          "status": "verified",
+          "verified": true,
+          "note": "HMR photo confirmed at 7,200 hrs"
+        },
+        "running_video": {
+          "name": "30s running & slew video",
+          "status": "received",
+          "verified": true,
+          "note": "30s running video uploaded; engine idle stable"
+        },
+        "rc_copy": {
+          "name": "RC copy",
+          "status": "pending",
+          "verified": false,
+          "note": "Seller promised to upload clear RC copy by tomorrow"
+        },
+        "noc_document": {
+          "name": "Clear finance NOC",
+          "status": "pending",
+          "verified": false,
+          "note": "Bank loan foreclosure clearance letter pending"
+        }
+      },
+      "evidence_integration_note": "WhatsApp action pending integration — Evidence manually received and indexed",
+      "journey_stage": "NEGOTIATION"
     },
     {
       "lead_id": "demo_lead_s02",
       "customer_name": "Banse (Munim)",
       "primary_phone": "+919414023910",
       "whatsapp_phone": "+919414023910",
+      "customer_type": "seller",
       "ownership_type": "broker_munim",
       "machine_brand": "JCB",
       "machine_model": "JS 205",
       "model_year": 2021,
       "running_hours": 5100,
       "application_history": "rock_breaker",
+      "component_condition": "Stone quarry work, rock breaker fitted for 12 months, hydraulic pump overhauled",
       "machine_condition_summary": "Stone quarry work, rock breaker fitted for 12 months, pump overhauled",
       "location_city": "Singrauli",
       "location_state": "Madhya Pradesh",
       "document_status": "loan_hypothecation_active",
+      "expected_selling_price_inr": 2700000,
       "expected_price_inr": 2700000,
       "price_raw": "27 Lakh",
-      "evidence_readiness": {
-        "photos_agreed": true,
-        "running_video_agreed": false,
-        "rc_copy_agreed": true,
-        "evidence_status": "partially_received"
-      },
       "lead_temperature": "WARM",
       "lifecycle_stage": "PRICE_DISCUSSION",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "price_discussion",
-      "next_action": "Authority check with direct owner to negotiate counter-offer for rock breaker wear",
+      "current_status": "Negotiating rock breaker discount",
+      "next_action": "Conference call with direct owner for rock breaker wear deduction",
+      "owner": "Sales Operator",
+      "assigned_owner": "Vikram (Procurement Lead)",
+      "due_datetime": "12 Sep 2026, 04:00 PM",
       "follow_up_required": true,
-      "follow_up_datetime": "2026-09-11T18:00:00.000Z",
-      "call_notes": "Mediator confirmed rate direct party ke saath baith ke final ho sakta hai. Breaker used."
+      "follow_up_datetime": "2026-09-12T16:00:00.000Z",
+      "call_notes": "Mediator confirmed rate direct party ke saath baith ke final ho sakta hai. Breaker used.",
+      "call_count": 2,
+      "dnc_requested": false,
+      "evidence_checklist": {
+        "boom_photo": {
+          "name": "Boom structure photo",
+          "status": "received",
+          "verified": false,
+          "note": "Photos received; needs weld ultrasonic check"
+        },
+        "undercarriage_photo": {
+          "name": "Undercarriage photo",
+          "status": "received",
+          "verified": false,
+          "note": "Quarry wear noticeable, 50% life"
+        },
+        "cabin_photo": {
+          "name": "Cabin & console photo",
+          "status": "received",
+          "verified": false,
+          "note": "Functional"
+        },
+        "counterweight_photo": {
+          "name": "Counterweight photo",
+          "status": "pending",
+          "verified": false,
+          "note": "Pending"
+        },
+        "hmr_photo": {
+          "name": "Hour meter (HMR) photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Confirmed 5,100 hrs"
+        },
+        "running_video": {
+          "name": "30s running & slew video",
+          "status": "pending",
+          "verified": false,
+          "note": "Requested running video showing breaker off"
+        },
+        "rc_copy": {
+          "name": "RC copy",
+          "status": "received",
+          "verified": true,
+          "note": "RC valid under hypothecation"
+        },
+        "noc_document": {
+          "name": "Clear finance NOC",
+          "status": "pending",
+          "verified": false,
+          "note": "NOC pending loan settlement"
+        }
+      },
+      "evidence_integration_note": "Evidence upload pending — manual receipt via operator",
+      "journey_stage": "ASKING_PRICE"
     },
     {
       "lead_id": "demo_lead_s03",
       "customer_name": "Kishore Singh",
       "primary_phone": "+919829031122",
       "whatsapp_phone": "+919829031122",
+      "customer_type": "seller",
       "ownership_type": "direct_owner",
       "machine_brand": "Tata Hitachi",
       "machine_model": "EX 210 LC",
       "model_year": 2024,
       "running_hours": 1800,
       "application_history": "soil_earthwork",
+      "component_condition": "Like-new condition, warranty active, company authorized dealer serviced",
       "machine_condition_summary": "Like-new condition, warranty active, company serviced",
       "location_city": "Jaipur",
       "location_state": "Rajasthan",
       "document_status": "all_clear_noc_ready",
+      "expected_selling_price_inr": 3400000,
       "expected_price_inr": 3400000,
       "price_raw": "34 Lakh",
-      "evidence_readiness": {
-        "photos_agreed": true,
-        "running_video_agreed": true,
-        "rc_copy_agreed": true,
-        "evidence_status": "complete_verified"
-      },
       "lead_temperature": "HOT",
       "lifecycle_stage": "QUALIFIED",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "lead_qualified",
+      "current_status": "Inspection ready in Jaipur",
       "next_action": "Bring machine to Jaipur Loha Mandi yard for token advance payment",
-      "follow_up_required": false,
-      "follow_up_datetime": null,
-      "call_notes": "2024 low hours Tata 210. High market demand. Asking ₹34L within fair ₹32L-₹36L range."
+      "owner": "Devendra (Yard Manager)",
+      "assigned_owner": "Devendra (Yard Manager)",
+      "due_datetime": "12 Sep 2026, 02:00 PM",
+      "follow_up_required": true,
+      "follow_up_datetime": "2026-09-12T14:00:00.000Z",
+      "call_notes": "2024 low hours Tata 210. High market demand. Asking ₹34L within fair ₹32L-₹36L range.",
+      "call_count": 2,
+      "dnc_requested": false,
+      "evidence_checklist": {
+        "boom_photo": {
+          "name": "Boom structure photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Factory condition"
+        },
+        "undercarriage_photo": {
+          "name": "Undercarriage photo",
+          "status": "verified",
+          "verified": true,
+          "note": "90% track life"
+        },
+        "cabin_photo": {
+          "name": "Cabin & console photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Pristine AC cabin"
+        },
+        "counterweight_photo": {
+          "name": "Counterweight photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Original paint"
+        },
+        "hmr_photo": {
+          "name": "Hour meter (HMR) photo",
+          "status": "verified",
+          "verified": true,
+          "note": "1,800 hrs certified"
+        },
+        "running_video": {
+          "name": "30s running & slew video",
+          "status": "verified",
+          "verified": true,
+          "note": "Full operational video verified"
+        },
+        "rc_copy": {
+          "name": "RC copy",
+          "status": "verified",
+          "verified": true,
+          "note": "First owner RC clear"
+        },
+        "noc_document": {
+          "name": "Clear finance NOC",
+          "status": "verified",
+          "verified": true,
+          "note": "No hypothecation, cash purchase"
+        }
+      },
+      "evidence_integration_note": "Evidence verified on-site in Jaipur yard",
+      "journey_stage": "INSPECTION"
     },
     {
       "lead_id": "demo_lead_s04",
       "customer_name": "Mahesh Gujjar",
       "primary_phone": "+919712398412",
       "whatsapp_phone": null,
+      "customer_type": "seller",
       "ownership_type": "direct_owner",
       "machine_brand": "Hyundai",
       "machine_model": "Robex R210",
       "model_year": 2018,
       "running_hours": 9400,
       "application_history": "mixed",
+      "component_condition": "Running condition, undercarriage 60% life, minor track roller play",
       "machine_condition_summary": "Running condition, undercarriage 60% life, minor track roller play",
-      "location_city": "Kishangarh (Ajmer)",
+      "location_city": "Kishangarh",
       "location_state": "Rajasthan",
       "document_status": "all_clear_noc_ready",
+      "expected_selling_price_inr": 2500000,
       "expected_price_inr": 2500000,
       "price_raw": "25 Lakh",
-      "evidence_readiness": {
-        "photos_agreed": false,
-        "running_video_agreed": false,
-        "rc_copy_agreed": false,
-        "evidence_status": "none"
-      },
       "lead_temperature": "WARM",
       "lifecycle_stage": "FOLLOW_UP",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "price_discussion",
-      "next_action": "Call back seller to request WhatsApp photos; anchor price toward ₹20L-₹22L",
+      "current_status": "Waiting for machine photos",
+      "next_action": "Follow up and collect missing evidence; anchor price to ₹20L-₹22L",
+      "owner": "Vaani",
+      "assigned_owner": "Ankit (Sales Rep)",
+      "due_datetime": "12 Sep 2026, 10:00 AM",
       "follow_up_required": true,
       "follow_up_datetime": "2026-09-12T10:00:00.000Z",
-      "call_notes": "Disambiguated to Ajmer highway Kishangarh. Asking ₹25L which is above 2018 benchmark."
+      "call_notes": "Disambiguated to Ajmer highway Kishangarh. Asking ₹25L which is above 2018 benchmark.",
+      "call_count": 1,
+      "dnc_requested": false,
+      "evidence_checklist": {
+        "boom_photo": {
+          "name": "Boom structure photo",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "undercarriage_photo": {
+          "name": "Undercarriage photo",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "cabin_photo": {
+          "name": "Cabin & console photo",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "counterweight_photo": {
+          "name": "Counterweight photo",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "hmr_photo": {
+          "name": "Hour meter (HMR) photo",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "running_video": {
+          "name": "30s running & slew video",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "rc_copy": {
+          "name": "RC copy",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        },
+        "noc_document": {
+          "name": "Clear finance NOC",
+          "status": "pending",
+          "verified": false,
+          "note": "Upload pending"
+        }
+      },
+      "evidence_integration_note": "Evidence upload pending — customer has not submitted photos yet",
+      "journey_stage": "EVIDENCE"
+    },
+    {
+      "lead_id": "demo_lead_s05",
+      "customer_name": "Vikramaditya Mining",
+      "primary_phone": "+919829988110",
+      "whatsapp_phone": "+919829988110",
+      "customer_type": "seller",
+      "ownership_type": "direct_owner",
+      "machine_brand": "Komatsu",
+      "machine_model": "PC 210-10M0",
+      "model_year": 2022,
+      "running_hours": 4200,
+      "application_history": "rock_quarry",
+      "component_condition": "Heavy duty mining bucket, certified Komatsu care history, excellent slew ring",
+      "machine_condition_summary": "Heavy quarry machine, serviced by Komatsu dealer, clean papers",
+      "location_city": "Udaipur",
+      "location_state": "Rajasthan",
+      "document_status": "all_clear_noc_ready",
+      "expected_selling_price_inr": 2900000,
+      "expected_price_inr": 2900000,
+      "price_raw": "29 Lakh",
+      "lead_temperature": "HOT",
+      "lifecycle_stage": "CLOSED_WON",
+      "qualification_state": "QUALIFIED",
+      "conversation_outcome": "lead_qualified",
+      "current_status": "Token advance paid, machine moving to yard",
+      "next_action": "Complete yard transit inspection and list on active inventory",
+      "owner": "Vikram (Procurement Lead)",
+      "assigned_owner": "Vikram (Procurement Lead)",
+      "due_datetime": "11 Sep 2026, 06:00 PM",
+      "follow_up_required": false,
+      "follow_up_datetime": null,
+      "call_notes": "Sourced at ₹29L after physical inspection. High demand Komatsu unit.",
+      "call_count": 2,
+      "dnc_requested": false,
+      "evidence_checklist": {
+        "boom_photo": {
+          "name": "Boom structure photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Verified by inspector"
+        },
+        "undercarriage_photo": {
+          "name": "Undercarriage photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Verified by inspector"
+        },
+        "cabin_photo": {
+          "name": "Cabin & console photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Verified"
+        },
+        "counterweight_photo": {
+          "name": "Counterweight photo",
+          "status": "verified",
+          "verified": true,
+          "note": "Verified"
+        },
+        "hmr_photo": {
+          "name": "Hour meter (HMR) photo",
+          "status": "verified",
+          "verified": true,
+          "note": "4,200 hrs verified"
+        },
+        "running_video": {
+          "name": "30s running & slew video",
+          "status": "verified",
+          "verified": true,
+          "note": "Video tested on site"
+        },
+        "rc_copy": {
+          "name": "RC copy",
+          "status": "verified",
+          "verified": true,
+          "note": "RC transferred to Shyam Earthmover"
+        },
+        "noc_document": {
+          "name": "Clear finance NOC",
+          "status": "verified",
+          "verified": true,
+          "note": "Full NOC in hand"
+        }
+      },
+      "evidence_integration_note": "Physical inspection complete — all documents verified",
+      "journey_stage": "DEAL"
     }
   ],
   "buyers": [
@@ -165,22 +516,32 @@
       "machine_brand": "Tata Hitachi",
       "machine_model": "EX 200 LC",
       "tonnage_class": "20_ton_class",
+      "required_tonnage_class": "20_ton_class",
       "application_history": "soil_earthwork",
+      "buyer_budget_max_inr": 2500000,
       "budget_max_inr": 2500000,
       "price_raw": "23-25 Lakh",
       "location_city": "Jaipur",
       "location_state": "Rajasthan",
-      "purchase_timeline": "immediate_within_7_days",
+      "purchase_timeline": "immediate_under_7d",
+      "used_or_refurbished": "refurbished_certified",
       "yard_visit_agreed": true,
       "yard_visit_schedule": "Tomorrow 2:00 PM",
       "lead_temperature": "HOT",
       "lifecycle_stage": "QUALIFIED",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "appointment_requested",
-      "next_action": "Send Jaipur Loha Mandi yard Google Maps pin and assign yard manager for 2 PM trial",
+      "current_status": "Yard visit confirmed for tomorrow",
+      "next_action": "Meet buyer at Jaipur Loha Mandi yard and conduct live machine engine trial",
+      "owner": "Devendra (Yard Manager)",
+      "assigned_owner": "Devendra (Yard Manager)",
+      "due_datetime": "12 Sep 2026, 02:00 PM",
       "follow_up_required": true,
-      "follow_up_datetime": "2026-09-11T16:30:00.000Z",
-      "call_notes": "Highway canal earthwork project. Ready payment. Visiting Jaipur yard tomorrow at 2 PM."
+      "follow_up_datetime": "2026-09-12T14:00:00.000Z",
+      "call_notes": "Highway canal earthwork project. Ready payment. Visiting Jaipur yard tomorrow at 2 PM.",
+      "call_count": 2,
+      "dnc_requested": false,
+      "journey_stage": "YARD_VISIT"
     },
     {
       "lead_id": "demo_lead_b02",
@@ -191,22 +552,32 @@
       "machine_brand": "JCB",
       "machine_model": "JS 205",
       "tonnage_class": "20_ton_class",
+      "required_tonnage_class": "20_ton_class",
       "application_history": "road_construction",
+      "buyer_budget_max_inr": 2800000,
       "budget_max_inr": 2800000,
       "price_raw": "26-28 Lakh",
       "location_city": "Jodhpur",
       "location_state": "Rajasthan",
       "purchase_timeline": "within_15_30_days",
+      "used_or_refurbished": "certified_used",
       "yard_visit_agreed": false,
       "yard_visit_schedule": null,
       "lead_temperature": "WARM",
       "lifecycle_stage": "INTERESTED",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "lead_qualified",
-      "next_action": "WhatsApp PDF catalog of available 2021 JCB 205 units and follow up on Monday",
+      "current_status": "Catalog sent, awaiting feedback",
+      "next_action": "Follow up on WhatsApp PDF catalog and propose live video call trial",
+      "owner": "Ankit (Sales Rep)",
+      "assigned_owner": "Ankit (Sales Rep)",
+      "due_datetime": "14 Sep 2026, 11:00 AM",
       "follow_up_required": true,
       "follow_up_datetime": "2026-09-14T11:00:00.000Z",
-      "call_notes": "Needs certified used JCB 205 for NHAI subcontract. Requested PDF catalog on WhatsApp."
+      "call_notes": "Needs certified used JCB 205 for NHAI subcontract. Requested PDF catalog on WhatsApp.",
+      "call_count": 1,
+      "dnc_requested": false,
+      "journey_stage": "MACHINE_OPTIONS"
     },
     {
       "lead_id": "demo_lead_b03",
@@ -215,31 +586,141 @@
       "whatsapp_phone": "+919784012999",
       "customer_type": "buyer",
       "machine_brand": "Any",
-      "machine_model": null,
+      "machine_model": "20-Ton Class",
       "tonnage_class": "20_ton_class",
+      "required_tonnage_class": "20_ton_class",
       "application_history": "soil_earthwork",
+      "buyer_budget_max_inr": 2000000,
       "budget_max_inr": 2000000,
       "price_raw": "18-20 Lakh",
       "location_city": "Kota",
       "location_state": "Rajasthan",
-      "purchase_timeline": "immediate_within_7_days",
+      "purchase_timeline": "immediate_under_7d",
+      "used_or_refurbished": "running_used",
       "yard_visit_agreed": true,
       "yard_visit_schedule": "Saturday morning",
       "lead_temperature": "HOT",
       "lifecycle_stage": "QUALIFIED",
       "qualification_state": "QUALIFIED",
       "conversation_outcome": "appointment_requested",
+      "current_status": "Finding matching budget machine",
       "next_action": "Match with incoming 2018 Tata 200 / JCB units and confirm Saturday yard trial",
+      "owner": "Sales Operator",
+      "assigned_owner": "Ankit (Sales Rep)",
+      "due_datetime": "12 Sep 2026, 09:30 AM",
       "follow_up_required": true,
       "follow_up_datetime": "2026-09-12T09:30:00.000Z",
-      "call_notes": "Budget-focused buyer. Cash ready for clean running condition 20-ton machine."
+      "call_notes": "Budget-focused buyer. Cash ready for clean running condition 20-ton machine.",
+      "call_count": 2,
+      "dnc_requested": false,
+      "journey_stage": "MATCHING"
+    },
+    {
+      "lead_id": "demo_lead_b04",
+      "customer_name": "Rajendra Yadav",
+      "primary_phone": "+919829567890",
+      "whatsapp_phone": "+919829567890",
+      "customer_type": "buyer",
+      "machine_brand": "Tata Hitachi",
+      "machine_model": "EX 210 LC",
+      "tonnage_class": "21_ton_class",
+      "required_tonnage_class": "21_ton_class",
+      "application_history": "soil_earthwork",
+      "buyer_budget_max_inr": 3000000,
+      "budget_max_inr": 3000000,
+      "price_raw": "28-30 Lakh",
+      "location_city": "Sikar",
+      "location_state": "Rajasthan",
+      "purchase_timeline": "within_15_30_days",
+      "used_or_refurbished": "certified_used",
+      "yard_visit_agreed": false,
+      "yard_visit_schedule": null,
+      "lead_temperature": "WARM",
+      "lifecycle_stage": "FOLLOW_UP",
+      "qualification_state": "QUALIFIED",
+      "conversation_outcome": "lead_qualified",
+      "current_status": "Evaluating financing options",
+      "next_action": "Connect with equipment financing partner for loan pre-approval",
+      "owner": "Ankit (Sales Rep)",
+      "assigned_owner": "Ankit (Sales Rep)",
+      "due_datetime": "13 Sep 2026, 03:00 PM",
+      "follow_up_required": true,
+      "follow_up_datetime": "2026-09-13T15:00:00.000Z",
+      "call_notes": "Contractor expanding fleet in Shekhawati region. Needs 70% loan support.",
+      "call_count": 1,
+      "dnc_requested": false,
+      "journey_stage": "BUDGET"
+    },
+    {
+      "lead_id": "demo_lead_b05",
+      "customer_name": "Deep Mining Corp",
+      "primary_phone": "+919414992200",
+      "whatsapp_phone": null,
+      "customer_type": "buyer",
+      "machine_brand": "Komatsu",
+      "machine_model": "PC 210",
+      "tonnage_class": "21_ton_class",
+      "required_tonnage_class": "21_ton_class",
+      "application_history": "rock_breaker",
+      "buyer_budget_max_inr": 1800000,
+      "budget_max_inr": 1800000,
+      "price_raw": "18 Lakh",
+      "location_city": "Bhilwara",
+      "location_state": "Rajasthan",
+      "purchase_timeline": "immediate_under_7d",
+      "used_or_refurbished": "running_used",
+      "yard_visit_agreed": false,
+      "yard_visit_schedule": null,
+      "lead_temperature": "COLD",
+      "lifecycle_stage": "CLOSED_LOST",
+      "qualification_state": "UNQUALIFIED",
+      "conversation_outcome": "price_discussion",
+      "current_status": "Deal closed lost: budget mismatch",
+      "next_action": "Archive lead; re-contact if sub-20L 20-ton rock machine becomes available",
+      "owner": "Vaani",
+      "assigned_owner": "None",
+      "due_datetime": "N/A",
+      "follow_up_required": false,
+      "follow_up_datetime": null,
+      "call_notes": "Client insisted on 2020+ Komatsu PC 210 under ₹18L. Market price is ₹28L+. Closed lost due to unrealistic price expectation.",
+      "call_count": 1,
+      "dnc_requested": false,
+      "journey_stage": "DEAL"
+    }
+  ],
+  "inbound_leads": [
+    {
+      "lead_id": "demo_lead_g01",
+      "customer_name": "Harish Meena",
+      "primary_phone": "+919414556677",
+      "customer_type": "unknown",
+      "lead_temperature": "WARM",
+      "lifecycle_stage": "NEW",
+      "qualification_state": "UNQUALIFIED",
+      "conversation_outcome": "inquiry",
+      "current_status": "Initial inquiry logged",
+      "next_action": "Call back to determine whether buyer or seller requirement",
+      "owner": "Vaani",
+      "assigned_owner": "Vaani",
+      "due_datetime": "12 Sep 2026, 12:00 PM",
+      "follow_up_required": true,
+      "follow_up_datetime": "2026-09-12T12:00:00.000Z",
+      "call_notes": "Caller asked generally about available JCB and Tata machines in Jaipur yard.",
+      "call_count": 1,
+      "dnc_requested": false,
+      "journey_stage": "CALL"
     }
   ],
   "machine_master": [
     {
       "brand": "Tata Hitachi",
       "canonical_model": "EX 200 LC",
-      "aliases": ["Tata 200", "EX 200", "200 Model", "Bada Tata"],
+      "aliases": [
+        "Tata 200",
+        "EX 200",
+        "200 Model",
+        "Bada Tata"
+      ],
       "tonnage_class": "20_ton_class",
       "operating_weight_kg": 20000,
       "standard_engine": "Cummins 6BT 5.9",
@@ -251,9 +732,31 @@
       }
     },
     {
+      "brand": "Tata Hitachi",
+      "canonical_model": "EX 210 LC / Super",
+      "aliases": [
+        "Tata 210",
+        "210 Super",
+        "EX 210"
+      ],
+      "tonnage_class": "21_ton_class",
+      "operating_weight_kg": 21000,
+      "standard_engine": "Cummins 6BT 5.9",
+      "market_positioning": "High fuel efficiency, contractor standard for canal and soil work",
+      "indicative_bands": {
+        "2023_2024": "₹33L - ₹37L",
+        "2021_2022": "₹28L - ₹32L",
+        "2018_2019": "₹20L - ₹25L"
+      }
+    },
+    {
       "brand": "JCB",
       "canonical_model": "JS 205",
-      "aliases": ["JCB 205", "JS 205", "JCB Excavator"],
+      "aliases": [
+        "JCB 205",
+        "JS 205",
+        "JCB Excavator"
+      ],
       "tonnage_class": "20_ton_class",
       "operating_weight_kg": 20500,
       "standard_engine": "Cummins 6BT 5.9",
@@ -267,7 +770,12 @@
     {
       "brand": "Hyundai",
       "canonical_model": "Robex R210-7",
-      "aliases": ["Hyundai 210", "Smart 210", "Robex 210", "Hyundai Poclain"],
+      "aliases": [
+        "Hyundai 210",
+        "Smart 210",
+        "Robex 210",
+        "Hyundai Poclain"
+      ],
       "tonnage_class": "21_ton_class",
       "operating_weight_kg": 21200,
       "standard_engine": "Hyundai / Cummins",
@@ -281,7 +789,10 @@
     {
       "brand": "Komatsu",
       "canonical_model": "PC 210-10M0",
-      "aliases": ["Komatsu 210", "PC 210"],
+      "aliases": [
+        "Komatsu 210",
+        "PC 210"
+      ],
       "tonnage_class": "21_ton_class",
       "operating_weight_kg": 21000,
       "standard_engine": "Komatsu SAA6D107E-1",
@@ -305,73 +816,135 @@
       "target_resale_inr": 3450000,
       "status": "certified_ready_in_yard",
       "current_location": "Jaipur Yard (Loha Mandi / VKI Area)",
-      "verified_features": ["Sealed Cummins Engine", "Track chain 90% life", "Full NOC clear", "Load tested"]
+      "verified_features": [
+        "Sealed Cummins Engine",
+        "Track chain 90% life",
+        "Full NOC clear",
+        "Load tested"
+      ]
     }
   ],
   "demand_analytics": {
     "top_requested_brands": [
-      {"brand": "Tata Hitachi", "share_percentage": 52, "inquiries_count": 28},
-      {"brand": "JCB", "share_percentage": 31, "inquiries_count": 17},
-      {"brand": "Hyundai", "share_percentage": 12, "inquiries_count": 7},
-      {"brand": "Komatsu", "share_percentage": 5, "inquiries_count": 3}
+      {
+        "brand": "Tata Hitachi",
+        "share_percentage": 52,
+        "inquiries_count": 28
+      },
+      {
+        "brand": "JCB",
+        "share_percentage": 31,
+        "inquiries_count": 17
+      },
+      {
+        "brand": "Hyundai",
+        "share_percentage": 12,
+        "inquiries_count": 7
+      },
+      {
+        "brand": "Komatsu",
+        "share_percentage": 5,
+        "inquiries_count": 3
+      }
     ],
     "top_requested_tonnage": [
-      {"tonnage": "20-Ton Class (19-21t)", "percentage": 82},
-      {"tonnage": "Mini Excavators (<10t)", "percentage": 11},
-      {"tonnage": "Heavy Mining (30t+)", "percentage": 7}
+      {
+        "tonnage": "20-Ton Class (19-21t)",
+        "percentage": 82
+      },
+      {
+        "tonnage": "Mini Excavators (<10t)",
+        "percentage": 11
+      },
+      {
+        "tonnage": "Heavy Mining (30t+)",
+        "percentage": 7
+      }
     ],
     "budget_distribution": [
-      {"bracket": "₹15L - ₹20L", "count": 6},
-      {"bracket": "₹20L - ₹25L", "count": 14},
-      {"bracket": "₹25L - ₹30L", "count": 10},
-      {"bracket": "₹30L+", "count": 5}
+      {
+        "bracket": "₹15L - ₹20L",
+        "count": 6
+      },
+      {
+        "bracket": "₹20L - ₹25L",
+        "count": 14
+      },
+      {
+        "bracket": "₹25L - ₹30L",
+        "count": 10
+      },
+      {
+        "bracket": "₹30L+",
+        "count": 5
+      }
     ],
     "top_locations": [
-      {"city": "Jaipur", "state": "Rajasthan", "count": 16},
-      {"city": "Kishangarh / Ajmer", "state": "Rajasthan", "count": 9},
-      {"city": "Satara / Pune", "state": "Maharashtra", "count": 6},
-      {"city": "Singrauli", "state": "Madhya Pradesh", "count": 4}
+      {
+        "city": "Jaipur",
+        "state": "Rajasthan",
+        "count": 16
+      },
+      {
+        "city": "Kishangarh / Ajmer",
+        "state": "Rajasthan",
+        "count": 9
+      },
+      {
+        "city": "Satara / Pune",
+        "state": "Maharashtra",
+        "count": 6
+      },
+      {
+        "city": "Singrauli",
+        "state": "Madhya Pradesh",
+        "count": 4
+      }
     ]
   },
   "follow_ups": [
     {
       "id": "fu_01",
+      "lead_id": "demo_lead_b01",
       "customer_name": "Om Builders (Sunil Sharma)",
       "customer_type": "buyer",
       "primary_phone": "+919828019944",
       "machine_requirement": "Tata Hitachi EX 200 LC (20-Ton)",
       "reason": "Confirm 2 PM Jaipur Yard Physical Inspection and gate pass",
-      "follow_up_datetime": "2026-09-11T14:00:00.000Z",
-      "category": "overdue",
+      "follow_up_datetime": "2026-09-12T14:00:00.000Z",
+      "category": "due_today",
       "status": "pending",
       "assigned_owner": "Yard Manager (Devendra)"
     },
     {
       "id": "fu_02",
+      "lead_id": "demo_lead_s01",
       "customer_name": "Ramesh Patel",
       "customer_type": "seller",
       "primary_phone": "+919822104512",
       "machine_requirement": "Tata 200 (2019, Satara)",
       "reason": "Review 30s boom running video and issue final token offer",
-      "follow_up_datetime": "2026-09-11T17:30:00.000Z",
+      "follow_up_datetime": "2026-09-12T11:00:00.000Z",
       "category": "due_today",
       "status": "pending",
       "assigned_owner": "Procurement Lead (Vikram)"
     },
     {
       "id": "fu_03",
+      "lead_id": "demo_lead_s02",
       "customer_name": "Banse (Munim)",
       "customer_type": "seller",
       "primary_phone": "+919414023910",
       "machine_requirement": "JCB 205 (2021, Singrauli)",
       "reason": "Conference call with direct owner for rock breaker price deduction",
-      "follow_up_datetime": "2026-09-11T18:00:00.000Z",
+      "follow_up_datetime": "2026-09-12T16:00:00.000Z",
       "category": "due_today",
       "status": "pending",
       "assigned_owner": "Procurement Lead (Vikram)"
     },
     {
       "id": "fu_04",
+      "lead_id": "demo_lead_b02",
       "customer_name": "Choudhary Infra Projects",
       "customer_type": "buyer",
       "primary_phone": "+919413345511",
@@ -383,45 +956,90 @@
       "assigned_owner": "Sales Rep (Ankit)"
     }
   ],
+  "dnc_registry": [
+    {
+      "lead_id": "demo_lead_dnc01",
+      "phone_number": "+919988776655",
+      "customer_name": "Suresh Verma (Unregistered)",
+      "reason": "Caller opted out during greeting: 'Mujhe koi machine nahi leni, phone mat karo'",
+      "opted_out_at": "2026-09-11T13:15:00.000Z",
+      "source": "Inbound Voice Call #103",
+      "is_active": true,
+      "dnc_requested": true
+    }
+  ],
   "calls": [
     {
       "run_id": 101,
-      "created_at": "2026-09-11T15:20:12.000Z",
+      "lead_id": "demo_lead_s01",
+      "call_number": 1,
+      "created_at": "2026-09-09T10:15:00.000Z",
+      "formatted_time": "09 Sep 2026, 10:15 AM",
       "customer_name": "Ramesh Patel",
       "primary_phone": "+919822104512",
       "customer_type": "seller",
-      "duration_seconds": 142,
+      "duration_seconds": 154,
       "conversation_outcome": "lead_qualified",
       "lead_temperature": "HOT",
-      "lifecycle_stage": "NEGOTIATION",
+      "qualification_state": "QUALIFIED",
       "machine_summary": "Tata Hitachi EX 200 LC (2019, 7200 hrs, Mitti)",
       "price_raw": "22 Lakh",
       "location": "Satara, Maharashtra",
-      "next_action": "Review WhatsApp video & dispatch inspection team",
+      "next_action": "Request 8-point evidence checklist on WhatsApp",
       "has_audio": true,
       "audio_url": "/samples/sample_call.wav",
       "transcript": [
-        {"speaker": "agent", "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"},
-        {"speaker": "caller", "text": "Haanji, mere paas Tata 200 hai 2019 model, bechni hai."},
-        {"speaker": "agent", "text": "Bahut badhiya sir. Meter reading kitne ghante show kar rahi hai, aur machine mitti mein chali hai ya breaker pe?"},
-        {"speaker": "caller", "text": "Meter 7200 ghante hai, poori canal excavation mitti ke kaam mein chali hai, breaker kabhi nahi laga."},
-        {"speaker": "agent", "text": "Achha sir, abhi machine kaunse shahar mein khadi hai aur expected rate kya hai?"},
-        {"speaker": "caller", "text": "Satara Maharashtra mein khadi hai, 22 Lakh expected rate hai."},
-        {"speaker": "agent", "text": "Aap WhatsApp par machine ke chaar-paanch photo aur meter ka photo bhej dijiye. Ek 30-second ka running video bhi bhej dena."},
-        {"speaker": "caller", "text": "Haan theek hai, main isi number se WhatsApp par bhej deta hoon."},
-        {"speaker": "agent", "text": "Dhanyawad sir, hamari technical team video review karke aapse call karegi. Shyam Earthmover mein baat karne ke liye shukriya!"}
+        {
+          "speaker": "agent",
+          "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Haanji, mere paas Tata 200 hai 2019 model, bechni hai."
+        },
+        {
+          "speaker": "agent",
+          "text": "Bahut badhiya sir. Meter reading kitne ghante show kar rahi hai, aur machine mitti mein chali hai ya breaker pe?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Meter 7200 ghante hai, poori canal excavation mitti ke kaam mein chali hai, breaker kabhi nahi laga."
+        },
+        {
+          "speaker": "agent",
+          "text": "Achha sir, abhi machine kaunse shahar mein khadi hai aur expected rate kya hai?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Satara Maharashtra mein khadi hai, 22 Lakh expected rate hai."
+        },
+        {
+          "speaker": "agent",
+          "text": "Aap WhatsApp par machine ke chaar-paanch photo aur meter ka photo bhej dijiye. Ek 30-second ka running video bhi bhej dena."
+        },
+        {
+          "speaker": "caller",
+          "text": "Haan theek hai, main isi number se WhatsApp par bhej deta hoon."
+        },
+        {
+          "speaker": "agent",
+          "text": "Dhanyawad sir, hamari technical team video review karke aapse call karegi. Shyam Earthmover mein baat karne ke liye shukriya!"
+        }
       ]
     },
     {
       "run_id": 102,
-      "created_at": "2026-09-11T14:45:00.000Z",
-      "customer_name": "Sunil Sharma (Om Builders)",
+      "lead_id": "demo_lead_b01",
+      "call_number": 1,
+      "created_at": "2026-09-10T11:30:00.000Z",
+      "formatted_time": "10 Sep 2026, 11:30 AM",
+      "customer_name": "Om Builders (Sunil Sharma)",
       "primary_phone": "+919828019944",
       "customer_type": "buyer",
       "duration_seconds": 115,
       "conversation_outcome": "appointment_requested",
       "lead_temperature": "HOT",
-      "lifecycle_stage": "QUALIFIED",
+      "qualification_state": "QUALIFIED",
       "machine_summary": "Tata Hitachi 20-Ton Class (Budget ₹25L)",
       "price_raw": "25 Lakh",
       "location": "Jaipur, Rajasthan",
@@ -429,24 +1047,817 @@
       "has_audio": true,
       "audio_url": "/samples/sample_call.wav",
       "transcript": [
-        {"speaker": "agent", "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"},
-        {"speaker": "caller", "text": "Mujhe 20-ton Poclain purchase karni hai canal work ke liye."},
-        {"speaker": "agent", "text": "Humare paas Tata 200 aur JCB 205 options hain sir. Aapka tentative budget kitna ban raha hai?"},
-        {"speaker": "caller", "text": "25 Lakh tak budget hai, machine Jaipur mein deliver honi chahiye."},
-        {"speaker": "agent", "text": "Hamara main yard Jaipur mein Loha Mandi (VKI Area) mein hai. Kya aap kal live machine start karke dekhna chahenge?"},
-        {"speaker": "caller", "text": "Haan bilkul, kal dopahar 2 baje visit karunga."},
-        {"speaker": "agent", "text": "Bilkul sir! Main aapko WhatsApp par yard ki live Google Maps location share kar rahi hoon. Aapse kal mulakaat hogi."}
+        {
+          "speaker": "agent",
+          "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi. Sir, aapko excavator machine sale karni thi ya purchase karni hai?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Mujhe 20-ton Poclain purchase karni hai canal work ke liye."
+        },
+        {
+          "speaker": "agent",
+          "text": "Humare paas Tata 200 aur JCB 205 options hain sir. Aapka tentative budget kitna ban raha hai?"
+        },
+        {
+          "speaker": "caller",
+          "text": "25 Lakh tak budget hai, machine Jaipur mein deliver honi chahiye."
+        },
+        {
+          "speaker": "agent",
+          "text": "Hamara main yard Jaipur mein Loha Mandi (VKI Area) mein hai. Kya aap kal live machine start karke dekhna chahenge?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Haan bilkul, kal dopahar 2 baje visit karunga."
+        },
+        {
+          "speaker": "agent",
+          "text": "Bilkul sir! Main aapko WhatsApp par yard ki live Google Maps location share kar rahi hoon. Aapse kal mulakaat hogi."
+        }
       ]
+    },
+    {
+      "run_id": 103,
+      "lead_id": "demo_lead_dnc01",
+      "call_number": 1,
+      "created_at": "2026-09-11T09:15:00.000Z",
+      "formatted_time": "11 Sep 2026, 09:15 AM",
+      "customer_name": "Suresh Verma (Unregistered)",
+      "primary_phone": "+919988776655",
+      "customer_type": "unknown",
+      "duration_seconds": 22,
+      "conversation_outcome": "dnc_requested",
+      "lead_temperature": "COLD",
+      "qualification_state": "UNQUALIFIED",
+      "machine_summary": "N/A — Immediate Opt-out",
+      "price_raw": "None",
+      "location": "Unknown",
+      "next_action": "Suppressed in DNC Registry — Never call",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": [
+        {
+          "speaker": "agent",
+          "text": "Namaste, main Vaani bol rahi hoon, Shyam Earthmover se. Aapki machine ke regarding baat karni thi."
+        },
+        {
+          "speaker": "caller",
+          "text": "Mujhe koi machine nahi leni, dobara phone mat karo!"
+        },
+        {
+          "speaker": "agent",
+          "text": "Ji theek hai sir, main aapka number Do Not Call list mein note kar rahi hoon. Sorry for the trouble."
+        }
+      ]
+    },
+    {
+      "run_id": 104,
+      "lead_id": "demo_lead_s01",
+      "call_number": 2,
+      "created_at": "2026-09-10T16:00:00.000Z",
+      "formatted_time": "10 Sep 2026, 04:00 PM",
+      "customer_name": "Ramesh Patel",
+      "primary_phone": "+919822104512",
+      "customer_type": "seller",
+      "duration_seconds": 98,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Tata Hitachi EX 200 LC (Evidence Verification)",
+      "price_raw": "22 Lakh",
+      "location": "Satara, Maharashtra",
+      "next_action": "Follow up on missing RC copy and bank NOC",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": [
+        {
+          "speaker": "agent",
+          "text": "Namaste Ramesh ji, Vaani bol rahi hoon Shyam Earthmover se. Aapne WhatsApp par machine ki photos aur running video bheji thi, team ne review ki hai."
+        },
+        {
+          "speaker": "caller",
+          "text": "Haanji madam, video dekh li aapne? Ekdum silent engine hai."
+        },
+        {
+          "speaker": "agent",
+          "text": "Haanji sir, boom aur undercarriage photos bahut clear hain. Bas RC book aur loan NOC ka document bacha hai, wo kab tak mil jayega?"
+        },
+        {
+          "speaker": "caller",
+          "text": "Bank se kal subah NOC ki copy mil jayegi, main turant WhatsApp kar dunga."
+        },
+        {
+          "speaker": "agent",
+          "text": "Shukriya Ramesh ji, hamare procurement head kal 11 baje call karenge."
+        }
+      ]
+    },
+    {
+      "run_id": 105,
+      "lead_id": "demo_lead_s01",
+      "call_number": 3,
+      "created_at": "2026-09-11T11:15:00.000Z",
+      "formatted_time": "11 Sep 2026, 11:15 AM",
+      "customer_name": "Ramesh Patel",
+      "primary_phone": "+919822104512",
+      "customer_type": "seller",
+      "duration_seconds": 180,
+      "conversation_outcome": "price_discussion",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Tata Hitachi EX 200 LC (Final Rate Negotiation)",
+      "price_raw": "21.5-22 Lakh",
+      "location": "Satara, Maharashtra",
+      "next_action": "Technical inspection team dispatch to Satara",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": [
+        {
+          "speaker": "agent",
+          "text": "Namaste Ramesh ji, Vikram ji (Procurement Lead) ke behalf par main Vaani bol rahi hoon. Rate 21.5L par Satara inspection final karein?"
+        },
+        {
+          "speaker": "caller",
+          "text": "21.75 Lakh kar lijiye, machine bahut saaf hai."
+        },
+        {
+          "speaker": "agent",
+          "text": "Ji Ramesh ji, inspection engineer Satara yard par load test karke token advance issue karega."
+        }
+      ]
+    },
+    {
+      "run_id": 106,
+      "lead_id": "demo_lead_s02",
+      "call_number": 1,
+      "created_at": "2026-09-10T14:20:00.000Z",
+      "formatted_time": "10 Sep 2026, 02:20 PM",
+      "customer_name": "Banse (Munim)",
+      "primary_phone": "+919414023910",
+      "customer_type": "seller",
+      "duration_seconds": 162,
+      "conversation_outcome": "price_discussion",
+      "lead_temperature": "WARM",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "JCB JS 205 (2021, Rock Breaker, Singrauli)",
+      "price_raw": "27 Lakh",
+      "location": "Singrauli, Madhya Pradesh",
+      "next_action": "Negotiate counter-offer for rock breaker wear",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 107,
+      "lead_id": "demo_lead_s02",
+      "call_number": 2,
+      "created_at": "2026-09-11T12:00:00.000Z",
+      "formatted_time": "11 Sep 2026, 12:00 PM",
+      "customer_name": "Banse (Munim)",
+      "primary_phone": "+919414023910",
+      "customer_type": "seller",
+      "duration_seconds": 110,
+      "conversation_outcome": "price_discussion",
+      "lead_temperature": "WARM",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "JCB JS 205 (Owner Conference Scheduled)",
+      "price_raw": "25-27 Lakh",
+      "location": "Singrauli, Madhya Pradesh",
+      "next_action": "Conference call with owner at 4 PM",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 108,
+      "lead_id": "demo_lead_s03",
+      "call_number": 1,
+      "created_at": "2026-09-10T09:40:00.000Z",
+      "formatted_time": "10 Sep 2026, 09:40 AM",
+      "customer_name": "Kishore Singh",
+      "primary_phone": "+919829031122",
+      "customer_type": "seller",
+      "duration_seconds": 135,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Tata Hitachi EX 210 LC (2024, 1800 hrs)",
+      "price_raw": "34 Lakh",
+      "location": "Jaipur, Rajasthan",
+      "next_action": "Direct physical inspection in Jaipur yard",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 109,
+      "lead_id": "demo_lead_s03",
+      "call_number": 2,
+      "created_at": "2026-09-11T10:30:00.000Z",
+      "formatted_time": "11 Sep 2026, 10:30 AM",
+      "customer_name": "Kishore Singh",
+      "primary_phone": "+919829031122",
+      "customer_type": "seller",
+      "duration_seconds": 88,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Tata Hitachi EX 210 LC (Advance Token Confirmation)",
+      "price_raw": "34 Lakh",
+      "location": "Jaipur, Rajasthan",
+      "next_action": "Gate pass issue for Jaipur yard entry",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 110,
+      "lead_id": "demo_lead_s04",
+      "call_number": 1,
+      "created_at": "2026-09-10T17:15:00.000Z",
+      "formatted_time": "10 Sep 2026, 05:15 PM",
+      "customer_name": "Mahesh Gujjar",
+      "primary_phone": "+919712398412",
+      "customer_type": "seller",
+      "duration_seconds": 120,
+      "conversation_outcome": "price_discussion",
+      "lead_temperature": "WARM",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Hyundai Robex R210 (2018, 9400 hrs)",
+      "price_raw": "25 Lakh",
+      "location": "Kishangarh, Rajasthan",
+      "next_action": "Collect machine photos and calibrate price",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 111,
+      "lead_id": "demo_lead_s05",
+      "call_number": 1,
+      "created_at": "2026-09-08T11:00:00.000Z",
+      "formatted_time": "08 Sep 2026, 11:00 AM",
+      "customer_name": "Vikramaditya Mining",
+      "primary_phone": "+919829988110",
+      "customer_type": "seller",
+      "duration_seconds": 210,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Komatsu PC 210-10M0 (2022, 4200 hrs)",
+      "price_raw": "29 Lakh",
+      "location": "Udaipur, Rajasthan",
+      "next_action": "Schedule Udaipur mining site physical inspection",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 112,
+      "lead_id": "demo_lead_s05",
+      "call_number": 2,
+      "created_at": "2026-09-09T15:30:00.000Z",
+      "formatted_time": "09 Sep 2026, 03:30 PM",
+      "customer_name": "Vikramaditya Mining",
+      "primary_phone": "+919829988110",
+      "customer_type": "seller",
+      "duration_seconds": 140,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Komatsu PC 210-10M0 (Deal Closing & Token Advance)",
+      "price_raw": "29 Lakh",
+      "location": "Udaipur, Rajasthan",
+      "next_action": "Transfer machine to Jaipur yard",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 113,
+      "lead_id": "demo_lead_b01",
+      "call_number": 2,
+      "created_at": "2026-09-11T14:15:00.000Z",
+      "formatted_time": "11 Sep 2026, 02:15 PM",
+      "customer_name": "Om Builders (Sunil Sharma)",
+      "primary_phone": "+919828019944",
+      "customer_type": "buyer",
+      "duration_seconds": 82,
+      "conversation_outcome": "appointment_requested",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Tata 200 Trial Confirmation",
+      "price_raw": "25 Lakh",
+      "location": "Jaipur, Rajasthan",
+      "next_action": "Gate pass issued for tomorrow 2 PM",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 114,
+      "lead_id": "demo_lead_b02",
+      "call_number": 1,
+      "created_at": "2026-09-10T12:45:00.000Z",
+      "formatted_time": "10 Sep 2026, 12:45 PM",
+      "customer_name": "Choudhary Infra Projects",
+      "primary_phone": "+919413345511",
+      "customer_type": "buyer",
+      "duration_seconds": 130,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "WARM",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "JCB JS 205 (Budget ₹26-28L)",
+      "price_raw": "26-28 Lakh",
+      "location": "Jodhpur, Rajasthan",
+      "next_action": "Send PDF catalog on WhatsApp",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 115,
+      "lead_id": "demo_lead_b03",
+      "call_number": 1,
+      "created_at": "2026-09-10T15:00:00.000Z",
+      "formatted_time": "10 Sep 2026, 03:00 PM",
+      "customer_name": "Balaji Earthmovers",
+      "primary_phone": "+919784012999",
+      "customer_type": "buyer",
+      "duration_seconds": 145,
+      "conversation_outcome": "appointment_requested",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "20-Ton Class (Budget ₹18-20L)",
+      "price_raw": "18-20 Lakh",
+      "location": "Kota, Rajasthan",
+      "next_action": "Match incoming units and schedule yard visit",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 116,
+      "lead_id": "demo_lead_b03",
+      "call_number": 2,
+      "created_at": "2026-09-11T13:40:00.000Z",
+      "formatted_time": "11 Sep 2026, 01:40 PM",
+      "customer_name": "Balaji Earthmovers",
+      "primary_phone": "+919784012999",
+      "customer_type": "buyer",
+      "duration_seconds": 95,
+      "conversation_outcome": "appointment_requested",
+      "lead_temperature": "HOT",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Saturday Trial Slot Confirmation",
+      "price_raw": "18-20 Lakh",
+      "location": "Kota, Rajasthan",
+      "next_action": "Reserve Saturday 10 AM yard slot",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 117,
+      "lead_id": "demo_lead_b04",
+      "call_number": 1,
+      "created_at": "2026-09-11T09:30:00.000Z",
+      "formatted_time": "11 Sep 2026, 09:30 AM",
+      "customer_name": "Rajendra Yadav",
+      "primary_phone": "+919829567890",
+      "customer_type": "buyer",
+      "duration_seconds": 112,
+      "conversation_outcome": "lead_qualified",
+      "lead_temperature": "WARM",
+      "qualification_state": "QUALIFIED",
+      "machine_summary": "Tata 210 LC (Budget ₹28-30L, Sikar)",
+      "price_raw": "28-30 Lakh",
+      "location": "Sikar, Rajasthan",
+      "next_action": "Financial pre-approval assistance",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
+    },
+    {
+      "run_id": 118,
+      "lead_id": "demo_lead_b05",
+      "call_number": 1,
+      "created_at": "2026-09-09T16:45:00.000Z",
+      "formatted_time": "09 Sep 2026, 04:45 PM",
+      "customer_name": "Deep Mining Corp",
+      "primary_phone": "+919414992200",
+      "customer_type": "buyer",
+      "duration_seconds": 105,
+      "conversation_outcome": "price_discussion",
+      "lead_temperature": "COLD",
+      "qualification_state": "UNQUALIFIED",
+      "machine_summary": "Komatsu PC 210 (Unrealistic Budget ₹18L)",
+      "price_raw": "18 Lakh",
+      "location": "Bhilwara, Rajasthan",
+      "next_action": "Deal closed lost: budget mismatch",
+      "has_audio": false,
+      "audio_url": null,
+      "transcript": []
     }
   ],
-  "dnc_registry": [
+  "lead_timelines": {
+    "demo_lead_s01": [
+      {
+        "id": "tl_s01_01",
+        "day": "DAY 1",
+        "timestamp": "2026-09-09T10:15:00.000Z",
+        "formatted_time": "09 Sep 2026, 10:15 AM",
+        "activity_type": "CALL_STARTED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Inbound Voice Call #101 Initiated",
+        "description": "Call received from verified mobile +919822104512 in Satara, Maharashtra."
+      },
+      {
+        "id": "tl_s01_02",
+        "day": "DAY 1",
+        "timestamp": "2026-09-09T10:15:15.000Z",
+        "formatted_time": "09 Sep 2026, 10:15 AM",
+        "activity_type": "CALL_CONNECTED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Call Connected & Dialogue Started",
+        "description": "Vaani opened with Shyam Earthmover brand greeting and engaged seller."
+      },
+      {
+        "id": "tl_s01_03",
+        "day": "DAY 1",
+        "timestamp": "2026-09-09T10:17:34.000Z",
+        "formatted_time": "09 Sep 2026, 10:17 AM",
+        "activity_type": "CALL_COMPLETED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Call Completed (Duration: 2m 34s)",
+        "description": "Vaani completed full seller qualification interview without escalation.",
+        "customer_quote": "Haanji, mere paas Tata 200 hai 2019 model, poori mitti ke kaam mein chali hai, 7800 hours chali hai."
+      },
+      {
+        "id": "tl_s01_04",
+        "day": "DAY 1",
+        "timestamp": "2026-09-09T10:18:00.000Z",
+        "formatted_time": "09 Sep 2026, 10:18 AM",
+        "activity_type": "INFORMATION_EXTRACTED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Machine & Sourcing Variables Extracted",
+        "description": "Extracted: Brand: Tata Hitachi | Model: EX 200 LC | Year: 2019 | Hours: 7,200 | Application: Soil/Mitti | Location: Satara | Ownership: Direct Owner."
+      },
+      {
+        "id": "tl_s01_05",
+        "day": "DAY 1",
+        "timestamp": "2026-09-09T10:19:00.000Z",
+        "formatted_time": "09 Sep 2026, 10:19 AM",
+        "activity_type": "LEAD_QUALIFIED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Lead Qualified as HOT",
+        "description": "Model matches high-demand Tata 200 tier; genuine direct seller with clean soft-soil usage history."
+      },
+      {
+        "id": "tl_s01_06",
+        "day": "DAY 1",
+        "timestamp": "2026-09-09T10:20:00.000Z",
+        "formatted_time": "09 Sep 2026, 10:20 AM",
+        "activity_type": "EVIDENCE_REQUESTED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "8-Point Evidence Checklist Created",
+        "description": "Requested: Boom photo, Undercarriage photo, Cabin photo, Counterweight photo, HMR photo, 30s running video, RC copy, and Bank NOC."
+      },
+      {
+        "id": "tl_s01_07",
+        "day": "DAY 2",
+        "timestamp": "2026-09-10T13:45:00.000Z",
+        "formatted_time": "10 Sep 2026, 01:45 PM",
+        "activity_type": "EVIDENCE_RECEIVED",
+        "actor": {
+          "type": "CUSTOMER",
+          "label": "📞 CUSTOMER"
+        },
+        "title": "6/7 Inspection Evidence Items Received",
+        "description": "Customer provided photos (Boom, Cabin, Undercarriage, Counterweight, HMR) and 30s running video. RC/NOC pending.",
+        "customer_quote": "Video aur photos bhej diye hain WhatsApp par. RC kal subah bhejunga."
+      },
+      {
+        "id": "tl_s01_08",
+        "day": "DAY 2",
+        "timestamp": "2026-09-10T14:00:00.000Z",
+        "formatted_time": "10 Sep 2026, 02:00 PM",
+        "activity_type": "PRICE_CAPTURED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Asking Price Calibrated",
+        "description": "Asking Price: ₹22.00 Lakh. Market indicative band: ₹19L - ₹24L. Price is competitive."
+      },
+      {
+        "id": "tl_s01_09",
+        "day": "DAY 2",
+        "timestamp": "2026-09-10T16:00:00.000Z",
+        "formatted_time": "10 Sep 2026, 04:00 PM",
+        "activity_type": "CALL_COMPLETED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Follow-up Call #104 Completed",
+        "description": "Vaani confirmed receipt of running video and requested NOC upload for final deal authorization."
+      },
+      {
+        "id": "tl_s01_10",
+        "day": "DAY 2",
+        "timestamp": "2026-09-10T16:15:00.000Z",
+        "formatted_time": "10 Sep 2026, 04:15 PM",
+        "activity_type": "FOLLOW_UP_CREATED",
+        "actor": {
+          "type": "SYSTEM",
+          "label": "⚙️ SYSTEM"
+        },
+        "title": "Document Verification Follow-up Scheduled",
+        "description": "Scheduled for Tomorrow 11:00 AM. Reason: RC/NOC verification + final price discussion."
+      },
+      {
+        "id": "tl_s01_11",
+        "day": "DAY 3",
+        "timestamp": "2026-09-11T09:30:00.000Z",
+        "formatted_time": "11 Sep 2026, 09:30 AM",
+        "activity_type": "BUYER_MATCH_FOUND",
+        "actor": {
+          "type": "SYSTEM",
+          "label": "⚙️ SYSTEM"
+        },
+        "title": "Matching Buyer Requirement Discovered",
+        "description": "Buyer Match: Om Builders (Sunil Sharma) seeking 20-Ton Tata machine in ₹25L budget for canal project."
+      },
+      {
+        "id": "tl_s01_12",
+        "day": "DAY 3",
+        "timestamp": "2026-09-11T11:15:00.000Z",
+        "formatted_time": "11 Sep 2026, 11:15 AM",
+        "activity_type": "NEGOTIATION_STARTED",
+        "actor": {
+          "type": "OPERATOR",
+          "label": "👤 SALES OPERATOR"
+        },
+        "title": "Procurement Rate Negotiation Initiated",
+        "description": "Vikram (Procurement Lead) conducted Call #105 to anchor purchase at ₹21.5L token advance.",
+        "customer_quote": "21.75 Lakh kar lijiye, machine bilkul tight hai."
+      },
+      {
+        "id": "tl_s01_13",
+        "day": "DAY 3",
+        "timestamp": "2026-09-11T12:00:00.000Z",
+        "formatted_time": "11 Sep 2026, 12:00 PM",
+        "activity_type": "INSPECTION_SCHEDULED",
+        "actor": {
+          "type": "OPERATOR",
+          "label": "👤 SALES OPERATOR"
+        },
+        "title": "Satara Mechanical Inspection Dispatched",
+        "description": "Technical inspector scheduled for 13 Sep 2026, 11:00 AM to perform pressure testing and issue token advance."
+      }
+    ],
+    "demo_lead_b01": [
+      {
+        "id": "tl_b01_01",
+        "day": "DAY 1",
+        "timestamp": "2026-09-10T11:30:00.000Z",
+        "formatted_time": "10 Sep 2026, 11:30 AM",
+        "activity_type": "CALL_STARTED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Inbound Buyer Call #102 Connected",
+        "description": "Call from Sunil Sharma (Om Builders, Jaipur)."
+      },
+      {
+        "id": "tl_b01_02",
+        "day": "DAY 1",
+        "timestamp": "2026-09-10T11:32:15.000Z",
+        "formatted_time": "10 Sep 2026, 11:32 AM",
+        "activity_type": "CALL_COMPLETED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Buyer Requirement Call Completed",
+        "description": "Vaani captured complete commercial criteria and project timeline.",
+        "customer_quote": "Mujhe 20-ton Poclain purchase karni hai canal work ke liye, budget 25 Lakh tak hai."
+      },
+      {
+        "id": "tl_b01_03",
+        "day": "DAY 1",
+        "timestamp": "2026-09-10T11:33:00.000Z",
+        "formatted_time": "10 Sep 2026, 11:33 AM",
+        "activity_type": "INFORMATION_EXTRACTED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Buyer Specs Extracted",
+        "description": "Brand: Tata Hitachi | Class: 20-Ton Class | Budget: ₹25L | Timeline: Immediate (under 7 days) | Delivery: Jaipur."
+      },
+      {
+        "id": "tl_b01_04",
+        "day": "DAY 1",
+        "timestamp": "2026-09-10T11:34:00.000Z",
+        "formatted_time": "10 Sep 2026, 11:34 AM",
+        "activity_type": "LEAD_QUALIFIED",
+        "actor": {
+          "type": "VAANI",
+          "label": "🤖 VAANI"
+        },
+        "title": "Buyer Qualified as HOT",
+        "description": "High intent buyer with urgent canal project requirement and immediate purchase timeline."
+      },
+      {
+        "id": "tl_b01_05",
+        "day": "DAY 2",
+        "timestamp": "2026-09-11T10:00:00.000Z",
+        "formatted_time": "11 Sep 2026, 10:00 AM",
+        "activity_type": "BUYER_MATCH_FOUND",
+        "actor": {
+          "type": "SYSTEM",
+          "label": "⚙️ SYSTEM"
+        },
+        "title": "Matching Yard Unit Identified",
+        "description": "Matched with certified physical stock unit MCH_JPR_2024_01 (Tata Hitachi EX 210 LC Super, 2024, Jaipur Yard)."
+      },
+      {
+        "id": "tl_b01_06",
+        "day": "DAY 2",
+        "timestamp": "2026-09-11T14:15:00.000Z",
+        "formatted_time": "11 Sep 2026, 02:15 PM",
+        "activity_type": "INSPECTION_SCHEDULED",
+        "actor": {
+          "type": "OPERATOR",
+          "label": "👤 SALES OPERATOR"
+        },
+        "title": "Jaipur Yard Visit Scheduled",
+        "description": "Assigned to Yard Manager Devendra. Gate pass and Google Maps pin sent. Trial at 2:00 PM tomorrow."
+      }
+    ]
+  },
+  "recent_activities": [
     {
-      "phone_number": "+919988776655",
-      "customer_name": "Unregistered Caller",
-      "reason": "Caller opted out during greeting: 'Mujhe koi machine nahi leni, phone mat karo'",
-      "opted_out_at": "2026-09-11T13:15:00.000Z",
-      "source": "Inbound Voice Call #103",
-      "is_active": true
+      "activity_id": "act_01",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-11T12:00:00.000Z",
+      "formatted_time": "12:00 PM",
+      "actor": {
+        "type": "OPERATOR",
+        "label": "👤 SALES OPERATOR"
+      },
+      "activity_type": "INSPECTION_SCHEDULED",
+      "title": "Satara On-Site Inspection Scheduled",
+      "description": "Ramesh Patel — Tata Hitachi EX 200 LC (2019, Satara). Technical engineer assigned for load test.",
+      "badge_class": "badge-owner"
+    },
+    {
+      "activity_id": "act_02",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-11T11:15:00.000Z",
+      "formatted_time": "11:15 AM",
+      "actor": {
+        "type": "OPERATOR",
+        "label": "👤 SALES OPERATOR"
+      },
+      "activity_type": "NEGOTIATION_STARTED",
+      "title": "Rate Negotiation Call #105 Completed",
+      "description": "Procurement Lead negotiated ₹21.5L rate against ₹22L asking price.",
+      "badge_class": "badge-seller"
+    },
+    {
+      "activity_id": "act_03",
+      "lead_id": "demo_lead_s03",
+      "timestamp": "2026-09-11T10:30:00.000Z",
+      "formatted_time": "10:30 AM",
+      "actor": {
+        "type": "VAANI",
+        "label": "🤖 VAANI"
+      },
+      "activity_type": "CALL_COMPLETED",
+      "title": "Sourcing Follow-up Call Completed",
+      "description": "Kishore Singh — Tata Hitachi EX 210 (2024, Jaipur). Confirmed Jaipur yard entry.",
+      "badge_class": "badge-qualified"
+    },
+    {
+      "activity_id": "act_04",
+      "lead_id": "demo_lead_b01",
+      "timestamp": "2026-09-11T10:00:00.000Z",
+      "formatted_time": "10:00 AM",
+      "actor": {
+        "type": "SYSTEM",
+        "label": "⚙️ SYSTEM"
+      },
+      "activity_type": "BUYER_MATCH_FOUND",
+      "title": "Buyer Match Found with Stock MCH_JPR_2024_01",
+      "description": "Om Builders (Sunil Sharma) matched with ready Tata 210 in Jaipur yard.",
+      "badge_class": "badge-buyer"
+    },
+    {
+      "activity_id": "act_05",
+      "lead_id": "demo_lead_dnc01",
+      "timestamp": "2026-09-11T09:15:00.000Z",
+      "formatted_time": "09:15 AM",
+      "actor": {
+        "type": "VAANI",
+        "label": "🤖 VAANI"
+      },
+      "activity_type": "DNC_REGISTERED",
+      "title": "DNC Request Suppressed & Isolated",
+      "description": "Caller opted out. Number quarantined in compliance registry.",
+      "badge_class": "badge-danger"
+    },
+    {
+      "activity_id": "act_06",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-10T16:15:00.000Z",
+      "formatted_time": "Yesterday 04:15 PM",
+      "actor": {
+        "type": "SYSTEM",
+        "label": "⚙️ SYSTEM"
+      },
+      "activity_type": "FOLLOW_UP_CREATED",
+      "title": "Document Verification Follow-up Scheduled",
+      "description": "Assigned to Vikram (Procurement Lead) for RC/NOC clearance.",
+      "badge_class": "badge-warm"
+    },
+    {
+      "activity_id": "act_07",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-10T14:00:00.000Z",
+      "formatted_time": "Yesterday 02:00 PM",
+      "actor": {
+        "type": "VAANI",
+        "label": "🤖 VAANI"
+      },
+      "activity_type": "PRICE_CAPTURED",
+      "title": "Asking Price Captured: ₹22.00L",
+      "description": "Tata 200 within ₹19L-₹24L market benchmark.",
+      "badge_class": "badge-qualified"
+    },
+    {
+      "activity_id": "act_08",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-10T13:45:00.000Z",
+      "formatted_time": "Yesterday 01:45 PM",
+      "actor": {
+        "type": "CUSTOMER",
+        "label": "📞 CUSTOMER"
+      },
+      "activity_type": "EVIDENCE_RECEIVED",
+      "title": "Customer Uploaded 6/7 Evidence Items",
+      "description": "Ramesh Patel uploaded 30s boom running video and undercarriage photos.",
+      "badge_class": "badge-owner"
+    },
+    {
+      "activity_id": "act_09",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-09T10:19:00.000Z",
+      "formatted_time": "09 Sep 10:19 AM",
+      "actor": {
+        "type": "VAANI",
+        "label": "🤖 VAANI"
+      },
+      "activity_type": "LEAD_QUALIFIED",
+      "title": "Lead Qualified as HOT",
+      "description": "Tata Hitachi EX 200 LC — high resale liquidity in Maharashtra & MP.",
+      "badge_class": "badge-hot"
+    },
+    {
+      "activity_id": "act_10",
+      "lead_id": "demo_lead_s01",
+      "timestamp": "2026-09-09T10:17:34.000Z",
+      "formatted_time": "09 Sep 10:17 AM",
+      "actor": {
+        "type": "VAANI",
+        "label": "🤖 VAANI"
+      },
+      "activity_type": "CALL_COMPLETED",
+      "title": "Vaani Completed Inbound Call #101",
+      "description": "Duration: 2m 34s. Customer quote: 'Tata Hitachi EX 200 hai, 2019 model, 7800 hours chali hai.'",
+      "badge_class": "badge-qualified"
     }
   ]
 }

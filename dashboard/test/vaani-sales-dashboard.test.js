@@ -225,4 +225,233 @@ test('HTTP API endpoints return valid status and schema', async () => {
   // Existing receptionist endpoint must remain unbroken
   const resReceptionist = await fetch(`${baseUrl}/api/vaani/leads`);
   assert.equal(resReceptionist.status, 200);
+
+  // New Phase B Lead 360 endpoints
+  const resLead360 = await fetch(`${baseUrl}/api/vaani/sales/leads/demo_lead_s01?demo=1`);
+  assert.equal(resLead360.status, 200);
+  const dataLead360 = await resLead360.json();
+  assert.equal(dataLead360.lead_id, 'demo_lead_s01');
+  assert.equal(dataLead360.customer_name, 'Ramesh Patel');
+
+  const resTimeline = await fetch(`${baseUrl}/api/vaani/sales/leads/demo_lead_s01/timeline?demo=1`);
+  assert.equal(resTimeline.status, 200);
+  const dataTimeline = await resTimeline.json();
+  assert.ok(Array.isArray(dataTimeline));
+  assert.ok(dataTimeline.length > 0);
+
+  const resActivities = await fetch(`${baseUrl}/api/vaani/sales/activities?demo=1`);
+  assert.equal(resActivities.status, 200);
+  const dataActivities = await resActivities.json();
+  assert.ok(Array.isArray(dataActivities.activities));
 });
+
+test('Lead 360 structure for seller: Next Action engine, captured vs missing, 8-point evidence, and journey', async () => {
+  const lead = await vaaniSales.getLead360('demo_lead_s01', true);
+  assert.ok(lead, 'Lead 360 object must exist');
+  assert.equal(lead.lead_id, 'demo_lead_s01');
+  assert.equal(lead.customer_name, 'Ramesh Patel');
+  assert.equal(lead.customer_type, 'seller');
+  assert.equal(lead.lead_temperature, 'HOT');
+
+  // Next Action Engine verification
+  assert.ok(lead.current_status, 'Current status must be exposed');
+  assert.ok(lead.next_action, 'Next action must be exposed');
+  assert.ok(lead.owner, 'Owner must be specified');
+  assert.ok(lead.due_display, 'Due date/time must be specified');
+  assert.ok(lead.current_status.includes('Waiting for RC/NOC'), 'Current status must reflect pending verification');
+
+  // What Vaani Learned: Captured vs Missing
+  assert.ok(lead.extracted_vs_missing, 'Extracted vs Missing object must exist');
+  const { captured, missing } = lead.extracted_vs_missing;
+  assert.ok(Array.isArray(captured), 'Captured fields must be an array');
+  assert.ok(Array.isArray(missing), 'Missing fields must be an array');
+  
+  const capturedFields = captured.map(c => c.field);
+  assert.ok(capturedFields.includes('Brand'));
+  assert.ok(capturedFields.includes('Model'));
+  assert.ok(capturedFields.includes('Manufacturing Year'));
+  assert.ok(capturedFields.includes('Hour Meter Reading (HMR)'));
+  assert.ok(capturedFields.includes('Asking Price'));
+
+  // 8-Point Physical Evidence Checklist
+  assert.ok(Array.isArray(lead.evidence_checklist), 'Evidence checklist must be an array');
+  assert.equal(lead.evidence_checklist.length, 8, 'Must contain standard 8-point evidence items');
+  
+  const evidenceKeys = lead.evidence_checklist.map(e => e.key);
+  assert.ok(evidenceKeys.includes('boom_photo'));
+  assert.ok(evidenceKeys.includes('undercarriage_photo'));
+  assert.ok(evidenceKeys.includes('cabin_photo'));
+  assert.ok(evidenceKeys.includes('counterweight_photo'));
+  assert.ok(evidenceKeys.includes('hmr_photo'));
+  assert.ok(evidenceKeys.includes('running_video'));
+  assert.ok(evidenceKeys.includes('rc_copy'));
+  assert.ok(evidenceKeys.includes('finance_noc'));
+
+  // Verify honest labeling in evidence checklist (no fake WhatsApp claims)
+  lead.evidence_checklist.forEach(item => {
+    assert.ok(item.status in { received: 1, verified: 1, pending: 1, requested: 1 }, `Invalid status ${item.status}`);
+    assert.ok(item.note, 'Each evidence item must have an honest operational note');
+    assert.ok(!item.note.includes('WhatsApp message confirmed delivered'), 'Must not claim false WhatsApp delivery');
+  });
+
+  // Seller Sales Journey Progression
+  assert.ok(Array.isArray(lead.journey_progression), 'Journey progression must be an array');
+  assert.equal(lead.journey_progression.length, 14, 'Seller journey must have 14 operational stages');
+  const stageKeys = lead.journey_progression.map(s => s.key);
+  assert.ok(stageKeys.includes('call_initial'));
+  assert.ok(stageKeys.includes('machine_details'));
+  assert.ok(stageKeys.includes('asking_price'));
+  assert.ok(stageKeys.includes('evidence_collection'));
+  assert.ok(stageKeys.includes('qualification'));
+  assert.ok(stageKeys.includes('buyer_matching'));
+  assert.ok(stageKeys.includes('deal_closing'));
+
+  // Verify active stage
+  const activeStages = lead.journey_progression.filter(s => s.status === 'active');
+  assert.equal(activeStages.length, 1, 'Exactly one stage must be active');
+  assert.equal(activeStages[0].key, 'evidence_collection');
+});
+
+test('Lead 360 structure for buyer: requirement extraction, buyer journey, and matched options', async () => {
+  const buyerLead = await vaaniSales.getLead360('demo_lead_b01', true);
+  assert.ok(buyerLead, 'Buyer Lead 360 must exist');
+  assert.equal(buyerLead.lead_id, 'demo_lead_b01');
+  assert.ok(buyerLead.customer_name.includes('Sunil Sharma'));
+  assert.equal(buyerLead.customer_type, 'buyer');
+  assert.equal(buyerLead.lead_temperature, 'HOT');
+
+  // Buyer extracted vs missing
+  const { captured, missing } = buyerLead.extracted_vs_missing;
+  const capturedFields = captured.map(c => c.field);
+  assert.ok(capturedFields.includes('Required Brand'));
+  assert.ok(capturedFields.includes('Tonnage Class'));
+  assert.ok(capturedFields.includes('Maximum Budget'));
+  assert.ok(capturedFields.includes('Purchase Timeline'));
+
+  // Buyer Journey (14 stages)
+  assert.ok(Array.isArray(buyerLead.journey_progression));
+  assert.equal(buyerLead.journey_progression.length, 14, 'Buyer journey must have 14 operational stages');
+  const buyerStageKeys = buyerLead.journey_progression.map(s => s.key);
+  assert.ok(buyerStageKeys.includes('machine_requirement'));
+  assert.ok(buyerStageKeys.includes('budget'));
+  assert.ok(buyerStageKeys.includes('matching'));
+  assert.ok(buyerStageKeys.includes('yard_visit'));
+  assert.ok(buyerStageKeys.includes('deal'));
+
+  const activeBuyerStages = buyerLead.journey_progression.filter(s => s.status === 'active');
+  assert.equal(activeBuyerStages.length, 1);
+  assert.ok(['matching', 'yard_visit'].includes(activeBuyerStages[0].key));
+});
+
+test('Lead timeline ordering, multi-day grouping, customer quotes, and actor attribution', async () => {
+  const timeline = await vaaniSales.getLeadTimeline('demo_lead_s01', true);
+  assert.ok(Array.isArray(timeline));
+  assert.ok(timeline.length >= 6, 'Timeline should contain multi-event history');
+
+  // Verify chronological ordering
+  for (let i = 0; i < timeline.length - 1; i++) {
+    const tCurrent = new Date(timeline[i].timestamp).getTime();
+    const tNext = new Date(timeline[i + 1].timestamp).getTime();
+    assert.ok(tCurrent <= tNext, `Timeline events must be in chronological order: ${timeline[i].title} (${tCurrent}) > ${timeline[i + 1].title} (${tNext})`);
+  }
+
+  // Verify multi-day progression
+  const days = new Set(timeline.map(e => e.day_label));
+  assert.ok(days.size >= 2, 'Timeline must persist across multiple days (Day 1, Day 2, etc.)');
+  assert.ok(days.has('Day 1'));
+  assert.ok(days.has('Day 2'));
+
+  // Verify actor attribution
+  const validActors = ['vaani', 'customer', 'operator', 'system'];
+  timeline.forEach(event => {
+    assert.ok(validActors.includes(event.actor), `Event actor ${event.actor} must be one of ${validActors.join(', ')}`);
+    assert.ok(event.actor_label, 'Event must have a human-readable actor label');
+  });
+
+  const actorsPresent = new Set(timeline.map(e => e.actor));
+  assert.ok(actorsPresent.has('vaani'), 'Timeline must include AI Vaani actions');
+  assert.ok(actorsPresent.has('customer'), 'Timeline must include Customer actions');
+  assert.ok(actorsPresent.has('operator'), 'Timeline must include Sales Operator actions');
+  assert.ok(actorsPresent.has('system'), 'Timeline must include System actions');
+
+  // Verify customer speech quotes are preserved
+  const quotes = timeline.filter(e => e.customer_quote);
+  assert.ok(quotes.length > 0, 'Customer speech quotes should be preserved in timeline');
+  assert.ok(quotes.some(q => q.customer_quote.includes('Tata')));
+
+  // Verify activity types match sales ontology
+  const supportedTypes = [
+    'CALL_STARTED', 'CALL_CONNECTED', 'CALL_COMPLETED', 'INFORMATION_EXTRACTED',
+    'LEAD_QUALIFIED', 'TEMPERATURE_CHANGED', 'EVIDENCE_REQUESTED', 'EVIDENCE_RECEIVED',
+    'EVIDENCE_VERIFIED', 'PRICE_CAPTURED', 'PRICE_CHANGED', 'FOLLOW_UP_CREATED',
+    'FOLLOW_UP_COMPLETED', 'FOLLOW_UP_MISSED', 'BUYER_MATCH_FOUND', 'BUYER_INTERESTED',
+    'NEGOTIATION_STARTED', 'INSPECTION_SCHEDULED', 'DEAL_WON', 'DEAL_LOST', 'DNC_REGISTERED'
+  ];
+  timeline.forEach(event => {
+    assert.ok(supportedTypes.includes(event.activity_type), `Activity type ${event.activity_type} must be supported`);
+  });
+});
+
+test('Multiple calls belonging to ONE lead (call count vs lead count)', async () => {
+  const overview = await vaaniSales.getOverview(true);
+  
+  // Total unique leads = 12, Connected calls = 18
+  assert.equal(overview.total_leads, 12, 'Total unique leads count is 12');
+  assert.equal(overview.connected_calls, 18, 'Connected calls count is 18');
+  assert.ok(overview.connected_calls > overview.total_leads, 'Calls count exceeds unique leads count');
+
+  // Lead demo_lead_s01 has 3 linked calls
+  const leadS01 = await vaaniSales.getLead360('demo_lead_s01', true);
+  assert.ok(Array.isArray(leadS01.linked_calls));
+  assert.equal(leadS01.linked_calls.length, 3, 'Ramesh Patel must have 3 linked call sessions');
+
+  // Verify all 3 calls belong to this same lead and have distinct run_ids
+  const runIds = leadS01.linked_calls.map(c => c.run_id);
+  assert.equal(runIds.length, 3);
+  assert.equal(new Set(runIds).size, 3, 'Run IDs must be distinct across calls');
+  assert.ok(runIds.includes(101));
+  assert.ok(runIds.includes(104));
+  assert.ok(runIds.includes(105));
+
+  // Buyer demo_lead_b01 has 2 linked calls
+  const leadB01 = await vaaniSales.getLead360('demo_lead_b01', true);
+  assert.ok(Array.isArray(leadB01.linked_calls));
+  assert.equal(leadB01.linked_calls.length, 2, 'Sunil Sharma must have 2 linked call sessions');
+});
+
+test('DNC isolation in Lead 360 and timeline', async () => {
+  const dncLead = await vaaniSales.getLead360('demo_lead_dnc01', true);
+  assert.ok(dncLead, 'DNC lead must be retrievable for compliance audit');
+  assert.equal(dncLead.customer_type, 'dnc');
+  assert.equal(dncLead.dnc_requested, true);
+  assert.equal(dncLead.lead_temperature, 'COLD');
+  assert.ok(dncLead.next_action.includes('DO NOT CALL') || dncLead.next_action.includes('Do Not Call'));
+
+  // Timeline must contain DNC_REGISTERED
+  const dncTimeline = await vaaniSales.getLeadTimeline('demo_lead_dnc01', true);
+  assert.ok(dncTimeline.some(e => e.activity_type === 'DNC_REGISTERED'));
+});
+
+test('Overview recent activities feed and honest empty state in Real DB', async () => {
+  // Demo mode activities
+  const demoActivities = await vaaniSales.getRecentActivities(10, true);
+  assert.ok(Array.isArray(demoActivities));
+  assert.ok(demoActivities.length > 0);
+  assert.ok(demoActivities[0].actor);
+  assert.ok(demoActivities[0].title);
+  assert.ok(demoActivities[0].activity_type);
+
+  // Overview includes recent activities
+  const overview = await vaaniSales.getOverview(true);
+  assert.ok(Array.isArray(overview.recent_activities));
+  assert.ok(overview.recent_activities.length > 0);
+
+  // Real DB activity test (non-demo)
+  const realActivities = await vaaniSales.getRecentActivities(10, false);
+  assert.ok(Array.isArray(realActivities), 'Real DB activities must return an array');
+  // Must NEVER fabricate fake activities
+  realActivities.forEach(act => {
+    assert.ok(act.run_id || act.id, 'Real DB activities must have actual run_id/id groundings');
+  });
+});
+
