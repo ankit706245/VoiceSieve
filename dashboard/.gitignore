@@ -4,6 +4,8 @@
 # Runtime state (auto-created and seeded on first boot).
 data/
 !data/.gitkeep
+!data/fixtures/
+!data/fixtures/**
 
 # Dependencies (there are none, but never sync these if they ever appear).
 node_modules

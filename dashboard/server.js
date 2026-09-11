@@ -25,6 +25,7 @@ core.loadEnv();
 const providers = require('./lib/providers');
 const payu = require('./lib/payu');
 const demoLinks = require('./lib/demo-links');
+const vaaniSales = require('./lib/vaani-sales');
 
 const PORT = parseInt(process.env.PORT || '8787', 10);
 const DEFAULT_PROVIDERS = Object.freeze({
@@ -1585,6 +1586,70 @@ const server = http.createServer(async (req, res) => {
       if (route === '/api/vaani/leads' && req.method === 'GET') {
         return apiVaaniLeads(req, res);
       }
+
+      // ---- Vaani Used Excavator Sales APIs ----
+      if (route.startsWith('/api/vaani/sales/')) {
+        const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        const isDemo = urlObj.searchParams.get('demo') === '1' || req.headers['x-vaani-demo'] === 'true';
+
+        if (route === '/api/vaani/sales/overview' && req.method === 'GET') {
+          const data = await vaaniSales.getOverview(isDemo);
+          return core.sendJson(res, 200, data);
+        }
+        if (route === '/api/vaani/sales/sellers' && req.method === 'GET') {
+          const filters = Object.fromEntries(urlObj.searchParams.entries());
+          const data = await vaaniSales.getSellers(filters, isDemo);
+          return core.sendJson(res, 200, { total: data.length, sellers: data });
+        }
+        if (route === '/api/vaani/sales/buyers' && req.method === 'GET') {
+          const filters = Object.fromEntries(urlObj.searchParams.entries());
+          const data = await vaaniSales.getBuyers(filters, isDemo);
+          return core.sendJson(res, 200, { total: data.length, buyers: data });
+        }
+        if (route === '/api/vaani/sales/machines' && req.method === 'GET') {
+          const data = await vaaniSales.getMachines(isDemo);
+          return core.sendJson(res, 200, data);
+        }
+        if (route === '/api/vaani/sales/demand' && req.method === 'GET') {
+          const data = await vaaniSales.getDemand(isDemo);
+          return core.sendJson(res, 200, data);
+        }
+        if (route === '/api/vaani/sales/follow-ups' && req.method === 'GET') {
+          const data = await vaaniSales.getFollowUps(isDemo);
+          return core.sendJson(res, 200, data);
+        }
+        if (route === '/api/vaani/sales/calls' && req.method === 'GET') {
+          const data = await vaaniSales.getCalls(isDemo);
+          return core.sendJson(res, 200, { total: data.length, calls: data });
+        }
+        if (route.startsWith('/api/vaani/sales/calls/') && req.method === 'GET') {
+          const runId = route.slice('/api/vaani/sales/calls/'.length);
+          const data = await vaaniSales.getCallDetail(runId, isDemo);
+          if (!data) return core.sendJson(res, 404, { error: 'call not found', code: 'not_found' });
+          return core.sendJson(res, 200, data);
+        }
+        if (route === '/api/vaani/sales/dnc' && req.method === 'GET') {
+          const data = await vaaniSales.getDncRegistry(isDemo);
+          return core.sendJson(res, 200, { total: data.length, dnc_records: data });
+        }
+        if (route === '/api/vaani/sales/search' && req.method === 'GET') {
+          const q = urlObj.searchParams.get('q') || '';
+          const data = await vaaniSales.searchLeads(q, isDemo);
+          return core.sendJson(res, 200, { query: q, total: data.length, results: data });
+        }
+        if (route === '/api/vaani/sales/follow-up/status' && req.method === 'POST') {
+          return core.readJsonBody(req, res, (body) => {
+            const { id, status } = body || {};
+            if (!id || !status) return core.sendJson(res, 422, { error: 'id and status required', code: 'bad_request' });
+            try {
+              const updated = vaaniSales.updateFollowUpStatus(id, status);
+              return core.sendJson(res, 200, updated);
+            } catch (err) {
+              return core.sendJson(res, 422, { error: err.message, code: 'invalid_status' });
+            }
+          });
+        }
+      }
       if (route.startsWith('/api/public/demo/') && req.method === 'GET') {
         const token = decodeURIComponent(route.slice('/api/public/demo/'.length));
         if (token.includes('/')) return core.sendJson(res, 404, { error: 'demo link not found', code: 'not_found' });
@@ -1693,6 +1758,10 @@ const server = http.createServer(async (req, res) => {
     }
     if (['GET', 'HEAD'].includes(req.method || '') && (route === '/vaani' || route === '/vaani.html')) {
       req.url = '/vaani.html';
+      return core.serveStatic(req, res);
+    }
+    if (['GET', 'HEAD'].includes(req.method || '') && (route === '/vaani-sales' || route === '/sales' || route === '/vaani-sales.html')) {
+      req.url = '/vaani-sales.html';
       return core.serveStatic(req, res);
     }
     if (['GET', 'HEAD'].includes(req.method || '') && route === '/console.html') {
