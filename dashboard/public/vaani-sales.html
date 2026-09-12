@@ -1205,10 +1205,10 @@
     <!-- Header -->
     <header class="header">
       <div class="brand-section">
-        <div class="brand-logo-badge">SE</div>
+        <div class="brand-logo-badge" id="brandLogoBadge">SE</div>
         <div class="brand-titles">
-          <h1>SHYAM EARTHMOVER <span class="brand-badge">Vaani — AI Sales Command Center</span></h1>
-          <p>Heavy Equipment Procurement & Resale Intelligence Console</p>
+          <h1><span id="tenantBrandName">SHYAM EARTHMOVER</span> <span class="brand-badge" id="tenantBrandBadge">Vaani — AI Sales Command Center</span></h1>
+          <p id="tenantBrandSub">Heavy Equipment Procurement & Resale Intelligence Console</p>
         </div>
       </div>
 
@@ -1223,6 +1223,17 @@
         <div class="mode-toggle-group">
           <button id="modeRealBtn" class="mode-btn" title="Live data queried from Postgres workflow_runs and sales tables">Real DB</button>
           <button id="modeDemoBtn" class="mode-btn" title="Grounded heavy-equipment test dataset from 18 WhatsApp recordings">Demo Data</button>
+        </div>
+
+        <!-- User Context & Logout -->
+        <div class="user-auth-badge" id="userAuthBadge" style="display: flex; align-items: center; gap: 10px; margin-left: 8px;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+            <span id="userEmailLabel" style="font-size: 12px; font-weight: 600; color: var(--text-main);"></span>
+            <span id="userRoleBadge" style="font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;"></span>
+          </div>
+          <button id="logoutBtn" class="mode-btn" title="Sign out" style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-color: rgba(244,63,94,0.3); color: #fca5a5;">
+            <span>🚪</span> <span>Sign Out</span>
+          </button>
         </div>
       </div>
     </header>
@@ -1940,9 +1951,25 @@
   <!-- Global Toast -->
   <div class="toast" id="toast"></div>
 
+  <!-- Session Expired / Unauthorized Modal Overlay -->
+  <div id="sessionOverlay" style="display: none; position: fixed; inset: 0; background: rgba(10,11,16,0.92); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-card); border: 1px solid var(--gold); border-radius: var(--radius-lg); padding: 32px; max-width: 440px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+      <div style="font-size: 40px; margin-bottom: 12px;">🔒</div>
+      <h2 id="sessionOverlayTitle" style="color: var(--text-main); font-size: 18px; margin-bottom: 8px;">Session Expired</h2>
+      <p id="sessionOverlayMsg" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Your session has expired or is invalid. Redirecting to sign in...</p>
+      <button id="sessionOverlayAction" class="btn-primary" style="width: 100%; padding: 10px 16px; background: var(--gold); color: #111; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;">Go to Sign In</button>
+    </div>
+  </div>
+
+  <!-- Safe Access Denied Banner -->
+  <div id="accessDeniedBanner" style="display: none; position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(244,63,94,0.15); border: 1px solid var(--rose); color: #fecdd3; padding: 12px 24px; border-radius: var(--radius); z-index: 9998; font-size: 13px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+    <span style="margin-right: 8px;">⛔</span> <span id="accessDeniedText">Access Denied: You do not have permission to access this resource.</span>
+  </div>
+
   <script>
     // State management
     const state = {
+      me: null,
       isDemo: new URLSearchParams(window.location.search).get('demo') === '1',
       activeView: 'overview',
       overview: null,
@@ -1956,6 +1983,144 @@
       activeDrawerItem: null
     };
 
+    // Centralized API fetch wrapper with 401 & 403 handling
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        clearSensitiveState();
+        showSessionExpired('Your session has expired or is invalid. Redirecting to sign in...');
+        throw new Error('Unauthorized');
+      }
+      if (res.status === 403) {
+        showAccessDenied('Access Denied: You do not have permission to access this resource.');
+        throw new Error('Forbidden');
+      }
+      return res;
+    }
+
+    // Clear all in-memory dashboard state and DOM representations
+    function clearSensitiveState() {
+      state.overview = null;
+      state.sellers = [];
+      state.buyers = [];
+      state.machines = { machine_master: [], actual_stock: [] };
+      state.demand = null;
+      state.followups = { overdue: [], due_today: [], upcoming: [] };
+      state.calls = [];
+      state.dnc = [];
+      state.activeDrawerItem = null;
+      state.recentActivities = [];
+
+      const containerIds = [
+        'sellersTableBody', 'buyersTableBody', 'stockTableBody',
+        'masterTableBody', 'demandTableBody', 'followupsTableBody',
+        'callsTableBody', 'dncTableBody', 'activitiesTimeline'
+      ];
+      containerIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      const drawer = document.getElementById('leadDrawer');
+      if (drawer) drawer.classList.remove('open');
+    }
+
+    function showSessionExpired(msg) {
+      const overlay = document.getElementById('sessionOverlay');
+      const msgEl = document.getElementById('sessionOverlayMsg');
+      if (msgEl && msg) msgEl.textContent = msg;
+      if (overlay) overlay.style.display = 'flex';
+      setTimeout(() => {
+        window.location.href = '/app.html?redirect=/vaani-sales';
+      }, 1200);
+    }
+
+    function showAccessDenied(msg) {
+      const banner = document.getElementById('accessDeniedBanner');
+      const text = document.getElementById('accessDeniedText');
+      if (text && msg) text.textContent = msg;
+      if (banner) {
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 4000);
+      }
+    }
+
+    // Authenticated identity verification on boot
+    async function checkAuthAndInit() {
+      try {
+        const res = await fetch('/api/me');
+        if (res.status === 401 || !res.ok) {
+          clearSensitiveState();
+          showSessionExpired('Authentication required. Redirecting to sign in...');
+          return false;
+        }
+        const data = await res.json();
+        state.me = data;
+        applyUserTenantContext(data);
+        return true;
+      } catch (err) {
+        clearSensitiveState();
+        showSessionExpired('Authentication check failed. Redirecting to sign in...');
+        return false;
+      }
+    }
+
+    // Dynamically apply tenant/company branding and user info
+    function applyUserTenantContext(data) {
+      const user = data.user || {};
+      const tenant = data.tenant || {};
+
+      let companyName = 'SHYAM EARTHMOVER';
+      if (tenant.organization_id && Number(tenant.organization_id) !== 1) {
+        companyName = (tenant.name || 'CLIENT WORKSPACE').toUpperCase();
+      } else if (tenant.name && tenant.name.toLowerCase() !== 'braviex') {
+        companyName = tenant.name.toUpperCase();
+      }
+
+      // Set company name in header
+      const brandNameEl = document.getElementById('tenantBrandName');
+      if (brandNameEl) brandNameEl.textContent = companyName;
+
+      // Set initials monogram in badge
+      const words = companyName.trim().split(/\s+/).filter(Boolean);
+      let initials = 'SE';
+      if (words.length >= 2) {
+        initials = (words[0][0] + words[1][0]).toUpperCase();
+      } else if (words.length === 1 && words[0].length >= 2) {
+        initials = words[0].slice(0, 2).toUpperCase();
+      }
+      const badgeLogoEl = document.getElementById('brandLogoBadge');
+      if (badgeLogoEl) badgeLogoEl.textContent = initials;
+
+      // User email / name
+      const emailEl = document.getElementById('userEmailLabel');
+      if (emailEl) emailEl.textContent = user.email || user.name || 'User';
+
+      // User role badge
+      const roleEl = document.getElementById('userRoleBadge');
+      if (roleEl) roleEl.textContent = (user.role || 'member').toUpperCase();
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (_) {}
+      clearSensitiveState();
+      window.location.href = '/app.html';
+    }
+
+    function initAuthHandlers() {
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      const overlayBtn = document.getElementById('sessionOverlayAction');
+      if (overlayBtn) {
+        overlayBtn.addEventListener('click', () => {
+          window.location.href = '/app.html?redirect=/vaani-sales';
+        });
+      }
+    }
+
     // Toast notification
     function showToast(msg) {
       const toast = document.getElementById('toast');
@@ -1965,13 +2130,18 @@
     }
 
     // Initialize UI
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       initNavigation();
       initModeToggle();
       initSearch();
       initDrawer();
       initFilters();
-      loadAllData();
+      initAuthHandlers();
+
+      const authed = await checkAuthAndInit();
+      if (authed) {
+        loadAllData();
+      }
     });
 
     // Navigation setup
@@ -2069,7 +2239,7 @@
 
       try {
         const url = `/api/vaani/sales/search?q=${encodeURIComponent(query)}${state.isDemo ? '&demo=1' : ''}`;
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         const data = await res.json();
         const results = data.results || [];
 
@@ -2153,7 +2323,7 @@
       // Fetch full Lead 360 data
       try {
         const queryParam = state.isDemo ? '?demo=1' : '';
-        const res = await fetch(`/api/vaani/sales/leads/${encodeURIComponent(leadId)}${queryParam}`);
+        const res = await apiFetch(`/api/vaani/sales/leads/${encodeURIComponent(leadId)}${queryParam}`);
         if (res.ok) {
           const l360 = await res.json();
           state.activeLead360 = l360;
@@ -2161,6 +2331,11 @@
           return;
         }
       } catch (err) {
+        if (err.message === 'Unauthorized' || err.message === 'Forbidden') {
+          backdrop.classList.remove('open');
+          drawer.classList.remove('open');
+          return;
+        }
         console.warn('Failed to load Lead 360 from API:', err);
       }
 
@@ -2471,15 +2646,18 @@
 
       try {
         const [ovRes, selRes, buyRes, machRes, demRes, fupRes, callRes, dncRes, actRes] = await Promise.all([
-          fetch(`/api/vaani/sales/overview${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/sellers${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/buyers${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/machines${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/demand${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/follow-ups${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/calls${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/dnc${queryParam}`).then(r => r.json()),
-          fetch(`/api/vaani/sales/activities${queryParam}`).then(r => r.json()).catch(() => ({ activities: [] }))
+          apiFetch(`/api/vaani/sales/overview${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/sellers${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/buyers${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/machines${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/demand${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/follow-ups${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/calls${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/dnc${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/activities${queryParam}`).then(r => r.json()).catch(e => {
+            if (e.message === 'Unauthorized' || e.message === 'Forbidden') throw e;
+            return { activities: [] };
+          })
         ]);
 
         state.overview = ovRes;
@@ -2494,6 +2672,9 @@
 
         renderAll();
       } catch (err) {
+        if (err.message === 'Unauthorized' || err.message === 'Forbidden') {
+          return;
+        }
         console.error('Failed to load dashboard data:', err);
         showToast('Error connecting to sales API');
       }
@@ -2959,7 +3140,7 @@
 
     async function updateFollowupStatus(id, newStatus) {
       try {
-        const res = await fetch('/api/vaani/sales/follow-up/status', {
+        const res = await apiFetch('/api/vaani/sales/follow-up/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ id, status: newStatus })
@@ -2970,6 +3151,7 @@
           loadAllData();
         }
       } catch (err) {
+        if (err.message === 'Unauthorized' || err.message === 'Forbidden') return;
         showToast('Failed to update follow-up');
       }
     }

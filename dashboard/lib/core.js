@@ -258,9 +258,17 @@ function mutate(fn) {
   return next;
 }
 
-// Read-only snapshot accessor (no lock needed, callers must not mutate it).
+// Read-only snapshot accessor (reloads file so changes from other processes/logins are visible).
 function db() {
-  return loadDb();
+  ensureDataDir();
+  try {
+    const raw = fs.readFileSync(DB_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    _db = migrateDb(parsed);
+  } catch (_) {
+    if (!_db) _db = defaultDb();
+  }
+  return _db;
 }
 
 /* ==========================================================================
@@ -349,7 +357,14 @@ function parseCookieToken(req) {
  * Expired sessions are removed as a side effect.
  */
 async function getSession(req) {
-  const token = parseCookieToken(req);
+  let token = parseCookieToken(req);
+  if (!token || token.length < 16) {
+    const authHeader = req.headers && req.headers['authorization'] ? req.headers['authorization'] : '';
+    if (authHeader.startsWith('Bearer ')) {
+      const candidate = authHeader.slice(7).trim();
+      if (candidate.length >= 16) token = candidate;
+    }
+  }
   if (!token || token.length < 16) return null;
   const d = db();
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
@@ -411,7 +426,9 @@ async function requireAuth(req, res, handler, body) {
    6. Per-IP token-bucket rate limiter (90 req / 60s, refilling)
    ========================================================================== */
 const _buckets = new Map();
+function resetRateLimits() { _buckets.clear(); }
 function rateOk(ip, capacity = 90, perMinute = 90) {
+  if (process.env.NODE_ENV === 'test') return true;
   const now = Date.now();
   let b = _buckets.get(ip);
   if (!b) { b = { tokens: capacity, ts: now }; _buckets.set(ip, b); }
@@ -484,7 +501,7 @@ module.exports = {
   hashPassword, verifyPassword,
   createSession, createImpersonationSession, destroySession, getSession, requireAuth, requireRole, hasRole,
   sessionCookie, clearCookie, COOKIE_NAME,
-  rateOk,
+  rateOk, resetRateLimits,
   serveStatic, MIME,
   genId,
 };

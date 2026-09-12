@@ -2,6 +2,7 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const core = require('../lib/core');
 const vaaniSales = require('../lib/vaani-sales');
 
 test('overview KPI calculation and funnel structure', async () => {
@@ -129,7 +130,7 @@ test('follow-up categorization and status mutation', async () => {
 
   // Test mutation
   const testId = 'fup_01';
-  const updated = vaaniSales.updateFollowUpStatus(testId, 'completed');
+  const updated = await vaaniSales.updateFollowUpStatus(testId, 'completed');
   assert.equal(updated.success, true);
   assert.equal(updated.status, 'completed');
 
@@ -192,54 +193,62 @@ test('global search across customers, machine model, and location', async () => 
 test('HTTP API endpoints return valid status and schema', async () => {
   const baseUrl = 'http://localhost:8787';
 
+  // Verify unauthenticated request returns 401
+  const unauthRes = await fetch(`${baseUrl}/api/vaani/sales/overview?demo=1`);
+  assert.equal(unauthRes.status, 401);
+
+  // Authenticate with valid session token
+  const token = await core.createSession('u_290fde84dd4df51e', 't_69d344e9ee8945d8');
+  const headers = { Cookie: `rxv_sess=${token}` };
+
   // Overview
-  const resOverview = await fetch(`${baseUrl}/api/vaani/sales/overview?demo=1`);
+  const resOverview = await fetch(`${baseUrl}/api/vaani/sales/overview?demo=1`, { headers });
   assert.equal(resOverview.status, 200);
   const dataOverview = await resOverview.json();
   assert.ok(dataOverview.total_leads >= 0);
 
   // Sellers
-  const resSellers = await fetch(`${baseUrl}/api/vaani/sales/sellers?demo=1`);
+  const resSellers = await fetch(`${baseUrl}/api/vaani/sales/sellers?demo=1`, { headers });
   assert.equal(resSellers.status, 200);
   const dataSellers = await resSellers.json();
   assert.ok(Array.isArray(dataSellers.sellers));
 
   // Buyers
-  const resBuyers = await fetch(`${baseUrl}/api/vaani/sales/buyers?demo=1`);
+  const resBuyers = await fetch(`${baseUrl}/api/vaani/sales/buyers?demo=1`, { headers });
   assert.equal(resBuyers.status, 200);
   const dataBuyers = await resBuyers.json();
   assert.ok(Array.isArray(dataBuyers.buyers));
 
   // Machines
-  const resMachines = await fetch(`${baseUrl}/api/vaani/sales/machines?demo=1`);
+  const resMachines = await fetch(`${baseUrl}/api/vaani/sales/machines?demo=1`, { headers });
   assert.equal(resMachines.status, 200);
   const dataMachines = await resMachines.json();
   assert.ok(Array.isArray(dataMachines.machine_master));
 
   // DNC
-  const resDnc = await fetch(`${baseUrl}/api/vaani/sales/dnc?demo=1`);
+  const resDnc = await fetch(`${baseUrl}/api/vaani/sales/dnc?demo=1`, { headers });
   assert.equal(resDnc.status, 200);
   const dataDnc = await resDnc.json();
   assert.ok(Array.isArray(dataDnc.dnc_records));
 
   // Existing receptionist endpoint must remain unbroken
-  const resReceptionist = await fetch(`${baseUrl}/api/vaani/leads`);
+  const resReceptionist = await fetch(`${baseUrl}/api/vaani/leads`, { headers });
   assert.equal(resReceptionist.status, 200);
 
   // New Phase B Lead 360 endpoints
-  const resLead360 = await fetch(`${baseUrl}/api/vaani/sales/leads/demo_lead_s01?demo=1`);
+  const resLead360 = await fetch(`${baseUrl}/api/vaani/sales/leads/demo_lead_s01?demo=1`, { headers });
   assert.equal(resLead360.status, 200);
   const dataLead360 = await resLead360.json();
   assert.equal(dataLead360.lead_id, 'demo_lead_s01');
   assert.equal(dataLead360.customer_name, 'Ramesh Patel');
 
-  const resTimeline = await fetch(`${baseUrl}/api/vaani/sales/leads/demo_lead_s01/timeline?demo=1`);
+  const resTimeline = await fetch(`${baseUrl}/api/vaani/sales/leads/demo_lead_s01/timeline?demo=1`, { headers });
   assert.equal(resTimeline.status, 200);
   const dataTimeline = await resTimeline.json();
   assert.ok(Array.isArray(dataTimeline));
   assert.ok(dataTimeline.length > 0);
 
-  const resActivities = await fetch(`${baseUrl}/api/vaani/sales/activities?demo=1`);
+  const resActivities = await fetch(`${baseUrl}/api/vaani/sales/activities?demo=1`, { headers });
   assert.equal(resActivities.status, 200);
   const dataActivities = await resActivities.json();
   assert.ok(Array.isArray(dataActivities.activities));

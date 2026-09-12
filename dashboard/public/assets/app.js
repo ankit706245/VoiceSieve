@@ -303,6 +303,12 @@ function renderAuth() {
       State.me = { user: res.user, tenant: res.tenant };
       resetData();
       toast(mode === 'login' ? 'Signed in.' : 'Account created.', 'ok');
+      const params = new URLSearchParams(window.location.search);
+      const redirect = params.get('redirect');
+      if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+        window.location.href = redirect;
+        return;
+      }
       renderShell();
     } catch (ex) {
       btn.disabled = false; btn.textContent = mode === 'login' ? 'Enter Agency OS' : 'Create workspace';

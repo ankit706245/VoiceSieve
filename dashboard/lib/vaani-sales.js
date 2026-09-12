@@ -13,7 +13,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execFile } = require('child_process');
+const { execFile, spawn } = require('child_process');
 
 const FIXTURE_PATH = path.join(__dirname, '..', 'data', 'fixtures', 'demo-sales-data.json');
 
@@ -102,89 +102,79 @@ function loadDemoData() {
   }
 }
 
-function queryPostgres(sql) {
+function sqlEscapeString(val) {
+  if (val === null || val === undefined) return 'NULL';
+  return `'` + String(val).replace(/'/g, `''`) + `'`;
+}
+
+function sqlEscapeJson(obj) {
+  if (obj === null || obj === undefined) return 'NULL';
+  const str = typeof obj === 'string' ? obj : JSON.stringify(obj);
+  return `'` + str.replace(/'/g, `''`) + `'::jsonb`;
+}
+
+function sqlEscapeInt(val) {
+  if (val === null || val === undefined || isNaN(Number(val))) return 'NULL';
+  return String(parseInt(val, 10));
+}
+
+function formatSql(sql, params) {
+  if (!params || !params.length) return sql;
+  return sql.replace(/\$(\d+)/g, (match, idx) => {
+    const i = parseInt(idx, 10) - 1;
+    if (i < 0 || i >= params.length) return match;
+    const val = params[i];
+    if (val === null || val === undefined) return 'NULL';
+    if (typeof val === 'number') return Number.isFinite(val) ? String(val) : 'NULL';
+    if (typeof val === 'boolean') return val ? 'true' : 'false';
+    if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
+    return `'${String(val).replace(/'/g, "''")}'`;
+  });
+}
+
+function queryPostgres(sql, params = []) {
+  const finalSql = formatSql(sql, params);
   return new Promise((resolve, reject) => {
-    execFile(
-      'docker',
-      ['exec', 'dograh-local-postgres-1', 'psql', '-U', 'postgres', '-d', 'postgres', '-t', '-A', '-c', sql],
-      { timeout: 8000 },
-      (err, stdout, stderr) => {
-        if (err) return reject(new Error(stderr || err.message));
+    const proc = spawn('docker', [
+      'exec',
+      '-i',
+      'dograh-local-postgres-1',
+      'psql',
+      '-U',
+      'postgres',
+      '-d',
+      'postgres',
+      '-t',
+      '-A'
+    ]);
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (d) => { stdout += d; });
+    proc.stderr.on('data', (d) => { stderr += d; });
+    proc.on('close', (code) => {
+      if (code !== 0) return reject(new Error(stderr || `psql exited with code ${code}`));
+      try {
+        const trimmed = stdout.trim();
+        if (!trimmed) return resolve(null);
         try {
-          const trimmed = stdout.trim();
-          if (!trimmed) return resolve(null);
-          const parsed = JSON.parse(trimmed);
-          resolve(parsed);
-        } catch (parseErr) {
-          resolve(stdout.trim());
+          resolve(JSON.parse(trimmed));
+        } catch (_) {
+          resolve(trimmed);
         }
+      } catch (parseErr) {
+        resolve(stdout.trim());
       }
-    );
+    });
+    proc.on('error', reject);
+    proc.stdin.write(finalSql);
+    proc.stdin.end();
   });
 }
 
 // In-memory follow-up status store for local runtime persistence
 const localFollowUpOverrides = new Map();
 
-async function getOverview(isDemo = false) {
-  if (isDemo) {
-    const demo = loadDemoData();
-    if (demo) {
-      return {
-        is_demo: true,
-        ...demo.stats,
-        funnel: demo.funnel,
-        recent_leads: demo.sellers.concat(demo.buyers).slice(0, 8),
-        recent_activities: demo.recent_activities || []
-      };
-    }
-  }
-
-  try {
-    const sql = `
-      SELECT json_build_object(
-        'total_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads),
-        'connected_calls', (SELECT COUNT(*) FROM workflow_runs WHERE workflow_id = 3),
-        'hot_sellers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE customer_type = 'seller' AND lead_temperature = 'HOT'),
-        'hot_buyers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE customer_type = 'buyer' AND lead_temperature = 'HOT'),
-        'qualified_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE qualification_state = 'QUALIFIED'),
-        'follow_ups_due', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE follow_up_required = true AND dnc_requested = false),
-        'closed_won', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT'),
-        'dnc_total', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE dnc_requested = true),
-        'funnel', json_build_array(
-          json_build_object('stage', 'NEW', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE customer_type = 'unknown' OR conversation_outcome = 'inquiry')),
-          json_build_object('stage', 'CONTACTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads)),
-          json_build_object('stage', 'CONNECTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome IS NOT NULL AND conversation_outcome != 'failed')),
-          json_build_object('stage', 'INTERESTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome IN ('inquiry', 'price_discussion', 'callback_requested', 'appointment_requested', 'lead_qualified'))),
-          json_build_object('stage', 'QUALIFIED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE qualification_state = 'QUALIFIED')),
-          json_build_object('stage', 'PRICE_DISCUSSION', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'price_discussion' OR price_raw IS NOT NULL)),
-          json_build_object('stage', 'FOLLOW_UP', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE follow_up_required = true)),
-          json_build_object('stage', 'NEGOTIATION', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE lead_temperature = 'HOT' AND qualification_state = 'QUALIFIED')),
-          json_build_object('stage', 'CLOSED_WON', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT')),
-          json_build_object('stage', 'CLOSED_LOST', 'count', 0),
-          json_build_object('stage', 'DO_NOT_CALL', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE dnc_requested = true))
-        ),
-        'recent_leads', COALESCE(
-          (SELECT json_agg(t) FROM (
-            SELECT run_id AS lead_id, created_at, to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
-                   caller_name, callback_number, customer_type, machine_brand, machine_model,
-                   lead_temperature, qualification_state, conversation_outcome, next_action, dnc_requested
-            FROM vaani_excavator_sales_leads
-            ORDER BY run_id DESC LIMIT 10
-          ) t), '[]'::json
-        )
-      );
-    `;
-    const result = await queryPostgres(sql);
-    if (result && typeof result === 'object') {
-      const activities = await getRecentActivities(10, false);
-      return { is_demo: false, ...result, recent_activities: activities };
-    }
-  } catch (err) {
-    console.error('[VAANI SALES] Error querying overview from PG:', err.message);
-  }
-
-  // Safe empty fallback
+function getEmptyOverview() {
   return {
     is_demo: false,
     total_leads: 0,
@@ -213,12 +203,86 @@ async function getOverview(isDemo = false) {
   };
 }
 
-async function getSellers(filters = {}, isDemo = false) {
+async function getOverview(isDemo = false, organizationId = null) {
+  if (isDemo) {
+    const demo = loadDemoData();
+    if (demo) {
+      return {
+        is_demo: true,
+        ...demo.stats,
+        funnel: demo.funnel,
+        recent_leads: demo.sellers.concat(demo.buyers).slice(0, 8),
+        recent_activities: demo.recent_activities || []
+      };
+    }
+  }
+
+  if (!organizationId) {
+    return getEmptyOverview();
+  }
+
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) {
+    return getEmptyOverview();
+  }
+
+  try {
+    const sql = `
+      SELECT json_build_object(
+        'total_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1),
+        'connected_calls', (SELECT COUNT(*) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = $1),
+        'hot_sellers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND customer_type = 'seller' AND lead_temperature = 'HOT'),
+        'hot_buyers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND customer_type = 'buyer' AND lead_temperature = 'HOT'),
+        'qualified_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND qualification_state = 'QUALIFIED'),
+        'follow_ups_due', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND follow_up_required = true AND dnc_requested = false),
+        'closed_won', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT'),
+        'dnc_total', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND dnc_requested = true),
+        'funnel', json_build_array(
+          json_build_object('stage', 'NEW', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND (customer_type = 'unknown' OR conversation_outcome = 'inquiry'))),
+          json_build_object('stage', 'CONTACTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1)),
+          json_build_object('stage', 'CONNECTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND conversation_outcome IS NOT NULL AND conversation_outcome != 'failed')),
+          json_build_object('stage', 'INTERESTED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND conversation_outcome IN ('inquiry', 'price_discussion', 'callback_requested', 'appointment_requested', 'lead_qualified'))),
+          json_build_object('stage', 'QUALIFIED', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND qualification_state = 'QUALIFIED')),
+          json_build_object('stage', 'PRICE_DISCUSSION', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND (conversation_outcome = 'price_discussion' OR price_raw IS NOT NULL))),
+          json_build_object('stage', 'FOLLOW_UP', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND follow_up_required = true)),
+          json_build_object('stage', 'NEGOTIATION', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND lead_temperature = 'HOT' AND qualification_state = 'QUALIFIED')),
+          json_build_object('stage', 'CLOSED_WON', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND conversation_outcome = 'lead_qualified' AND lead_temperature = 'HOT')),
+          json_build_object('stage', 'CLOSED_LOST', 'count', 0),
+          json_build_object('stage', 'DO_NOT_CALL', 'count', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND dnc_requested = true))
+        ),
+        'recent_leads', COALESCE(
+          (SELECT json_agg(t) FROM (
+            SELECT run_id AS lead_id, created_at, to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
+                   caller_name, callback_number, customer_type, machine_brand, machine_model,
+                   lead_temperature, qualification_state, conversation_outcome, next_action, dnc_requested
+            FROM vaani_excavator_sales_leads
+            WHERE organization_id = $1
+            ORDER BY run_id DESC LIMIT 10
+          ) t), '[]'::json
+        )
+      );
+    `;
+    const result = await queryPostgres(sql, [orgInt]);
+    if (result && typeof result === 'object') {
+      const activities = await getRecentActivities(10, false, orgInt);
+      return { is_demo: false, ...result, recent_activities: activities };
+    }
+  } catch (err) {
+    console.error('[VAANI SALES] Error querying overview from PG:', err.message);
+  }
+
+  return getEmptyOverview();
+}
+
+async function getSellers(filters = {}, isDemo = false, organizationId = null) {
   let sellers = [];
   if (isDemo) {
     const demo = loadDemoData();
     sellers = demo ? demo.sellers : [];
   } else {
+    if (!organizationId) return [];
+    const orgInt = parseInt(organizationId, 10);
+    if (isNaN(orgInt) || orgInt <= 0) return [];
     try {
       const sql = `
         SELECT COALESCE(json_agg(t), '[]'::json) FROM (
@@ -231,11 +295,11 @@ async function getSellers(filters = {}, isDemo = false) {
                  lead_temperature, qualification_state, conversation_outcome,
                  next_action, follow_up_required, follow_up_datetime, call_notes, dnc_requested
           FROM vaani_excavator_sales_leads
-          WHERE customer_type = 'seller'
+          WHERE organization_id = $1 AND customer_type = 'seller'
           ORDER BY run_id DESC
         ) t;
       `;
-      const result = await queryPostgres(sql);
+      const result = await queryPostgres(sql, [orgInt]);
       sellers = Array.isArray(result) ? result : [];
     } catch (err) {
       console.error('[VAANI SALES] Error querying sellers from PG:', err.message);
@@ -274,7 +338,7 @@ async function getSellers(filters = {}, isDemo = false) {
   });
 }
 
-async function getBuyers(filters = {}, isDemo = false) {
+async function getBuyers(filters = {}, isDemo = false, organizationId = null) {
   let buyers = [];
   if (isDemo) {
     const demo = loadDemoData();
@@ -288,6 +352,9 @@ async function getBuyers(filters = {}, isDemo = false) {
       };
     });
   } else {
+    if (!organizationId) return [];
+    const orgInt = parseInt(organizationId, 10);
+    if (isNaN(orgInt) || orgInt <= 0) return [];
     try {
       const sql = `
         SELECT COALESCE(json_agg(t), '[]'::json) FROM (
@@ -300,11 +367,11 @@ async function getBuyers(filters = {}, isDemo = false) {
                  lead_temperature, qualification_state, conversation_outcome,
                  next_action, follow_up_required, follow_up_datetime, call_notes, dnc_requested
           FROM vaani_excavator_sales_leads
-          WHERE customer_type = 'buyer'
+          WHERE organization_id = $1 AND customer_type = 'buyer'
           ORDER BY run_id DESC
         ) t;
       `;
-      const result = await queryPostgres(sql);
+      const result = await queryPostgres(sql, [orgInt]);
       buyers = Array.isArray(result) ? result : [];
     } catch (err) {
       console.error('[VAANI SALES] Error querying buyers from PG:', err.message);
@@ -340,12 +407,19 @@ async function getBuyers(filters = {}, isDemo = false) {
   });
 }
 
-async function getMachines(isDemo = false) {
+async function getMachines(isDemo = false, organizationId = null) {
   let actualStock = [];
   if (isDemo) {
     const demo = loadDemoData();
     actualStock = demo ? demo.actual_stock : [];
   } else {
+    if (!organizationId) {
+      return { machine_master: MACHINE_MASTER_TAXONOMY, actual_stock: [] };
+    }
+    const orgInt = parseInt(organizationId, 10);
+    if (isNaN(orgInt) || orgInt <= 0) {
+      return { machine_master: MACHINE_MASTER_TAXONOMY, actual_stock: [] };
+    }
     try {
       const sql = `
         SELECT COALESCE(json_agg(t), '[]'::json) FROM (
@@ -353,10 +427,11 @@ async function getMachines(isDemo = false) {
                  application_history, sourcing_cost_inr, target_resale_inr, status,
                  current_location, created_at
           FROM vaani_machines
+          WHERE organization_id = $1
           ORDER BY created_at DESC
         ) t;
       `;
-      const result = await queryPostgres(sql);
+      const result = await queryPostgres(sql, [orgInt]);
       actualStock = Array.isArray(result) ? result : [];
     } catch (err) {
       console.error('[VAANI SALES] Error querying vaani_machines:', err.message);
@@ -370,7 +445,7 @@ async function getMachines(isDemo = false) {
   };
 }
 
-async function getDemand(isDemo = false) {
+async function getDemand(isDemo = false, organizationId = null) {
   if (isDemo) {
     const demo = loadDemoData();
     const demand = demo ? demo.demand_analytics : {};
@@ -403,8 +478,8 @@ async function getDemand(isDemo = false) {
 
   // Real data aggregation from PG
   try {
-    const buyers = await getBuyers({}, false);
-    const machinesRes = await getMachines(false);
+    const buyers = await getBuyers({}, false, organizationId);
+    const machinesRes = await getMachines(false, organizationId);
     const stock = machinesRes.actual_stock;
 
     // Aggregate brands
@@ -458,12 +533,19 @@ async function getDemand(isDemo = false) {
   }
 }
 
-async function getFollowUps(isDemo = false) {
+async function getFollowUps(isDemo = false, organizationId = null) {
   let list = [];
   if (isDemo) {
     const demo = loadDemoData();
     list = demo ? demo.follow_ups : [];
   } else {
+    if (!organizationId) {
+      return { overdue: [], due_today: [], upcoming: [] };
+    }
+    const orgInt = parseInt(organizationId, 10);
+    if (isNaN(orgInt) || orgInt <= 0) {
+      return { overdue: [], due_today: [], upcoming: [] };
+    }
     try {
       const sql = `
         SELECT COALESCE(json_agg(t), '[]'::json) FROM (
@@ -473,11 +555,11 @@ async function getFollowUps(isDemo = false) {
                  next_action AS reason, follow_up_datetime,
                  'pending' AS status, 'Procurement/Sales Team' AS assigned_owner
           FROM vaani_excavator_sales_leads
-          WHERE follow_up_required = true AND dnc_requested = false
+          WHERE organization_id = $1 AND follow_up_required = true AND dnc_requested = false
           ORDER BY run_id DESC
         ) t;
       `;
-      const result = await queryPostgres(sql);
+      const result = await queryPostgres(sql, [orgInt]);
       list = Array.isArray(result) ? result : [];
     } catch (err) {
       console.error('[VAANI SALES] Error querying follow-ups from PG:', err.message);
@@ -515,11 +597,15 @@ async function getFollowUps(isDemo = false) {
   };
 }
 
-async function getCalls(isDemo = false) {
+async function getCalls(isDemo = false, organizationId = null) {
   if (isDemo) {
     const demo = loadDemoData();
     return demo ? demo.calls : [];
   }
+
+  if (!organizationId) return [];
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) return [];
 
   try {
     const sql = `
@@ -531,10 +617,11 @@ async function getCalls(isDemo = false) {
                price_raw, machine_location_city AS location, next_action,
                false AS has_audio, NULL AS audio_url
         FROM vaani_excavator_sales_leads
+        WHERE organization_id = $1
         ORDER BY run_id DESC
       ) t;
     `;
-    const result = await queryPostgres(sql);
+    const result = await queryPostgres(sql, [orgInt]);
     return Array.isArray(result) ? result : [];
   } catch (err) {
     console.error('[VAANI SALES] Error querying calls from PG:', err.message);
@@ -542,13 +629,18 @@ async function getCalls(isDemo = false) {
   }
 }
 
-async function getCallDetail(runId, isDemo = false) {
+async function getCallDetail(runId, isDemo = false, organizationId = null) {
   if (isDemo) {
     const demo = loadDemoData();
     const match = (demo?.calls || []).find((c) => String(c.run_id) === String(runId));
     if (match) return match;
     return (demo?.calls || [])[0] || null;
   }
+
+  if (!organizationId) return null;
+  const orgInt = parseInt(organizationId, 10);
+  const runInt = parseInt(runId, 10);
+  if (isNaN(orgInt) || orgInt <= 0 || isNaN(runInt) || runInt <= 0) return null;
 
   try {
     const sql = `
@@ -569,9 +661,10 @@ async function getCallDetail(runId, isDemo = false) {
         'transcript', '[]'::json
       )
       FROM workflow_runs r
-      WHERE r.id = ${parseInt(runId, 10)};
+      JOIN workflows w ON r.workflow_id = w.id
+      WHERE r.id = $1 AND w.organization_id = $2;
     `;
-    const result = await queryPostgres(sql);
+    const result = await queryPostgres(sql, [runInt, orgInt]);
     return result || null;
   } catch (err) {
     console.error(`[VAANI SALES] Error querying call detail for ${runId}:`, err.message);
@@ -579,27 +672,32 @@ async function getCallDetail(runId, isDemo = false) {
   }
 }
 
-async function getDncRegistry(isDemo = false) {
+async function getDncRegistry(isDemo = false, organizationId = null) {
   if (isDemo) {
     const demo = loadDemoData();
     return demo ? demo.dnc_registry : [];
   }
 
+  if (!organizationId) return [];
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) return [];
+
   try {
     const sql = `
       SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-        SELECT COALESCE(callback_number, 'Unknown') AS phone_number,
-               COALESCE(caller_name, 'Unregistered Caller') AS customer_name,
-               'Opted out during conversation' AS reason,
-               created_at AS opted_out_at,
-               'Inbound/Outbound Call #' || run_id AS source,
-               true AS is_active
-        FROM vaani_excavator_sales_leads
-        WHERE dnc_requested = true
-        ORDER BY run_id DESC
+        SELECT d.phone_number,
+               COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'caller_name'::text, 'Unregistered Caller') AS customer_name,
+               d.reason,
+               d.opted_out_at,
+               'Call #' || COALESCE(d.run_id::text, 'N/A') AS source,
+               d.is_active
+        FROM vaani_dnc_registry d
+        LEFT JOIN workflow_runs r ON d.run_id = r.id
+        WHERE d.organization_id = $1 AND d.is_active = true
+        ORDER BY d.opted_out_at DESC
       ) t;
     `;
-    const result = await queryPostgres(sql);
+    const result = await queryPostgres(sql, [orgInt]);
     return Array.isArray(result) ? result : [];
   } catch (err) {
     console.error('[VAANI SALES] Error querying DNC registry:', err.message);
@@ -607,14 +705,14 @@ async function getDncRegistry(isDemo = false) {
   }
 }
 
-async function searchLeads(query, isDemo = false) {
+async function searchLeads(query, isDemo = false, organizationId = null) {
   if (!query || typeof query !== 'string') return [];
   const q = query.trim().toLowerCase();
 
   const [sellers, buyers, dncList] = await Promise.all([
-    getSellers({}, isDemo),
-    getBuyers({}, isDemo),
-    getDncRegistry(isDemo)
+    getSellers({}, isDemo, organizationId),
+    getBuyers({}, isDemo, organizationId),
+    getDncRegistry(isDemo, organizationId)
   ]);
 
   const results = [];
@@ -680,10 +778,28 @@ async function searchLeads(query, isDemo = false) {
   return results;
 }
 
-function updateFollowUpStatus(followUpId, status) {
+async function updateFollowUpStatus(followUpId, status, organizationId = null) {
   if (!['pending', 'completed', 'cancelled', 'scheduled'].includes(status)) {
     throw new Error('Invalid follow-up status');
   }
+
+  if (organizationId) {
+    const orgInt = parseInt(organizationId, 10);
+    const runInt = parseInt(followUpId, 10);
+    if (isNaN(runInt)) {
+      const err = new Error('Follow-up not found');
+      err.code = 'not_found';
+      throw err;
+    }
+    const checkSql = `SELECT r.id FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE r.id = $1 AND w.organization_id = $2 LIMIT 1;`;
+    const exists = await queryPostgres(checkSql, [runInt, orgInt]);
+    if (!exists || (typeof exists === 'object' && !exists.id)) {
+      const err = new Error('Follow-up record not found for organization');
+      err.code = 'not_found';
+      throw err;
+    }
+  }
+
   localFollowUpOverrides.set(String(followUpId), status);
   return { success: true, id: followUpId, status, updated_at: new Date().toISOString() };
 }
@@ -1050,7 +1166,7 @@ function buildDefaultEvidenceChecklist(lead) {
   }));
 }
 
-async function getLead360(leadId, isDemo = false) {
+async function getLead360(leadId, isDemo = false, organizationId = null) {
   if (!leadId) return null;
   const targetId = String(leadId).trim();
 
@@ -1059,8 +1175,8 @@ async function getLead360(leadId, isDemo = false) {
     if (!demo) return null;
 
     const allLeads = [
-      ...(demo.sellers || []),
-      ...(demo.buyers || []),
+      ...(demo.sellers || []).map((s) => ({ ...s, customer_type: 'seller' })),
+      ...(demo.buyers || []).map((b) => ({ ...b, customer_type: 'buyer' })),
       ...(demo.inbound_leads || []),
       ...(demo.dnc_registry || []).map((d) => ({ ...d, customer_type: 'dnc', lead_temperature: 'COLD', qualification_state: 'UNQUALIFIED' }))
     ];
@@ -1141,12 +1257,18 @@ async function getLead360(leadId, isDemo = false) {
     };
   }
 
-  // Real DB mode: query PostgreSQL workflow_runs and sales views
+  if (!organizationId) return null;
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) return null;
+
+  // Real DB mode: query PostgreSQL workflow_runs and sales views scoped by organization
   try {
     const isNum = /^\d+$/.test(targetId);
-    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}'`;
+    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $2`;
+    let queryParams = [orgInt, String(targetId)];
     if (isNum) {
-      whereClause = `(r.id = ${parseInt(targetId, 10)} OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}')`;
+      whereClause = `(r.id = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $3)`;
+      queryParams = [orgInt, parseInt(targetId, 10), String(targetId)];
     }
 
     const sql = `
@@ -1159,13 +1281,15 @@ async function getLead360(leadId, isDemo = false) {
           'customer_type', COALESCE((r.gathered_context -> 'extracted_variables') ->> 'customer_type', 'unknown'),
           'machine_brand', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'brand', (r.gathered_context -> 'extracted_variables') ->> 'machine_brand'),
           'machine_model', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'model', (r.gathered_context -> 'extracted_variables') ->> 'machine_model'),
-          'model_year', (r.gathered_context -> 'extracted_variables') ->> 'model_year',
-          'running_hours', (r.gathered_context -> 'extracted_variables') ->> 'running_hours',
-          'application_history', (r.gathered_context -> 'extracted_variables') ->> 'application_history',
+          'model_year', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'model_year')::integer, ((r.gathered_context -> 'extracted_variables') ->> 'model_year')::integer),
+          'running_hours', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'running_hours')::integer, ((r.gathered_context -> 'extracted_variables') ->> 'running_hours')::integer),
+          'application_history', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'application_history', (r.gathered_context -> 'extracted_variables') ->> 'application_history'),
           'location_city', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'location_city', (r.gathered_context -> 'extracted_variables') ->> 'location_city'),
           'location_state', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'machine_details') ->> 'location_state', (r.gathered_context -> 'extracted_variables') ->> 'location_state'),
-          'expected_selling_price_inr', (r.gathered_context -> 'extracted_variables') ->> 'expected_selling_price_inr',
-          'price_raw', (r.gathered_context -> 'extracted_variables') ->> 'price_or_budget_raw',
+          'expected_selling_price_inr', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'commercial_terms') ->> 'expected_price_inr')::bigint, ((r.gathered_context -> 'extracted_variables') ->> 'expected_selling_price_inr')::bigint, ((r.gathered_context -> 'extracted_variables') ->> 'expected_price_inr')::bigint),
+          'buyer_budget_max_inr', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'commercial_terms') ->> 'budget_max_inr')::bigint, ((r.gathered_context -> 'extracted_variables') ->> 'buyer_budget_max_inr')::bigint, ((r.gathered_context -> 'extracted_variables') ->> 'budget_max_inr')::bigint),
+          'price_raw', COALESCE(((r.gathered_context -> 'extracted_variables') -> 'commercial_terms') ->> 'price_or_budget_raw', (r.gathered_context -> 'extracted_variables') ->> 'price_or_budget_raw', (r.gathered_context -> 'extracted_variables') ->> 'price_raw'),
+          'yard_visit_agreed', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'commercial_terms') ->> 'yard_visit_agreed')::boolean, ((r.gathered_context -> 'extracted_variables') ->> 'yard_visit_agreed')::boolean, false),
           'lead_temperature', COALESCE((r.gathered_context -> 'extracted_variables') ->> 'lead_temperature', 'COLD'),
           'qualification_state', COALESCE((r.gathered_context -> 'extracted_variables') ->> 'qualification_state', 'UNQUALIFIED'),
           'conversation_outcome', (r.gathered_context -> 'extracted_variables') ->> 'conversation_outcome',
@@ -1173,24 +1297,75 @@ async function getLead360(leadId, isDemo = false) {
           'follow_up_required', ((r.gathered_context -> 'extracted_variables') ->> 'follow_up_required')::boolean,
           'follow_up_datetime', (r.gathered_context -> 'extracted_variables') ->> 'follow_up_datetime',
           'dnc_requested', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'dnc_requested')::boolean, false),
-          'photos_agreed', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'photos_agreed')::boolean, false),
-          'running_video_agreed', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'running_video_agreed')::boolean, false),
-          'rc_copy_agreed', COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'rc_copy_agreed')::boolean, false)
+          'photos_agreed', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'evidence_readiness') ->> 'photos_agreed')::boolean, ((r.gathered_context -> 'extracted_variables') ->> 'photos_agreed')::boolean, false),
+          'running_video_agreed', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'evidence_readiness') ->> 'running_video_agreed')::boolean, ((r.gathered_context -> 'extracted_variables') ->> 'running_video_agreed')::boolean, false),
+          'rc_copy_agreed', COALESCE((((r.gathered_context -> 'extracted_variables') -> 'evidence_readiness') ->> 'rc_copy_agreed')::boolean, ((r.gathered_context -> 'extracted_variables') ->> 'rc_copy_agreed')::boolean, false)
         ) ORDER BY r.id DESC)
       )
       FROM workflow_runs r
-      WHERE r.workflow_id = 3 AND ${whereClause};
+      JOIN workflows w ON r.workflow_id = w.id
+      WHERE w.organization_id = $1 AND ${whereClause};
     `;
 
-    const res = await queryPostgres(sql);
+    const res = await queryPostgres(sql, queryParams);
     const runs = res && Array.isArray(res.runs) ? res.runs : [];
     if (runs.length === 0) return null;
 
     const latest = runs[0];
     const phone = latest.callback_number || targetId;
+
+    // Fetch relational machine data strictly scoped by organization
+    const machineSql = `
+      SELECT row_to_json(m) FROM (
+        SELECT machine_id, brand, model, manufacturing_year, hour_meter_reading,
+               application_history, sourcing_cost_inr, target_resale_inr, status, current_location
+        FROM vaani_machines
+        WHERE organization_id = $1 AND source_lead_run_id = $2
+        LIMIT 1
+      ) m;
+    `;
+    const machineRow = await queryPostgres(machineSql, [orgInt, parseInt(latest.run_id, 10)]).catch(() => null);
+
+    // Fetch relational digital evidence items strictly scoped by organization
+    const evidenceSql = `
+      SELECT json_agg(row_to_json(e)) FROM (
+        SELECT evidence_id, media_type, media_url, evaluator_verdict, evaluator_notes, received_at
+        FROM vaani_digital_evidence
+        WHERE organization_id = $1 AND run_id = $2
+        ORDER BY received_at ASC
+      ) e;
+    `;
+    const evidenceRows = await queryPostgres(evidenceSql, [orgInt, parseInt(latest.run_id, 10)]).catch(() => null);
+
     const learned = buildExtractedVsMissing(latest);
     const journey = buildJourneyProgression(latest);
-    const evidence = buildDefaultEvidenceChecklist(latest);
+    let evidence = buildDefaultEvidenceChecklist(latest);
+
+    if (Array.isArray(evidenceRows) && evidenceRows.length > 0) {
+      const typeMap = {
+        photo_boom: 'boom_photo',
+        photo_undercarriage: 'undercarriage_photo',
+        photo_cabin: 'cabin_photo',
+        photo_meter: 'hmr_photo',
+        video_running_30s: 'running_video',
+        doc_rc: 'rc_copy',
+        doc_noc: 'finance_noc'
+      };
+      evidence = evidence.map((item) => {
+        const foundEv = evidenceRows.find((e) => typeMap[e.media_type] === item.key);
+        if (foundEv) {
+          return {
+            ...item,
+            status: foundEv.evaluator_verdict === 'approved' ? 'verified' : 'received',
+            verified: foundEv.evaluator_verdict === 'approved',
+            media_url: foundEv.media_url,
+            note: foundEv.evaluator_notes || item.note
+          };
+        }
+        return item;
+      });
+    }
+
     const timeline = await getLeadTimeline(targetId, false);
     const isDnc = !!latest.dnc_requested || latest.customer_type === 'dnc';
     const dueTime = latest.follow_up_datetime || 'Tomorrow, 11:00 AM';
@@ -1221,6 +1396,8 @@ async function getLead360(leadId, isDemo = false) {
       journey_progression: Array.isArray(journey?.stages) ? journey.stages : (journey || []),
       sales_journey: journey,
       evidence_checklist: evidence,
+      relational_machine: machineRow || null,
+      relational_evidence: Array.isArray(evidenceRows) ? evidenceRows : [],
       evidence_integration_note: 'WhatsApp action pending integration — Evidence status logged from voice responses',
       linked_calls: runs.map((r) => ({
         run_id: r.run_id,
@@ -1238,7 +1415,7 @@ async function getLead360(leadId, isDemo = false) {
   }
 }
 
-async function getLeadTimeline(leadId, isDemo = false) {
+async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
   if (!leadId) return [];
   const targetId = String(leadId).trim();
 
@@ -1302,24 +1479,22 @@ async function getLeadTimeline(leadId, isDemo = false) {
       actor: 'vaani',
       actor_label: '🤖 VAANI',
       title: 'Qualification Call Completed',
-      description: match.dnc_requested
-        ? `Caller requested Do Not Call opt-out: ${match.reason || 'Opted out'}.`
-        : `Vaani identified customer as ${isSeller ? 'Machine Seller' : 'Excavator Buyer'}. Outcome: ${match.conversation_outcome || 'inquiry'}.`,
+      description: `Outcome: ${match.conversation_outcome || 'lead_qualified'}. Customer identified as ${isSeller ? 'Machine Seller / Owner' : 'Excavator Buyer'}.`,
       customer_quote: match.call_notes || match.reason || null
     });
 
-    if (match.dnc_requested || match.customer_type === 'dnc') {
+    if (match.dnc_requested) {
       events.push({
         id: `synth_${targetId}_dnc`,
         day: 'DAY 1',
         day_label: 'Day 1',
-        timestamp: new Date(createdDate.getTime() + 180000).toISOString(),
-        formatted_time: `${formattedDate}, 10:03 AM`,
+        timestamp: new Date(createdDate.getTime() + 150000).toISOString(),
+        formatted_time: `${formattedDate}, 10:02 AM`,
         activity_type: 'DNC_REGISTERED',
         actor: 'vaani',
         actor_label: '🤖 VAANI',
-        title: 'Do Not Call Registered',
-        description: 'Customer requested opt-out during call greeting. Quarantined in compliance registry.'
+        title: 'Caller Opted Out — DNC Activated',
+        description: 'Customer requested not to be contacted. Added to DNC compliance registry.'
       });
       return events;
     }
@@ -1370,12 +1545,18 @@ async function getLeadTimeline(leadId, isDemo = false) {
     return events;
   }
 
-  // Real DB mode
+  // Real DB mode scoped by organization
+  if (!organizationId) return [];
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) return [];
+
   try {
     const isNum = /^\d+$/.test(targetId);
-    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}'`;
+    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $2`;
+    let queryParams = [orgInt, String(targetId)];
     if (isNum) {
-      whereClause = `(r.id = ${parseInt(targetId, 10)} OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = '${targetId}')`;
+      whereClause = `(r.id = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $3)`;
+      queryParams = [orgInt, parseInt(targetId, 10), String(targetId)];
     }
 
     const sql = `
@@ -1383,11 +1564,12 @@ async function getLeadTimeline(leadId, isDemo = false) {
              to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
              (r.gathered_context -> 'extracted_variables') as vars
       FROM workflow_runs r
-      WHERE r.workflow_id = 3 AND ${whereClause}
+      JOIN workflows w ON r.workflow_id = w.id
+      WHERE w.organization_id = $1 AND ${whereClause}
       ORDER BY r.id ASC;
     `;
 
-    const runs = await queryPostgres(sql);
+    const runs = await queryPostgres(sql, queryParams);
     if (!Array.isArray(runs) || runs.length === 0) return [];
 
     const events = [];
@@ -1475,11 +1657,16 @@ async function getLeadTimeline(leadId, isDemo = false) {
   }
 }
 
-async function getRecentActivities(limit = 15, isDemo = false) {
+async function getRecentActivities(limit = 15, isDemo = false, organizationId = null) {
   if (isDemo) {
     const demo = loadDemoData();
     return demo ? (demo.recent_activities || []).slice(0, limit) : [];
   }
+
+  if (!organizationId) return [];
+  const orgInt = parseInt(organizationId, 10);
+  const limitInt = parseInt(limit, 10) || 15;
+  if (isNaN(orgInt) || orgInt <= 0) return [];
 
   try {
     const sql = `
@@ -1496,9 +1683,10 @@ async function getRecentActivities(limit = 15, isDemo = false) {
                (r.gathered_context -> 'extracted_variables') ->> 'lead_temperature' as lead_temperature,
                COALESCE(((r.gathered_context -> 'extracted_variables') ->> 'dnc_requested')::boolean, false) as dnc_requested
         FROM workflow_runs r
-        WHERE r.workflow_id = 3
+        JOIN workflows w ON r.workflow_id = w.id
+        WHERE w.organization_id = $1
         ORDER BY r.id DESC
-        LIMIT ${limit}
+        LIMIT $2
       ) t;
     `;
 
@@ -1541,6 +1729,254 @@ async function getRecentActivities(limit = 15, isDemo = false) {
   }
 }
 
+/**
+ * Ingest completed call payload from Vaani voice pipeline
+ * Complies strictly with docs/dashboard/VAANI-SALES-DATA-CONTRACT.md
+ */
+async function ingestCallComplete(payload) {
+  if (!payload || typeof payload !== 'object') {
+    const err = new Error('Payload must be a valid JSON object');
+    err.statusCode = 400;
+    err.code = 'invalid_payload';
+    throw err;
+  }
+
+  const phone = (payload.primary_phone || payload.callback_number || '').trim();
+  if (!phone || phone.length < 8) {
+    const err = new Error('Missing or invalid primary_phone (+91XXXXXXXXXX)');
+    err.statusCode = 400;
+    err.code = 'missing_primary_phone';
+    throw err;
+  }
+
+  const callMeta = payload.call_metadata || {};
+  const runId = callMeta.run_id ?? payload.run_id;
+  if (runId === undefined || runId === null || isNaN(Number(runId))) {
+    const err = new Error('Missing or invalid call_metadata.run_id (integer required)');
+    err.statusCode = 400;
+    err.code = 'missing_run_id';
+    throw err;
+  }
+
+  const numericRunId = parseInt(runId, 10);
+  let orgId = callMeta.org_id ? parseInt(callMeta.org_id, 10) : null;
+  if (!orgId) {
+    const wfId = parseInt(callMeta.workflow_id || 3, 10);
+    const wfRow = await queryPostgres(`SELECT row_to_json(w) FROM (SELECT organization_id FROM workflows WHERE id = ${sqlEscapeInt(wfId)}) w;`);
+    orgId = wfRow && wfRow.organization_id ? parseInt(wfRow.organization_id, 10) : null;
+  }
+  if (!orgId) {
+    const err = new Error('Cannot determine organization_id for call ingestion');
+    err.statusCode = 400;
+    err.code = 'missing_organization_id';
+    throw err;
+  }
+  const leadId = payload.lead_id || `lead_${numericRunId}`;
+  const customerType = ['seller', 'buyer', 'other', 'unknown'].includes(payload.customer_type)
+    ? payload.customer_type
+    : 'unknown';
+
+  const machDetails = payload.machine_details || {};
+  const commTerms = payload.commercial_terms || {};
+  const evReadiness = payload.evidence_readiness || {};
+
+  const modelYear = (typeof machDetails.model_year === 'number' && machDetails.model_year >= 2005 && machDetails.model_year <= 2026)
+    ? machDetails.model_year
+    : null;
+
+  const validAppHistories = ['soil_earthwork', 'quarry_rock', 'rock_breaker', 'mixed', 'unknown'];
+  const appHistory = validAppHistories.includes(machDetails.application_history)
+    ? machDetails.application_history
+    : 'unknown';
+
+  const expectedPrice = typeof commTerms.expected_price_inr === 'number' ? commTerms.expected_price_inr : null;
+  const budgetMax = typeof commTerms.budget_max_inr === 'number' ? commTerms.budget_max_inr : null;
+
+  const extractedVariables = {
+    caller_name: payload.customer_name || payload.caller_name || null,
+    callback_number: phone,
+    whatsapp_number: payload.whatsapp_phone || payload.whatsapp_number || phone,
+    customer_type: customerType,
+    ownership_type: payload.ownership_type || 'unknown',
+    machine_details: {
+      brand: machDetails.brand || null,
+      model: machDetails.model || null,
+      model_year: modelYear,
+      running_hours: typeof machDetails.running_hours === 'number' ? machDetails.running_hours : null,
+      tonnage_class: machDetails.tonnage_class || 'unknown',
+      application_history: appHistory,
+      machine_condition_summary: machDetails.machine_condition_summary || null,
+      location_city: machDetails.location_city || null,
+      location_state: machDetails.location_state || null,
+      document_status: machDetails.document_status || 'unknown'
+    },
+    commercial_terms: {
+      expected_price_inr: expectedPrice,
+      budget_max_inr: budgetMax,
+      price_or_budget_raw: commTerms.price_or_budget_raw || null,
+      purchase_timeline: commTerms.purchase_timeline || 'not_applicable',
+      yard_visit_agreed: !!commTerms.yard_visit_agreed,
+      yard_visit_schedule: commTerms.yard_visit_schedule || null
+    },
+    evidence_readiness: {
+      photos_agreed: !!evReadiness.photos_agreed,
+      running_video_agreed: !!evReadiness.running_video_agreed,
+      rc_copy_agreed: !!evReadiness.rc_copy_agreed,
+      evidence_status: evReadiness.evidence_status || 'promised'
+    },
+    lead_temperature: ['HOT', 'WARM', 'COLD'].includes(payload.lead_temperature) ? payload.lead_temperature : 'COLD',
+    qualification_state: ['QUALIFIED', 'PARTIALLY_QUALIFIED', 'UNQUALIFIED', 'DISQUALIFIED'].includes(payload.qualification_state)
+      ? payload.qualification_state
+      : 'UNQUALIFIED',
+    conversation_outcome: payload.conversation_outcome || 'inquiry',
+    next_action: payload.next_action || 'Initial inquiry',
+    follow_up_required: !!payload.follow_up_required,
+    follow_up_datetime: payload.follow_up_datetime || null,
+    call_notes: payload.call_notes || '',
+    dnc_requested: !!payload.dnc_requested
+  };
+
+  // 1. Persist into workflow_runs.gathered_context
+  const wfSql = `
+    INSERT INTO workflow_runs (
+      id, name, workflow_id, mode, created_at, is_completed, usage_info, cost_info,
+      initial_context, gathered_context, annotations, logs, storage_backend, state, call_type, extra
+    ) VALUES (
+      ${sqlEscapeInt(numericRunId)},
+      ${sqlEscapeString('vaani-call-' + numericRunId)},
+      3,
+      'smallwebrtc',
+      CURRENT_TIMESTAMP,
+      true,
+      '{}'::json,
+      '{}'::json,
+      '{}'::json,
+      json_build_object('extracted_variables', ${sqlEscapeJson(extractedVariables)})::json,
+      '{}'::json,
+      '{}'::json,
+      's3',
+      'completed',
+      'outbound',
+      '{}'::json
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      gathered_context = jsonb_set(
+        COALESCE(workflow_runs.gathered_context::jsonb, '{}'::jsonb),
+        '{extracted_variables}',
+        ${sqlEscapeJson(extractedVariables)},
+        true
+      )::json,
+      is_completed = true,
+      state = 'completed';
+  `;
+  await queryPostgres(wfSql);
+
+  // 2. For seller calls with valid machine info, create/update vaani_machines
+  const brand = extractedVariables.machine_details.brand;
+  const model = extractedVariables.machine_details.model;
+  let machineId = null;
+
+  if (customerType === 'seller' && brand && model) {
+    machineId = `mach_run_${numericRunId}`;
+    const hmr = extractedVariables.machine_details.running_hours;
+    const city = extractedVariables.machine_details.location_city || 'Jaipur Yard (Loha Mandi / VKI Area)';
+
+    const machSql = `
+      INSERT INTO vaani_machines (
+        organization_id, machine_id, source_lead_run_id, brand, model, manufacturing_year,
+        hour_meter_reading, application_history, sourcing_cost_inr, status, current_location, updated_at
+      ) VALUES (
+        ${sqlEscapeInt(orgId)},
+        ${sqlEscapeString(machineId)},
+        ${sqlEscapeInt(numericRunId)},
+        ${sqlEscapeString(brand)},
+        ${sqlEscapeString(model)},
+        ${sqlEscapeInt(modelYear)},
+        ${sqlEscapeInt(hmr)},
+        ${sqlEscapeString(appHistory)},
+        ${sqlEscapeInt(expectedPrice)},
+        'in_sourcing_pipeline',
+        ${sqlEscapeString(city)},
+        CURRENT_TIMESTAMP
+      )
+      ON CONFLICT (machine_id) DO UPDATE SET
+        organization_id = EXCLUDED.organization_id,
+        brand = EXCLUDED.brand,
+        model = EXCLUDED.model,
+        manufacturing_year = EXCLUDED.manufacturing_year,
+        hour_meter_reading = EXCLUDED.hour_meter_reading,
+        application_history = EXCLUDED.application_history,
+        sourcing_cost_inr = EXCLUDED.sourcing_cost_inr,
+        current_location = EXCLUDED.current_location,
+        updated_at = CURRENT_TIMESTAMP;
+    `;
+    await queryPostgres(machSql);
+  }
+
+  // 3. For evidence promised/received, create tracking records in vaani_digital_evidence
+  const evidenceQueries = [];
+  if (extractedVariables.evidence_readiness.photos_agreed) {
+    const photoTypes = ['photo_exterior', 'photo_boom', 'photo_undercarriage', 'photo_meter'];
+    for (const mType of photoTypes) {
+      const evId = `ev_${numericRunId}_${mType}`;
+      evidenceQueries.push(
+        `INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
+         VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, ${sqlEscapeString(mType)}, 'whatsapp://pending/${mType}', 'Promised by seller on WhatsApp')
+         ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;`
+      );
+    }
+  }
+
+  if (extractedVariables.evidence_readiness.running_video_agreed) {
+    const evId = `ev_${numericRunId}_video_running_30s`;
+    evidenceQueries.push(
+      `INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
+       VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, 'video_running_30s', 'whatsapp://pending/video_running_30s', 'Promised 30s operational running video')
+       ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;`
+    );
+  }
+
+  if (extractedVariables.evidence_readiness.rc_copy_agreed) {
+    const evId = `ev_${numericRunId}_doc_rc`;
+    evidenceQueries.push(
+      `INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
+       VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, 'doc_rc', 'whatsapp://pending/doc_rc', 'Promised RC/NOC document')
+       ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;`
+    );
+  }
+
+  if (evidenceQueries.length > 0) {
+    await queryPostgres(evidenceQueries.join('\n'));
+  }
+
+  // 4. If dnc_requested === true, write to vaani_dnc_registry
+  if (extractedVariables.dnc_requested && phone) {
+    const dncSql = `
+      INSERT INTO vaani_dnc_registry (organization_id, phone_number, run_id, reason, opted_out_at, is_active)
+      VALUES (
+        ${sqlEscapeInt(orgId)},
+        ${sqlEscapeString(phone)},
+        ${sqlEscapeInt(numericRunId)},
+        ${sqlEscapeString(payload.dnc_reason || 'Caller opted out during conversation')},
+        CURRENT_TIMESTAMP,
+        true
+      )
+      ON CONFLICT (organization_id, phone_number) DO UPDATE SET
+        run_id = EXCLUDED.run_id,
+        reason = EXCLUDED.reason,
+        opted_out_at = CURRENT_TIMESTAMP,
+        is_active = true;
+    `;
+    await queryPostgres(dncSql);
+  }
+
+  return {
+    success: true,
+    lead_id: leadId,
+    run_id: numericRunId
+  };
+}
+
 module.exports = {
   MACHINE_MASTER_TAXONOMY,
   getOverview,
@@ -1559,6 +1995,8 @@ module.exports = {
   getRecentActivities,
   buildExtractedVsMissing,
   buildJourneyProgression,
-  buildDefaultEvidenceChecklist
+  buildDefaultEvidenceChecklist,
+  ingestCallComplete,
+  queryPostgres,
+  localFollowUpOverrides
 };
-

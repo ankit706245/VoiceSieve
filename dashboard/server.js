@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
 const { WebSocketServer, WebSocket } = require('ws');
+const crypto = require('crypto');
 
 const core = require('./lib/core');
 core.loadEnv();
@@ -242,6 +243,7 @@ function publicTenant(t) {
     id: t.id, name: t.name, slug: t.slug, createdAt: t.createdAt,
     branding: t.branding, providers: t.providers, plan: t.plan,
     status: t.status, privacyMode: t.privacyMode,
+    organization_id: t.organization_id || 1,
   };
 }
 function publicAgent(a) {
@@ -344,7 +346,7 @@ async function apiSignup(req, res, body) {
   });
 
   const token = await core.createSession(userId, tenantId);
-  core.send(res, 200, JSON.stringify({ user: publicUser(user), tenant: publicTenant(tenant) }), {
+  core.send(res, 200, JSON.stringify({ token, user: publicUser(user), tenant: publicTenant(tenant) }), {
     'Content-Type': 'application/json',
     'Set-Cookie': core.sessionCookie(token),
   });
@@ -363,7 +365,7 @@ async function apiLogin(req, res, body) {
   if (!tenant) return core.sendJson(res, 401, { error: 'invalid email or password', code: 'bad_creds' });
 
   const token = await core.createSession(user.id, user.tenantId);
-  core.send(res, 200, JSON.stringify({ user: publicUser(user), tenant: publicTenant(tenant) }), {
+  core.send(res, 200, JSON.stringify({ token, user: publicUser(user), tenant: publicTenant(tenant) }), {
     'Content-Type': 'application/json',
     'Set-Cookie': core.sessionCookie(token),
   });
@@ -415,34 +417,49 @@ function apiHvacDesk(req, res, ctx) {
   core.sendJson(res, 200, { timezone: HVAC_TIMEZONE, calendarConfigured: Boolean(process.env.CALCOM_API_KEY), jobs: jobs.map(publicHvacJob), stats: { calls: jobs.length, booked: count('booked'), routed: count('routed'), followUp: count('follow_up') } });
 }
 
-function queryVaaniLeads() {
+function resolveOrganizationId(ctx) {
+  if (!ctx || !ctx.tenant) return null;
+  if (ctx.tenant.organization_id !== undefined && ctx.tenant.organization_id !== null) {
+    const parsed = parseInt(ctx.tenant.organization_id, 10);
+    return isNaN(parsed) ? null : parsed;
+  }
+  return null;
+}
+
+function queryVaaniLeads(orgId) {
   return new Promise((resolve, reject) => {
+    const orgInt = parseInt(orgId, 10);
+    if (isNaN(orgInt)) {
+      return reject(new Error('Invalid organization ID'));
+    }
     const sql = `
       SELECT json_build_object(
         'stats', json_build_object(
-          'total', (SELECT COUNT(*) FROM vaani_customer_leads),
-          'inquiry', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'inquiry'),
-          'lead_qualified', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'lead_qualified'),
-          'callback_requested', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'callback_requested'),
-          'appointment_requested', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'appointment_requested'),
-          'opt_out', (SELECT COUNT(*) FROM vaani_customer_leads WHERE conversation_outcome = 'opt_out')
+          'total', (SELECT COUNT(r.id) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = ${orgInt}),
+          'inquiry', (SELECT COUNT(r.id) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = ${orgInt} AND COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'conversation_outcome'::text, r.gathered_context ->> 'call_disposition'::text) = 'inquiry'),
+          'lead_qualified', (SELECT COUNT(r.id) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = ${orgInt} AND COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'conversation_outcome'::text, r.gathered_context ->> 'call_disposition'::text) = 'lead_qualified'),
+          'callback_requested', (SELECT COUNT(r.id) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = ${orgInt} AND COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'conversation_outcome'::text, r.gathered_context ->> 'call_disposition'::text) = 'callback_requested'),
+          'appointment_requested', (SELECT COUNT(r.id) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = ${orgInt} AND COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'conversation_outcome'::text, r.gathered_context ->> 'call_disposition'::text) = 'appointment_requested'),
+          'opt_out', (SELECT COUNT(r.id) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = ${orgInt} AND COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'conversation_outcome'::text, r.gathered_context ->> 'call_disposition'::text) = 'opt_out')
         ),
         'interactions', COALESCE(
           (SELECT json_agg(t) FROM (
             SELECT 
-              run_id,
-              created_at,
-              to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') AS formatted_time,
-              caller_name,
-              callback_number,
-              requirement,
-              callback_requested,
-              appointment_type,
-              preferred_date,
-              preferred_time,
-              conversation_outcome
-            FROM vaani_customer_leads
-            ORDER BY run_id DESC
+              r.id AS run_id,
+              r.created_at,
+              to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') AS formatted_time,
+              (r.gathered_context -> 'extracted_variables'::text) ->> 'caller_name'::text AS caller_name,
+              (r.gathered_context -> 'extracted_variables'::text) ->> 'callback_number'::text AS callback_number,
+              (r.gathered_context -> 'extracted_variables'::text) ->> 'requirement'::text AS requirement,
+              COALESCE(((r.gathered_context -> 'extracted_variables'::text) ->> 'callback_requested'::text)::boolean, false) AS callback_requested,
+              (r.gathered_context -> 'extracted_variables'::text) ->> 'appointment_type'::text AS appointment_type,
+              (r.gathered_context -> 'extracted_variables'::text) ->> 'preferred_date'::text AS preferred_date,
+              (r.gathered_context -> 'extracted_variables'::text) ->> 'preferred_time'::text AS preferred_time,
+              COALESCE((r.gathered_context -> 'extracted_variables'::text) ->> 'conversation_outcome'::text, r.gathered_context ->> 'call_disposition'::text) AS conversation_outcome
+            FROM workflow_runs r
+            JOIN workflows w ON r.workflow_id = w.id
+            WHERE w.organization_id = ${orgInt}
+            ORDER BY r.id DESC
           ) t), '[]'::json
         )
       );
@@ -459,12 +476,121 @@ function queryVaaniLeads() {
   });
 }
 
-async function apiVaaniLeads(req, res) {
+async function apiVaaniLeads(req, res, ctx) {
   try {
-    const data = await queryVaaniLeads();
+    const orgId = resolveOrganizationId(ctx);
+    if (!orgId) {
+      return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
+    }
+    const data = await queryVaaniLeads(orgId);
     core.sendJson(res, 200, data);
   } catch (err) {
     core.sendJson(res, 500, { error: err.message, code: 'db_error' });
+  }
+}
+
+async function apiVaaniSalesGet(req, res, ctx) {
+  try {
+    const orgId = resolveOrganizationId(ctx);
+    if (!orgId) {
+      return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
+    }
+
+    const route = (req.url || '').split('?')[0];
+    const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const isDemo = urlObj.searchParams.get('demo') === '1' || req.headers['x-vaani-demo'] === 'true';
+
+    // Sanitize query parameters - explicitly delete any tenant injection attempts
+    const filters = Object.fromEntries(urlObj.searchParams.entries());
+    delete filters.organization_id;
+    delete filters.organizationId;
+    delete filters.tenant_id;
+    delete filters.tenantId;
+
+    if (route === '/api/vaani/sales/overview') {
+      const data = await vaaniSales.getOverview(isDemo, orgId);
+      return core.sendJson(res, 200, data);
+    }
+    if (route === '/api/vaani/sales/sellers') {
+      const data = await vaaniSales.getSellers(filters, isDemo, orgId);
+      return core.sendJson(res, 200, { total: data.length, sellers: data });
+    }
+    if (route === '/api/vaani/sales/buyers') {
+      const data = await vaaniSales.getBuyers(filters, isDemo, orgId);
+      return core.sendJson(res, 200, { total: data.length, buyers: data });
+    }
+    if (route === '/api/vaani/sales/machines') {
+      const data = await vaaniSales.getMachines(isDemo, orgId);
+      return core.sendJson(res, 200, data);
+    }
+    if (route === '/api/vaani/sales/demand') {
+      const data = await vaaniSales.getDemand(isDemo, orgId);
+      return core.sendJson(res, 200, data);
+    }
+    if (route === '/api/vaani/sales/follow-ups') {
+      const data = await vaaniSales.getFollowUps(isDemo, orgId);
+      return core.sendJson(res, 200, data);
+    }
+    if (route === '/api/vaani/sales/calls') {
+      const data = await vaaniSales.getCalls(isDemo, orgId);
+      return core.sendJson(res, 200, { total: data.length, calls: data });
+    }
+    if (route.startsWith('/api/vaani/sales/calls/')) {
+      const runId = route.slice('/api/vaani/sales/calls/'.length);
+      const data = await vaaniSales.getCallDetail(runId, isDemo, orgId);
+      if (!data) return core.sendJson(res, 404, { error: 'call not found', code: 'not_found' });
+      return core.sendJson(res, 200, data);
+    }
+    if (route.startsWith('/api/vaani/sales/leads/') && route.endsWith('/timeline')) {
+      const raw = route.slice('/api/vaani/sales/leads/'.length);
+      const leadId = raw.replace(/\/timeline$/, '');
+      const data = await vaaniSales.getLeadTimeline(leadId, isDemo, orgId);
+      return core.sendJson(res, 200, data);
+    }
+    if (route.startsWith('/api/vaani/sales/leads/')) {
+      const leadId = route.slice('/api/vaani/sales/leads/'.length);
+      const data = await vaaniSales.getLead360(leadId, isDemo, orgId);
+      if (!data) return core.sendJson(res, 404, { error: 'lead not found', code: 'not_found' });
+      return core.sendJson(res, 200, data);
+    }
+    if (route === '/api/vaani/sales/activities') {
+      const limit = parseInt(urlObj.searchParams.get('limit') || '15', 10);
+      const data = await vaaniSales.getRecentActivities(limit, isDemo, orgId);
+      return core.sendJson(res, 200, { total: data.length, activities: data });
+    }
+    if (route === '/api/vaani/sales/dnc') {
+      const data = await vaaniSales.getDncRegistry(isDemo, orgId);
+      return core.sendJson(res, 200, { total: data.length, dnc_records: data });
+    }
+    if (route === '/api/vaani/sales/search') {
+      const q = urlObj.searchParams.get('q') || '';
+      const data = await vaaniSales.searchLeads(q, isDemo, orgId);
+      return core.sendJson(res, 200, { query: q, total: data.length, results: data });
+    }
+
+    return core.sendJson(res, 404, { error: 'no such endpoint', code: 'not_found' });
+  } catch (err) {
+    return core.sendJson(res, 500, { error: err.message, code: 'sales_api_error' });
+  }
+}
+
+async function apiVaaniFollowUpStatus(req, res, ctx) {
+  try {
+    const orgId = resolveOrganizationId(ctx);
+    if (!orgId) {
+      return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
+    }
+    const { id, status } = ctx.body || {};
+    if (!id || !status) return core.sendJson(res, 422, { error: 'id and status required', code: 'bad_request' });
+    try {
+      const updated = await vaaniSales.updateFollowUpStatus(id, status, orgId);
+      return core.sendJson(res, 200, updated);
+    } catch (err) {
+      const statusCode = err.code === 'not_found' ? 404 : 422;
+      return core.sendJson(res, statusCode, { error: err.message, code: err.code || 'invalid_status' });
+    }
+  } catch (err) {
+    return core.sendJson(res, 500, { error: err.message, code: 'internal_error' });
   }
 }
 async function apiHvacEventTypes(req, res) {
@@ -1548,6 +1674,30 @@ function handleProviderError(res, e) {
 }
 
 /* ==========================================================================
+   Service Authentication: Vaani Ingestion Webhook
+   Validates Authorization: Bearer <VAANI_INGESTION_SECRET> in constant time.
+   Fails closed if VAANI_INGESTION_SECRET is not configured.
+   ========================================================================== */
+function verifyIngestionAuth(req) {
+  const configuredSecret = process.env.VAANI_INGESTION_SECRET;
+  if (!configuredSecret || typeof configuredSecret !== 'string' || !configuredSecret.trim()) {
+    return false;
+  }
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || typeof authHeader !== 'string') {
+    return false;
+  }
+  const parts = authHeader.trim().split(/\s+/);
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer' || !parts[1]) {
+    return false;
+  }
+  const token = parts[1].trim();
+  const expectedHash = crypto.createHash('sha256').update(configuredSecret.trim()).digest();
+  const actualHash = crypto.createHash('sha256').update(token).digest();
+  return crypto.timingSafeEqual(expectedHash, actualHash);
+}
+
+/* ==========================================================================
    Router
    ========================================================================== */
 
@@ -1583,90 +1733,7 @@ const server = http.createServer(async (req, res) => {
         const text = urlObj.searchParams.get('text') || '';
         return apiTtsLocal(req, res, { text });
       }
-      if (route === '/api/vaani/leads' && req.method === 'GET') {
-        return apiVaaniLeads(req, res);
-      }
 
-      // ---- Vaani Used Excavator Sales APIs ----
-      if (route.startsWith('/api/vaani/sales/')) {
-        const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-        const isDemo = urlObj.searchParams.get('demo') === '1' || req.headers['x-vaani-demo'] === 'true';
-
-        if (route === '/api/vaani/sales/overview' && req.method === 'GET') {
-          const data = await vaaniSales.getOverview(isDemo);
-          return core.sendJson(res, 200, data);
-        }
-        if (route === '/api/vaani/sales/sellers' && req.method === 'GET') {
-          const filters = Object.fromEntries(urlObj.searchParams.entries());
-          const data = await vaaniSales.getSellers(filters, isDemo);
-          return core.sendJson(res, 200, { total: data.length, sellers: data });
-        }
-        if (route === '/api/vaani/sales/buyers' && req.method === 'GET') {
-          const filters = Object.fromEntries(urlObj.searchParams.entries());
-          const data = await vaaniSales.getBuyers(filters, isDemo);
-          return core.sendJson(res, 200, { total: data.length, buyers: data });
-        }
-        if (route === '/api/vaani/sales/machines' && req.method === 'GET') {
-          const data = await vaaniSales.getMachines(isDemo);
-          return core.sendJson(res, 200, data);
-        }
-        if (route === '/api/vaani/sales/demand' && req.method === 'GET') {
-          const data = await vaaniSales.getDemand(isDemo);
-          return core.sendJson(res, 200, data);
-        }
-        if (route === '/api/vaani/sales/follow-ups' && req.method === 'GET') {
-          const data = await vaaniSales.getFollowUps(isDemo);
-          return core.sendJson(res, 200, data);
-        }
-        if (route === '/api/vaani/sales/calls' && req.method === 'GET') {
-          const data = await vaaniSales.getCalls(isDemo);
-          return core.sendJson(res, 200, { total: data.length, calls: data });
-        }
-        if (route.startsWith('/api/vaani/sales/calls/') && req.method === 'GET') {
-          const runId = route.slice('/api/vaani/sales/calls/'.length);
-          const data = await vaaniSales.getCallDetail(runId, isDemo);
-          if (!data) return core.sendJson(res, 404, { error: 'call not found', code: 'not_found' });
-          return core.sendJson(res, 200, data);
-        }
-        if (route.startsWith('/api/vaani/sales/leads/') && route.endsWith('/timeline') && req.method === 'GET') {
-          const raw = route.slice('/api/vaani/sales/leads/'.length);
-          const leadId = raw.replace(/\/timeline$/, '');
-          const data = await vaaniSales.getLeadTimeline(leadId, isDemo);
-          return core.sendJson(res, 200, data);
-        }
-        if (route.startsWith('/api/vaani/sales/leads/') && req.method === 'GET') {
-          const leadId = route.slice('/api/vaani/sales/leads/'.length);
-          const data = await vaaniSales.getLead360(leadId, isDemo);
-          if (!data) return core.sendJson(res, 404, { error: 'lead not found', code: 'not_found' });
-          return core.sendJson(res, 200, data);
-        }
-        if (route === '/api/vaani/sales/activities' && req.method === 'GET') {
-          const limit = parseInt(urlObj.searchParams.get('limit') || '15', 10);
-          const data = await vaaniSales.getRecentActivities(limit, isDemo);
-          return core.sendJson(res, 200, { total: data.length, activities: data });
-        }
-        if (route === '/api/vaani/sales/dnc' && req.method === 'GET') {
-          const data = await vaaniSales.getDncRegistry(isDemo);
-          return core.sendJson(res, 200, { total: data.length, dnc_records: data });
-        }
-        if (route === '/api/vaani/sales/search' && req.method === 'GET') {
-          const q = urlObj.searchParams.get('q') || '';
-          const data = await vaaniSales.searchLeads(q, isDemo);
-          return core.sendJson(res, 200, { query: q, total: data.length, results: data });
-        }
-        if (route === '/api/vaani/sales/follow-up/status' && req.method === 'POST') {
-          return core.readJsonBody(req, res, (body) => {
-            const { id, status } = body || {};
-            if (!id || !status) return core.sendJson(res, 422, { error: 'id and status required', code: 'bad_request' });
-            try {
-              const updated = vaaniSales.updateFollowUpStatus(id, status);
-              return core.sendJson(res, 200, updated);
-            } catch (err) {
-              return core.sendJson(res, 422, { error: err.message, code: 'invalid_status' });
-            }
-          });
-        }
-      }
       if (route.startsWith('/api/public/demo/') && req.method === 'GET') {
         const token = decodeURIComponent(route.slice('/api/public/demo/'.length));
         if (token.includes('/')) return core.sendJson(res, 404, { error: 'demo link not found', code: 'not_found' });
@@ -1702,11 +1769,29 @@ const server = http.createServer(async (req, res) => {
         if (route === '/api/hvac/desk') return core.requireAuth(req, res, apiHvacDesk);
         if (route === '/api/hvac/event-types') return core.requireAuth(req, res, apiHvacEventTypes);
         if (route === '/api/hvac/slots') return core.requireAuth(req, res, apiHvacSlots);
+        if (route === '/api/vaani/leads') return core.requireAuth(req, res, apiVaaniLeads);
+        if (route.startsWith('/api/vaani/sales/')) return core.requireAuth(req, res, apiVaaniSalesGet);
         return core.sendJson(res, 404, { error: 'no such endpoint', code: 'not_found' });
       }
 
       if (req.method !== 'POST') {
         return core.sendJson(res, 405, { error: 'method not allowed', code: 'method' });
+      }
+
+      // ---- Vaani Call Ingestion Webhook (POST /api/v1/vaani/calls/complete & POST /api/vaani/calls/complete) ----
+      // Service-to-service authentication using Authorization: Bearer <VAANI_INGESTION_SECRET>
+      if (route === '/api/v1/vaani/calls/complete' || route === '/api/vaani/calls/complete') {
+        if (!verifyIngestionAuth(req)) {
+          return core.sendJson(res, 401, { error: 'unauthorized', code: 'unauthorized' });
+        }
+        try {
+          const rawBody = await core.readBody(req);
+          const result = await vaaniSales.ingestCallComplete(rawBody);
+          return core.sendJson(res, 201, result);
+        } catch (err) {
+          const status = err.statusCode || 400;
+          return core.sendJson(res, status, { error: err.message, code: err.code || 'validation_error' });
+        }
       }
 
       // ---- POST routes: read the body once, with a bigger cap for STT audio ----
@@ -1733,6 +1818,7 @@ const server = http.createServer(async (req, res) => {
       if (route === '/api/tts/local') return apiTtsLocal(req, res, body);
 
       // Authed POST routes (tenant scoped through requireAuth).
+      if (route === '/api/vaani/sales/follow-up/status') return core.requireAuth(req, res, apiVaaniFollowUpStatus, body);
       if (route === '/api/agents') return core.requireAuth(req, res, apiAgentsCreate, body);
       if (route === '/api/agents/update') return core.requireAuth(req, res, apiAgentsUpdate, body);
       if (route === '/api/agents/delete') return core.requireAuth(req, res, apiAgentsDelete, body);
@@ -1777,7 +1863,22 @@ const server = http.createServer(async (req, res) => {
       req.url = '/vaani.html';
       return core.serveStatic(req, res);
     }
-    if (['GET', 'HEAD'].includes(req.method || '') && (route === '/vaani-sales' || route === '/sales' || route === '/vaani-sales.html')) {
+    const isVaaniSales = /^\/(vaani-sales|sales)(\.html|\/)?$/i.test(route);
+    if (['GET', 'HEAD'].includes(req.method || '') && isVaaniSales) {
+      const sess = await core.getSession(req);
+      if (!sess) {
+        const accept = String(req.headers['accept'] || '').toLowerCase();
+        if (accept.includes('application/json') && !accept.includes('text/html')) {
+          return core.sendJson(res, 401, { error: 'authentication required', code: 'no_session' });
+        }
+        res.writeHead(302, {
+          Location: '/app.html?redirect=/vaani-sales',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0'
+        });
+        return res.end();
+      }
       req.url = '/vaani-sales.html';
       return core.serveStatic(req, res);
     }
