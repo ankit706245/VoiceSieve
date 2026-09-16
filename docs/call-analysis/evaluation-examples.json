@@ -1,0 +1,336 @@
+[
+  {
+    "id": "EVAL-01",
+    "scenario": "Buyer requesting 2024/2025 JS 215 excavator with GST invoice in Jaipur",
+    "transcript_excerpt": "Madam mujhe Pocclain machine chahiye... With GST chahiye maam. Hyundai me 2025/2026 model ya JS me 2024/2025 model 215.",
+    "expected_extraction": {
+      "customer_type": "BUYER",
+      "customer_name": null,
+      "phone": "95469*****",
+      "machine_requirement": "Tracked Excavator 20-22 Ton",
+      "brand": "JCB",
+      "model": "JS 215",
+      "manufacturing_year": 2024,
+      "running_hours": null,
+      "application": null,
+      "location": "Jaipur",
+      "budget": null,
+      "asking_price": null,
+      "interest_level": "HIGH",
+      "customer_intent": "BUY",
+      "objections": [],
+      "outcome": "lead_qualified",
+      "next_action": "Send WhatsApp details and schedule yard visit in Loha Mandi Jaipur",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": true
+    },
+    "expected_normalization": {
+      "raw_model": "JS 215",
+      "normalized_brand": "JCB",
+      "normalized_model": "JS215"
+    }
+  },
+  {
+    "id": "EVAL-02",
+    "scenario": "Seller offering 2 units of Komatsu PC210 2019 in Singrauli with broken meter",
+    "transcript_excerpt": "Hai to abhi 2 PC hai mere paas Komatsu PC210... 2019 model... meter kharab ho gaya hai running hours approx 9000... demand 22 Lakhs.",
+    "expected_extraction": {
+      "customer_type": "SELLER",
+      "customer_name": null,
+      "phone": "97000*****",
+      "machine_requirement": "Selling Inventory",
+      "brand": "Komatsu",
+      "model": "PC 210",
+      "manufacturing_year": 2019,
+      "running_hours": 9000,
+      "application": "soil_earthwork",
+      "location": "Singrauli",
+      "budget": null,
+      "asking_price": "Rs 22 Lakhs each",
+      "interest_level": "HIGH",
+      "customer_intent": "SELL",
+      "objections": [
+        "meter_broken"
+      ],
+      "outcome": "lead_qualified",
+      "next_action": "Request WhatsApp photos and RC copy for verification",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": true
+    },
+    "expected_normalization": {
+      "raw_model": "PC 210",
+      "normalized_brand": "Komatsu",
+      "normalized_model": "PC210"
+    }
+  },
+  {
+    "id": "EVAL-03",
+    "scenario": "Seller offering Tata 370 2019 model with 10k-11k hours (Asking 35L)",
+    "transcript_excerpt": "Tata 370 hai 2019 model... location site par hai... demand 35 Lakhs hai... 10 se 11 hazar ghanta chali hai.",
+    "expected_extraction": {
+      "customer_type": "SELLER",
+      "customer_name": null,
+      "phone": "98290*****",
+      "machine_requirement": "Selling Inventory",
+      "brand": "Tata Hitachi",
+      "model": "Zaxis 370",
+      "manufacturing_year": 2019,
+      "running_hours": 10500,
+      "application": "unknown",
+      "location": "Rajasthan",
+      "budget": null,
+      "asking_price": "Rs 35 Lakhs",
+      "interest_level": "MODERATE",
+      "customer_intent": "SELL",
+      "objections": [],
+      "outcome": "inquiry",
+      "next_action": "Request exact site location and WhatsApp photos",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": "Tata 370",
+      "normalized_brand": "Tata Hitachi",
+      "normalized_model": "Zaxis 370"
+    }
+  },
+  {
+    "id": "EVAL-04",
+    "scenario": "Buyer inquiry for Sany SY215 2024 or Komatsu PC210 2021 in Jaipur yard",
+    "transcript_excerpt": "Sany 215 kaunse year ka model hai? 2024 ka model... location mera Jaipur colony Loha Mandi hai.",
+    "expected_extraction": {
+      "customer_type": "BUYER",
+      "customer_name": null,
+      "phone": "94140*****",
+      "machine_requirement": "Tracked Excavator 21 Ton",
+      "brand": "Sany",
+      "model": "SY215",
+      "manufacturing_year": 2024,
+      "running_hours": null,
+      "application": null,
+      "location": "Jaipur",
+      "budget": null,
+      "asking_price": null,
+      "interest_level": "HIGH",
+      "customer_intent": "BUY",
+      "objections": [],
+      "outcome": "appointment_requested",
+      "next_action": "Send Loha Mandi location pin on WhatsApp for yard visit",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": "Sany 215",
+      "normalized_brand": "Sany",
+      "normalized_model": "SY215"
+    }
+  },
+  {
+    "id": "EVAL-05",
+    "scenario": "Seller offering Cat 320 2020/21 model in Bikaner (Asking 35L)",
+    "transcript_excerpt": "Cat ki machine hai... 2020 ya 21 model hai... 7-8 hazar ghante chali hai... Bikaner me hai... customer 35 maang raha hai.",
+    "expected_extraction": {
+      "customer_type": "SELLER",
+      "customer_name": "Monika Contact",
+      "phone": "96100*****",
+      "machine_requirement": "Selling Inventory",
+      "brand": "Caterpillar",
+      "model": "CAT 320",
+      "manufacturing_year": 2020,
+      "running_hours": 7500,
+      "application": null,
+      "location": "Bikaner",
+      "budget": null,
+      "asking_price": "Rs 35 Lakhs",
+      "interest_level": "MODERATE",
+      "customer_intent": "SELL",
+      "objections": [],
+      "outcome": "inquiry",
+      "next_action": "Receive WhatsApp photos and evaluate buyer match",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": "Cat 320",
+      "normalized_brand": "Caterpillar",
+      "normalized_model": "CAT 320"
+    }
+  },
+  {
+    "id": "EVAL-06",
+    "scenario": "Buyer requesting Hyundai 215 2023 model in Kuchaman",
+    "transcript_excerpt": "Hyundai 215 2023 model... 5-6 hazar ghante chali hui... location Kuchaman.",
+    "expected_extraction": {
+      "customer_type": "BUYER",
+      "customer_name": "Pramod Lead",
+      "phone": "98280*****",
+      "machine_requirement": "Hyundai 215 Excavator",
+      "brand": "Hyundai",
+      "model": "R215",
+      "manufacturing_year": 2023,
+      "running_hours": 5500,
+      "application": null,
+      "location": "Kuchaman",
+      "budget": null,
+      "asking_price": null,
+      "interest_level": "HIGH",
+      "customer_intent": "BUY",
+      "objections": [],
+      "outcome": "lead_qualified",
+      "next_action": "Send photo catalog and price quote on WhatsApp",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": "Hyundai 215",
+      "normalized_brand": "Hyundai",
+      "normalized_model": "R215"
+    }
+  },
+  {
+    "id": "EVAL-07",
+    "scenario": "Seller offering Kobelco SK210 2019 in Satara/Tamil Nadu (Asking 25L - Price Objection)",
+    "transcript_excerpt": "Kobelco 210... 2019 model... 7000+ hours... Satara location... price 25 Lakhs... 25 to bahut zyada bata rahe ho sir.",
+    "expected_extraction": {
+      "customer_type": "SELLER",
+      "customer_name": null,
+      "phone": "97840*****",
+      "machine_requirement": "Selling Inventory",
+      "brand": "Kobelco",
+      "model": "SK210",
+      "manufacturing_year": 2019,
+      "running_hours": 7000,
+      "application": null,
+      "location": "Satara",
+      "budget": null,
+      "asking_price": "Rs 25 Lakhs",
+      "interest_level": "LOW",
+      "customer_intent": "SELL",
+      "objections": [
+        "price_too_high"
+      ],
+      "outcome": "inquiry",
+      "next_action": "Receive WhatsApp details and check for price revision",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": "Kobelco 210",
+      "normalized_brand": "Kobelco",
+      "normalized_model": "SK210"
+    }
+  },
+  {
+    "id": "EVAL-08",
+    "scenario": "Outbound call - Caller has no machine for sale or purchase",
+    "transcript_excerpt": "Koi machine hai sale ke liye? Nahi maam abhi to nahi. Koi purchase karni ho? Nahi maam.",
+    "expected_extraction": {
+      "customer_type": "UNKNOWN",
+      "customer_name": null,
+      "phone": "99290*****",
+      "machine_requirement": null,
+      "brand": null,
+      "model": null,
+      "manufacturing_year": null,
+      "running_hours": null,
+      "application": null,
+      "location": null,
+      "budget": null,
+      "asking_price": null,
+      "interest_level": "NONE",
+      "customer_intent": "NOT_INTERESTED",
+      "objections": [],
+      "outcome": "opt_out",
+      "next_action": "No immediate action; archive lead",
+      "follow_up_required": false,
+      "whatsapp_required": false,
+      "photos_required": false,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": null,
+      "normalized_brand": null,
+      "normalized_model": null
+    }
+  },
+  {
+    "id": "EVAL-09",
+    "scenario": "Buyer from Jaisalmer (Dhanraj) seeking Hyundai / Kobelco / Tata / JS",
+    "transcript_excerpt": "Shubh naam sir? Dhanraj. Kahan se? Jaisalmer. 2nd hand machine chahiye... Hyundai, Kobelco, Tata, JS sab chalegi... Jaipur me 6-7 machines khadi hain.",
+    "expected_extraction": {
+      "customer_type": "BUYER",
+      "customer_name": "Dhanraj",
+      "phone": "94145*****",
+      "machine_requirement": "2nd Hand Tracked Excavator",
+      "brand": "Multi-Brand",
+      "model": null,
+      "manufacturing_year": null,
+      "running_hours": null,
+      "application": null,
+      "location": "Jaisalmer",
+      "budget": null,
+      "asking_price": null,
+      "interest_level": "HIGH",
+      "customer_intent": "BUY",
+      "objections": [],
+      "outcome": "lead_qualified",
+      "next_action": "Send catalog of 6-7 machines in Jaipur yard on WhatsApp",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": null,
+      "normalized_brand": null,
+      "normalized_model": null
+    }
+  },
+  {
+    "id": "EVAL-10",
+    "scenario": "Seller offering Tata 200 2024 model in Karauli (Asking 33L)",
+    "transcript_excerpt": "Tata 200 hai maam 24 model... location Karauli side hai... photo bhej di hai... demand 33 Lakhs.",
+    "expected_extraction": {
+      "customer_type": "SELLER",
+      "customer_name": null,
+      "phone": "95710*****",
+      "machine_requirement": "Selling Inventory",
+      "brand": "Tata Hitachi",
+      "model": "EX200",
+      "manufacturing_year": 2024,
+      "running_hours": null,
+      "application": null,
+      "location": "Karauli",
+      "budget": null,
+      "asking_price": "Rs 33 Lakhs",
+      "interest_level": "HIGH",
+      "customer_intent": "SELL",
+      "objections": [],
+      "outcome": "lead_qualified",
+      "next_action": "Inspect WhatsApp photos and callback seller after buyer match",
+      "follow_up_required": true,
+      "whatsapp_required": true,
+      "photos_required": true,
+      "documents_required": false
+    },
+    "expected_normalization": {
+      "raw_model": "Tata 200",
+      "normalized_brand": "Tata Hitachi",
+      "normalized_model": "EX200"
+    }
+  }
+]

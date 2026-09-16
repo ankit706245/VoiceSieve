@@ -1,0 +1,3301 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>SHYAM EARTHMOVER — Vaani AI Sales Command Center</title>
+  <meta name="description" content="Vaani AI Used Excavator Sales Command Center for Shyam Earthmover. Sourcing, Buyer Matchmaking, Machine Inventory, Follow-ups, and DNC Isolation." />
+  <meta name="theme-color" content="#0c0d14" />
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+  <style>
+    :root {
+      --bg-base: #0a0b10;
+      --bg-surface: #11131c;
+      --bg-card: #161926;
+      --bg-card-hover: #1c2032;
+      --bg-active: #22273d;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --border-focus: rgba(210, 174, 89, 0.5);
+      --text-main: #f3f4f6;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --gold: #d2ae59;
+      --gold-bright: #eab308;
+      --gold-dim: rgba(210, 174, 89, 0.15);
+      --green: #10b981;
+      --green-dim: rgba(16, 185, 129, 0.15);
+      --blue: #38bdf8;
+      --blue-dim: rgba(56, 189, 248, 0.15);
+      --purple: #a855f7;
+      --purple-dim: rgba(168, 85, 247, 0.15);
+      --rose: #f43f5e;
+      --rose-dim: rgba(244, 63, 94, 0.15);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245, 158, 11, 0.15);
+      --radius: 10px;
+      --radius-sm: 6px;
+      --radius-lg: 14px;
+      --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      --mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: var(--font);
+      min-height: 100vh;
+      line-height: 1.5;
+      font-size: 14px;
+      overflow-x: hidden;
+    }
+
+    /* Ambient backdrop glow */
+    .glow-layer {
+      position: fixed;
+      top: 0; left: 0; right: 0; height: 320px;
+      background: radial-gradient(circle at 50% -15%, rgba(210, 174, 89, 0.08), transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app-container {
+      max-width: 1480px;
+      margin: 0 auto;
+      padding: 16px 24px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Header & Top Bar */
+    header.header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-logo-badge {
+      width: 42px;
+      height: 42px;
+      border-radius: var(--radius-sm);
+      background: #1a1d2c;
+      border: 1px solid rgba(210, 174, 89, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--gold);
+      font-weight: 800;
+      font-size: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    .brand-titles h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-titles p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .brand-badge {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--gold-dim);
+      color: var(--gold);
+      border: 1px solid rgba(210, 174, 89, 0.3);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Global Search Box */
+    .search-box {
+      position: relative;
+      width: 300px;
+    }
+    .search-input {
+      width: 100%;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 34px 8px 12px;
+      color: var(--text-main);
+      font-size: 13px;
+      outline: none;
+      transition: all 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(210, 174, 89, 0.2);
+    }
+    .search-kbd {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px;
+      font-family: var(--mono);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 5px;
+      border-radius: 3px;
+      color: var(--text-dim);
+      pointer-events: none;
+    }
+
+    /* Data Mode Switcher */
+    .mode-toggle-group {
+      display: flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 2px;
+    }
+    .mode-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mode-btn.active {
+      background: var(--bg-card);
+      color: var(--gold);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Navigation Bar */
+    nav.main-nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+      margin-bottom: 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    nav.main-nav::-webkit-scrollbar { display: none; }
+    .nav-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 16px;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .nav-tab:hover {
+      color: var(--text-main);
+      background: var(--bg-surface);
+    }
+    .nav-tab.active {
+      color: var(--gold);
+      background: var(--bg-card);
+      border-color: rgba(210, 174, 89, 0.25);
+    }
+    .tab-badge {
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+    }
+    .nav-tab.active .tab-badge {
+      background: var(--gold-dim);
+      color: var(--gold);
+    }
+    .tab-badge.badge-danger {
+      background: var(--rose-dim);
+      color: var(--rose);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    /* Views container */
+    .view-content {
+      display: none;
+      animation: fadeIn 0.2s ease-in-out;
+    }
+    .view-content.active {
+      display: block;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(3px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* KPI Cards Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .kpi-card:hover {
+      border-color: var(--border-strong);
+      transform: translateY(-2px);
+    }
+    .kpi-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .kpi-value {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .kpi-card.gold-accent { border-top: 3px solid var(--gold); }
+    .kpi-card.green-accent { border-top: 3px solid var(--green); }
+    .kpi-card.blue-accent { border-top: 3px solid var(--blue); }
+    .kpi-card.rose-accent { border-top: 3px solid var(--rose); }
+
+    /* Funnel & Ratio Section */
+    .overview-split {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 1024px) {
+      .overview-split { grid-template-columns: 1fr; }
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .panel-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-subtitle {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Lead Funnel Visualizer */
+    .funnel-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .funnel-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+    .funnel-label {
+      width: 130px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.03em;
+    }
+    .funnel-bar-bg {
+      flex: 1;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .funnel-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+    .funnel-count {
+      width: 45px;
+      text-align: right;
+      font-weight: 700;
+      color: #fff;
+      font-family: var(--mono);
+    }
+
+    /* Ratio bar */
+    .ratio-bar {
+      display: flex;
+      height: 12px;
+      border-radius: 6px;
+      overflow: hidden;
+      margin: 16px 0;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .ratio-segment-seller { background: var(--blue); }
+    .ratio-segment-buyer { background: var(--green); }
+    .ratio-segment-inquiry { background: var(--purple); }
+    .ratio-legend {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    /* Filters Bar */
+    .filter-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      background: var(--bg-surface);
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-subtle);
+    }
+    .filter-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .filter-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      outline: none;
+      cursor: pointer;
+    }
+    .filter-select:focus {
+      border-color: var(--gold);
+    }
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      cursor: pointer;
+      align-self: flex-end;
+      margin-top: auto;
+    }
+    .btn-reset:hover {
+      color: #fff;
+      border-color: var(--border-strong);
+    }
+
+    /* Tables */
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      overflow-x: auto;
+      box-shadow: var(--shadow);
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    table.data-table th {
+      background: #11131c;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    table.data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    table.data-table tbody tr {
+      cursor: pointer;
+      transition: background-color 0.15s;
+    }
+    table.data-table tbody tr:hover {
+      background-color: var(--bg-card-hover);
+    }
+
+    /* Badges & Tags */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .badge-hot {
+      background: var(--rose-dim);
+      color: #fda4af;
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+    .badge-warm {
+      background: var(--amber-dim);
+      color: #fcd34d;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .badge-cold {
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+    }
+    .badge-seller {
+      background: var(--blue-dim);
+      color: var(--blue);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .badge-buyer {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-qualified {
+      background: var(--green-dim);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-owner {
+      background: rgba(255, 255, 255, 0.06);
+      color: #e2e8f0;
+      border: 1px solid var(--border-subtle);
+    }
+    .badge-broker {
+      background: var(--purple-dim);
+      color: #d8b4fe;
+      border: 1px solid rgba(168, 85, 247, 0.3);
+    }
+    .badge-dnc {
+      background: #4c0519;
+      color: #fecdd3;
+      border: 1px solid #e11d48;
+      font-weight: 700;
+    }
+
+    .phone-link {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--blue);
+      text-decoration: none;
+    }
+
+    /* Evidence icons */
+    .evidence-icons {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .evidence-chip {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.06);
+      color: var(--text-dim);
+    }
+    .evidence-chip.verified {
+      background: var(--green-dim);
+      color: var(--green);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    /* Warning Banner for DNC */
+    .dnc-banner {
+      background: linear-gradient(135deg, rgba(244, 63, 94, 0.15), rgba(76, 5, 25, 0.4));
+      border: 1px solid #f43f5e;
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .dnc-icon-badge {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: #e11d48;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .dnc-banner-text h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+    .dnc-banner-text p {
+      font-size: 13px;
+      color: #fecdd3;
+      margin-top: 4px;
+      line-height: 1.4;
+    }
+
+    /* Detail Slide-Over Drawer */
+    .drawer-backdrop {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 998;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .drawer-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .drawer {
+      position: fixed;
+      top: 0; right: 0; bottom: 0;
+      width: 620px;
+      max-width: 95vw;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-strong);
+      box-shadow: -10px 0 40px rgba(0, 0, 0, 0.7);
+      z-index: 999;
+      transform: translateX(100%);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .drawer.open {
+      transform: translateX(0);
+    }
+    .drawer-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .drawer-close-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .drawer-close-btn:hover {
+      color: #fff;
+      border-color: var(--border-strong);
+    }
+    .drawer-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Drawer Sections */
+    .drawer-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 16px;
+    }
+    .drawer-card-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+    }
+    .drawer-field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      font-size: 12px;
+    }
+    .drawer-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .drawer-field-label {
+      color: var(--text-dim);
+      font-size: 11px;
+    }
+    .drawer-field-value {
+      color: var(--text-main);
+      font-weight: 600;
+    }
+
+    /* Transcript bubbles */
+    .transcript-box {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      max-height: 280px;
+      overflow-y: auto;
+    }
+    .bubble {
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      line-height: 1.4;
+      max-width: 85%;
+    }
+    .bubble-vaani {
+      background: #1e2238;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: #e0f2fe;
+      align-self: flex-start;
+    }
+    .bubble-customer {
+      background: #231f18;
+      border: 1px solid rgba(210, 174, 89, 0.25);
+      color: #fef08a;
+      align-self: flex-end;
+    }
+    .bubble-sender {
+      font-size: 10px;
+      font-weight: 700;
+      margin-bottom: 2px;
+      color: var(--text-dim);
+    }
+
+    /* Lead 360 Drawer Tabs */
+    .drawer-tabs {
+      display: flex;
+      gap: 6px;
+      padding: 10px 24px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-subtle);
+      overflow-x: auto;
+    }
+    .drawer-tab {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .drawer-tab:hover {
+      color: #fff;
+      border-color: var(--border-strong);
+    }
+    .drawer-tab.active {
+      background: rgba(210, 174, 89, 0.12);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .drawer-tab-pane {
+      display: none;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .drawer-tab-pane.active {
+      display: flex;
+    }
+
+    /* Next Action Engine Banner */
+    .next-action-card {
+      background: linear-gradient(135deg, rgba(210, 174, 89, 0.08) 0%, rgba(30, 34, 56, 0.6) 100%);
+      border: 1px solid rgba(210, 174, 89, 0.35);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .next-action-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .next-action-title {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+    .next-action-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      font-size: 12px;
+    }
+    .next-action-box {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 8px 10px;
+    }
+    .next-action-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 700;
+      margin-bottom: 3px;
+    }
+    .next-action-val {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    /* Sales Journey Tracker */
+    .journey-tracker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 12px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+    }
+    .journey-step {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .journey-step.completed {
+      border-color: rgba(34, 197, 94, 0.4);
+      background: rgba(34, 197, 94, 0.1);
+      color: #4ade80;
+    }
+    .journey-step.current {
+      border-color: var(--gold);
+      background: rgba(210, 174, 89, 0.2);
+      color: #fef08a;
+      box-shadow: 0 0 10px rgba(210, 174, 89, 0.3);
+      font-weight: 700;
+    }
+    .journey-arrow {
+      color: var(--text-dim);
+      font-size: 9px;
+    }
+
+    /* What Vaani Learned Grid */
+    .learned-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .learned-column {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .learned-col-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .learned-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 11px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .learned-item-title {
+      font-weight: 600;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .learned-item-val {
+      font-size: 12px;
+      color: #fff;
+      padding-left: 15px;
+    }
+    .learned-item-hint {
+      font-size: 10px;
+      color: var(--text-dim);
+      padding-left: 15px;
+      font-style: italic;
+    }
+
+    /* 8-Point Evidence Checklist Table */
+    .evidence-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    .evidence-table th {
+      text-align: left;
+      padding: 8px 10px;
+      background: var(--bg-base);
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border-subtle);
+      font-weight: 600;
+    }
+    .evidence-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-main);
+    }
+    .evidence-disclaimer {
+      font-size: 11px;
+      color: var(--text-muted);
+      background: rgba(56, 189, 248, 0.05);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      line-height: 1.4;
+    }
+
+    /* Timeline Styling */
+    .timeline-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .timeline-day-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+    .timeline-day-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+    .timeline-card {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-left: 3px solid var(--border-strong);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s ease;
+    }
+    .timeline-card.actor-vaani { border-left-color: var(--blue); }
+    .timeline-card.actor-operator { border-left-color: var(--gold); }
+    .timeline-card.actor-customer { border-left-color: #22c55e; }
+    .timeline-card.actor-system { border-left-color: var(--purple); }
+    .timeline-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+    .timeline-actor {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .timeline-time {
+      color: var(--text-dim);
+      font-size: 10px;
+    }
+    .timeline-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: #fff;
+    }
+    .timeline-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+    .customer-quote-box {
+      margin-top: 4px;
+      padding: 6px 10px;
+      background: rgba(210, 174, 89, 0.08);
+      border-left: 2px solid var(--gold);
+      border-radius: 0 4px 4px 0;
+      font-size: 11px;
+      color: #fef08a;
+      font-style: italic;
+    }
+
+    /* Activity feed in Overview */
+    .activity-feed-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px 0;
+    }
+    .activity-feed-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      gap: 12px;
+      transition: all 0.15s ease;
+      cursor: pointer;
+    }
+    .activity-feed-row:hover {
+      background: rgba(255, 255, 255, 0.03);
+      border-color: var(--border-strong);
+    }
+    .activity-feed-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex: 1;
+    }
+    .activity-feed-time {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      width: 110px;
+    }
+    .activity-feed-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      font-size: 12px;
+    }
+    .activity-feed-title {
+      font-weight: 600;
+      color: #fff;
+    }
+    .activity-feed-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Empty states */
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      background: var(--bg-card);
+      border: 1px dashed var(--border-strong);
+      border-radius: var(--radius);
+      margin: 16px 0;
+    }
+    .empty-icon {
+      font-size: 36px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .empty-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+    .empty-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      max-width: 440px;
+      margin: 0 auto 16px;
+    }
+
+    /* Quick status action button */
+    .action-btn {
+      padding: 5px 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .action-btn:hover {
+      background: var(--gold-dim);
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+
+    /* Audio Player Component */
+    .audio-player-card {
+      background: var(--bg-base);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+    audio {
+      width: 100%;
+      height: 32px;
+      outline: none;
+    }
+
+    /* Demand Match cards */
+    .match-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .match-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .stock-unit-chip {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+    }
+
+    /* Live notification toast */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-surface);
+      border: 1px solid var(--gold);
+      color: #fff;
+      padding: 12px 18px;
+      border-radius: var(--radius);
+      box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+      font-size: 13px;
+      z-index: 1000;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-layer"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand-section">
+        <div class="brand-logo-badge" id="brandLogoBadge">SE</div>
+        <div class="brand-titles">
+          <h1><span id="tenantBrandName">SHYAM EARTHMOVER</span> <span class="brand-badge" id="tenantBrandBadge">Vaani — AI Sales Command Center</span></h1>
+          <p id="tenantBrandSub">Heavy Equipment Procurement & Resale Intelligence Console</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Global Search Bar -->
+        <div class="search-box">
+          <input type="text" id="globalSearchInput" class="search-input" placeholder="Search customer, phone, machine, city..." />
+          <span class="searchkbd search-kbd">/</span>
+        </div>
+
+        <!-- Mode Toggle (Real Postgres DB vs Grounded Demo Fixture) -->
+        <div class="mode-toggle-group">
+          <button id="modeRealBtn" class="mode-btn" title="Live data queried from Postgres workflow_runs and sales tables">Real DB</button>
+          <button id="modeDemoBtn" class="mode-btn" title="Grounded heavy-equipment test dataset from 18 WhatsApp recordings">Demo Data</button>
+        </div>
+
+        <!-- User Context & Logout -->
+        <div class="user-auth-badge" id="userAuthBadge" style="display: flex; align-items: center; gap: 10px; margin-left: 8px;">
+          <div style="display: flex; flex-direction: column; align-items: flex-end; line-height: 1.2;">
+            <span id="userEmailLabel" style="font-size: 12px; font-weight: 600; color: var(--text-main);"></span>
+            <span id="userRoleBadge" style="font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700;"></span>
+          </div>
+          <button id="logoutBtn" class="mode-btn" title="Sign out" style="cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-color: rgba(244,63,94,0.3); color: #fca5a5;">
+            <span>🚪</span> <span>Sign Out</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs -->
+    <nav class="main-nav" id="mainNav">
+      <button class="nav-tab active" data-view="overview">
+        📊 Overview
+      </button>
+      <button class="nav-tab" data-view="sellers">
+        🚜 Sellers <span class="tab-badge" id="sellerTabCount">0</span>
+      </button>
+      <button class="nav-tab" data-view="buyers">
+        🛒 Buyers <span class="tab-badge" id="buyerTabCount">0</span>
+      </button>
+      <button class="nav-tab" data-view="machines" title="Physical yard inventory & canonical machine models">
+        ⚙️ Yard Stock & Models <span class="tab-badge" id="machineTabCount">0 in Yard</span>
+      </button>
+      <button class="nav-tab" data-view="demand">
+        📈 Demand & Match
+      </button>
+      <button class="nav-tab" data-view="followups">
+        📅 Follow-ups <span class="tab-badge" id="followupTabCount">0</span>
+      </button>
+      <button class="nav-tab" data-view="calls">
+        📞 Call Records <span class="tab-badge" id="callsTabCount">0</span>
+      </button>
+      <button class="nav-tab" data-view="dnc">
+        🛑 DNC Registry <span class="tab-badge badge-danger" id="dncTabCount">0</span>
+      </button>
+    </nav>
+
+    <!-- ==================== 1. OVERVIEW VIEW ==================== -->
+    <main id="view-overview" class="view-content active">
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card gold-accent">
+          <div class="kpi-label">Total Inbound Leads</div>
+          <div class="kpi-value" id="kpiTotalLeads">0</div>
+          <div class="kpi-sub">Unique customer records</div>
+        </div>
+        <div class="kpi-card blue-accent">
+          <div class="kpi-label">Connected Calls</div>
+          <div class="kpi-value" id="kpiConnectedCalls">0</div>
+          <div class="kpi-sub">Total call sessions logged</div>
+        </div>
+        <div class="kpi-card gold-accent">
+          <div class="kpi-label">Hot Sellers</div>
+          <div class="kpi-value" id="kpiHotSellers">0</div>
+          <div class="kpi-sub">High disposal urgency</div>
+        </div>
+        <div class="kpi-card green-accent">
+          <div class="kpi-label">Hot Buyers</div>
+          <div class="kpi-value" id="kpiHotBuyers">0</div>
+          <div class="kpi-sub">Immediate machine need</div>
+        </div>
+        <div class="kpi-card green-accent">
+          <div class="kpi-label">Qualified Pipeline</div>
+          <div class="kpi-value" id="kpiQualifiedLeads">0</div>
+          <div class="kpi-sub">Specs & Price Verified</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Follow-ups Due</div>
+          <div class="kpi-value" id="kpiFollowUpsDue">0</div>
+          <div class="kpi-sub">Action required today</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Closed / Won Deals</div>
+          <div class="kpi-value" id="kpiClosedWon">0</div>
+          <div class="kpi-sub">Inspections scheduled</div>
+        </div>
+        <div class="kpi-card rose-accent">
+          <div class="kpi-label">DNC Suppressed</div>
+          <div class="kpi-value" id="kpiDncTotal">0</div>
+          <div class="kpi-sub">Never to be called</div>
+        </div>
+      </div>
+
+      <!-- Funnel and Ratio Breakdown -->
+      <div class="overview-split">
+        <!-- Lead Funnel -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Lead Pipeline Conversion Funnel</div>
+              <div class="panel-subtitle">Stage-by-stage progression of unique leads (1 Lead = 1 Unit)</div>
+            </div>
+            <span class="badge badge-owner" id="funnelTotalCount">0 Unique Leads</span>
+          </div>
+          <div class="funnel-container" id="funnelBars">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Sourcing vs Buyer Distribution -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Market Mix</div>
+              <div class="panel-subtitle">Sellers Sourcing vs Buyer Demand</div>
+            </div>
+          </div>
+          <div class="ratio-bar">
+            <div id="ratioSeller" class="ratio-segment-seller" style="width: 50%;"></div>
+            <div id="ratioBuyer" class="ratio-segment-buyer" style="width: 35%;"></div>
+            <div id="ratioInquiry" class="ratio-segment-inquiry" style="width: 15%;"></div>
+          </div>
+          <div class="ratio-legend">
+            <div class="legend-item"><span class="legend-dot" style="background: var(--blue);"></span> Sellers: <strong id="ratioSellerText">0</strong></div>
+            <div class="legend-item"><span class="legend-dot" style="background: var(--green);"></span> Buyers: <strong id="ratioBuyerText">0</strong></div>
+            <div class="legend-item"><span class="legend-dot" style="background: var(--purple);"></span> General: <strong id="ratioInquiryText">0</strong></div>
+          </div>
+
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border-subtle);">
+            <div class="panel-title" style="font-size: 13px; margin-bottom: 8px;">Action Center</div>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+              Vaani automatically tags high-intent contractors, verifies HMR hours, distinguishes rock-breaker abuse, and schedules WhatsApp asset verification.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Inbound Leads Table -->
+      <div class="panel-card" style="margin-bottom: 24px;">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Recent Inbound Voice Leads</div>
+            <div class="panel-subtitle">Latest voice sessions processed through Vaani dialog workflow</div>
+          </div>
+        </div>
+        <div class="table-container">
+          <table class="data-table" id="recentLeadsTable">
+            <thead>
+              <tr>
+                <th>Date & Time</th>
+                <th>Customer Name</th>
+                <th>Phone</th>
+                <th>Role</th>
+                <th>Machine / Requirement</th>
+                <th>Temperature</th>
+                <th>Status / Outcome</th>
+                <th>Next Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vaani Activity Operations Feed -->
+      <div class="panel-card" style="margin-bottom: 24px;">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">🤖 Vaani Activity Operations Feed</div>
+            <div class="panel-subtitle">Live stream of voice qualification, evidence processing, and sales follow-ups</div>
+          </div>
+          <span class="badge badge-owner" id="overviewActivityCount">0 Activities</span>
+        </div>
+        <div class="activity-feed-container" id="overviewActivityFeed">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== 2. SELLERS VIEW ==================== -->
+    <main id="view-sellers" class="view-content">
+      <!-- Filter Bar -->
+      <div class="filter-toolbar">
+        <div class="filter-item">
+          <label class="filter-label">Temperature</label>
+          <select id="sellerFilterTemp" class="filter-select">
+            <option value="ALL">All Temperatures</option>
+            <option value="HOT">HOT</option>
+            <option value="WARM">WARM</option>
+            <option value="COLD">COLD</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label">Caller Role</label>
+          <select id="sellerFilterRole" class="filter-select">
+            <option value="ALL">All Roles</option>
+            <option value="owner">Direct Owner</option>
+            <option value="broker">Broker / Munim</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label">Brand</label>
+          <select id="sellerFilterBrand" class="filter-select">
+            <option value="ALL">All Brands</option>
+            <option value="Tata Hitachi">Tata Hitachi</option>
+            <option value="JCB">JCB</option>
+            <option value="Hyundai">Hyundai</option>
+            <option value="Komatsu">Komatsu</option>
+            <option value="Kobelco">Kobelco</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label">Application</label>
+          <select id="sellerFilterApp" class="filter-select">
+            <option value="ALL">All Usages</option>
+            <option value="soil_earthwork">Soil / Mitti Only</option>
+            <option value="breaker_quarry">Rock Breaker / Quarry</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label">Follow-up Due</label>
+          <select id="sellerFilterFollowup" class="filter-select">
+            <option value="ALL">All</option>
+            <option value="YES">Due / Pending</option>
+          </select>
+        </div>
+        <button id="sellerResetFilters" class="btn-reset">Reset</button>
+      </div>
+
+      <!-- Sellers Table -->
+      <div class="table-container">
+        <table class="data-table" id="sellersTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Owner/Broker</th>
+              <th>Machine</th>
+              <th>Year</th>
+              <th>Hours (HMR)</th>
+              <th>Application</th>
+              <th>Location</th>
+              <th>Expected Price</th>
+              <th>WhatsApp Evidence</th>
+              <th>Temp</th>
+              <th>Stage</th>
+              <th>Next Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+      <div id="sellersEmptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">🚜</div>
+        <div class="empty-title">No Sellers Matching Filters</div>
+        <div class="empty-desc">No machines matching the selected criteria were found in the database.</div>
+      </div>
+    </main>
+
+    <!-- ==================== 3. BUYERS VIEW ==================== -->
+    <main id="view-buyers" class="view-content">
+      <!-- Filter Bar -->
+      <div class="filter-toolbar">
+        <div class="filter-item">
+          <label class="filter-label">Temperature</label>
+          <select id="buyerFilterTemp" class="filter-select">
+            <option value="ALL">All Temperatures</option>
+            <option value="HOT">HOT</option>
+            <option value="WARM">WARM</option>
+            <option value="COLD">COLD</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label">Tonnage Class</label>
+          <select id="buyerFilterTonnage" class="filter-select">
+            <option value="ALL">All Tonnage</option>
+            <option value="20_ton_class">20-Ton Class</option>
+            <option value="21_ton_class">21-Ton Class</option>
+            <option value="14_ton_class">14-Ton Class</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <label class="filter-label">Timeline</label>
+          <select id="buyerFilterTimeline" class="filter-select">
+            <option value="ALL">All Timelines</option>
+            <option value="immediate_under_7d">Immediate (&lt;7 days)</option>
+            <option value="15_to_30_days">15 - 30 Days</option>
+            <option value="planning_stage">Planning Stage</option>
+          </select>
+        </div>
+        <button id="buyerResetFilters" class="btn-reset">Reset</button>
+      </div>
+
+      <!-- Buyers Table -->
+      <div class="table-container">
+        <table class="data-table" id="buyersTable">
+          <thead>
+            <tr>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Requested Machine</th>
+              <th>Tonnage</th>
+              <th>Work Application</th>
+              <th>Budget (Max)</th>
+              <th>Location</th>
+              <th>Purchase Timeline</th>
+              <th>Yard Visit</th>
+              <th>Temp</th>
+              <th>Stage</th>
+              <th>Next Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+      <div id="buyersEmptyState" class="empty-state" style="display: none;">
+        <div class="empty-icon">🛒</div>
+        <div class="empty-title">No Buyers Found</div>
+        <div class="empty-desc">No buyer procurement requests matching your current filter settings.</div>
+      </div>
+    </main>
+
+    <!-- ==================== 4. MACHINES VIEW ==================== -->
+    <main id="view-machines" class="view-content">
+      <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+        <button id="subtabActualStock" class="nav-tab active">
+          📦 Verified Yard Stock (<span id="stockCountBadge">0</span>)
+        </button>
+        <button id="subtabMachineMaster" class="nav-tab">
+          📘 Machine Master Taxonomy (<span id="masterCountBadge">5</span>)
+        </button>
+      </div>
+
+      <!-- Actual Verified Stock Section -->
+      <div id="sectionActualStock">
+        <div style="font-size: 12px; color: var(--green); margin-bottom: 14px; background: var(--green-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(16,185,129,0.3);">
+          ✅ <strong>Physical Yard Inventory:</strong> Machines physically stationed at Jaipur/partner yards with verified mechanical fitness, load trial clearance, and clear NOC.
+        </div>
+        <div id="stockGrid" class="kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
+          <!-- Rendered dynamically -->
+        </div>
+        <div id="stockEmptyState" class="empty-state" style="display: none;">
+          <div class="empty-icon">🏗️</div>
+          <div class="empty-title">No Physical Machines Currently Stationed in Yard</div>
+          <div class="empty-desc">
+            Only machines that have arrived at yard, passed mechanical inspection, and possess cleared NOC are logged as verified stock. Sourcing pipeline active.
+          </div>
+          <button class="action-btn" onclick="switchDataMode(true)">View Verified Stock in Demo Mode</button>
+        </div>
+      </div>
+
+      <!-- Machine Master Section -->
+      <div id="sectionMachineMaster" style="display: none;">
+        <div style="font-size: 12px; color: var(--gold); margin-bottom: 14px; background: var(--gold-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(210,174,89,0.3);">
+          📘 <strong>Industry Reference Catalog:</strong> Canonical equipment models, contractor spoken aliases, and indicative market price benchmarks across India. (Reference Taxonomy only — Not Physical Yard Stock).
+        </div>
+        <div class="panel-card" style="margin-bottom: 20px;">
+          <div class="panel-title">Canonical Indian Market Taxonomy</div>
+          <div class="panel-subtitle">Used by Vaani NLP normalization to map spoken contractor aliases to certified machine models.</div>
+        </div>
+        <div class="table-container">
+          <table class="data-table" id="machineMasterTable">
+            <thead>
+              <tr>
+                <th>Brand</th>
+                <th>Canonical Model</th>
+                <th>Contractor Spoken Aliases</th>
+                <th>Tonnage Class</th>
+                <th>Standard Engine</th>
+                <th>Market Positioning</th>
+                <th>2023-24 Band</th>
+                <th>2021-22 Band</th>
+                <th>2018-19 Band</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== 5. DEMAND & MATCHING VIEW ==================== -->
+    <main id="view-demand" class="view-content">
+      <div class="overview-split">
+        <!-- Demand Analytics -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Market Demand Aggregates</div>
+              <div class="panel-subtitle">Contractor requests analyzed by Brand & Tonnage</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 14px;" id="demandBrandBars">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Tonnage & Timeline -->
+        <div class="panel-card">
+          <div class="panel-header">
+            <div>
+              <div class="panel-title">Tonnage Class Preference</div>
+              <div class="panel-subtitle">Heavy vs Medium excavator demand</div>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 12px;" id="demandTonnageBars">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Machine-to-Buyer Matchmaking Engine -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <div class="panel-title">Live Buyer Matchmaking Engine</div>
+            <div class="panel-subtitle">Matches active qualified buyer budgets against certified yard inventory only. No phantom stock.</div>
+          </div>
+        </div>
+        <div id="matchingListContainer">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== 6. FOLLOW-UPS VIEW ==================== -->
+    <main id="view-followups" class="view-content">
+      <div class="panel-card" style="margin-bottom: 20px;">
+        <div class="panel-title">Sales & Procurement Follow-up Desk</div>
+        <div class="panel-subtitle">Scheduled callbacks, WhatsApp quotation dispatch, and yard visit confirmations.</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px;" id="followupColumns">
+        <!-- Overdue -->
+        <div class="panel-card" style="border-top: 3px solid var(--rose);">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #fda4af;">🚨 Overdue (<span id="countOverdue">0</span>)</span>
+          </div>
+          <div id="listOverdue" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <!-- Due Today -->
+        <div class="panel-card" style="border-top: 3px solid var(--amber);">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #fcd34d;">⚡ Due Today (<span id="countDueToday">0</span>)</span>
+          </div>
+          <div id="listDueToday" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+
+        <!-- Upcoming -->
+        <div class="panel-card" style="border-top: 3px solid var(--blue);">
+          <div class="panel-header">
+            <span class="panel-title" style="color: #7dd3fc;">📅 Upcoming (<span id="countUpcoming">0</span>)</span>
+          </div>
+          <div id="listUpcoming" style="display: flex; flex-direction: column; gap: 10px;"></div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ==================== 7. CALL RECORDS VIEW ==================== -->
+    <main id="view-calls" class="view-content">
+      <div class="panel-card" style="margin-bottom: 16px;">
+        <div class="panel-title">Voice Call Log & Machine Extraction Vault</div>
+        <div class="panel-subtitle">Inspect verbatim customer speech, extraction confidence, and structured metadata.</div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" id="callsTable">
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Customer</th>
+              <th>Phone</th>
+              <th>Role</th>
+              <th>Outcome</th>
+              <th>Temp</th>
+              <th>Machine / Requirement</th>
+              <th>Next Action</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- ==================== 8. DNC VIEW ==================== -->
+    <main id="view-dnc" class="view-content">
+      <!-- Critical Warning Banner -->
+      <div class="dnc-banner">
+        <div class="dnc-icon-badge">🛑</div>
+        <div class="dnc-banner-text">
+          <h3>CRITICAL DNC SUPPRESSION REGISTRY — DO NOT CALL UNDER ANY CIRCUMSTANCES</h3>
+          <p>
+            The telephone numbers listed below have explicitly exercised their legal opt-out rights, requested not to be contacted, or terminated engagement.
+            They are permanently suppressed from automated dialing, batch campaigns, and sales callbacks.
+          </p>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table" id="dncTable">
+          <thead>
+            <tr>
+              <th>Suppressed Phone Number</th>
+              <th>Customer Name</th>
+              <th>Opt-Out Reason</th>
+              <th>Registration Date</th>
+              <th>Originating Source / Session</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Rendered dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <!-- Slide-Over Lead 360 Command Drawer -->
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="detailDrawer">
+    <div class="drawer-header">
+      <div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <h2 id="drawerCustomerName" style="font-size: 18px; color: #fff; margin: 0;">Lead Details</h2>
+          <span id="drawerLeadIdBadge" class="badge" style="font-size: 10px; background: rgba(255,255,255,0.06);">ID: —</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
+          <span id="drawerPhone" class="phone-link">+91 00000 00000</span>
+          <span id="drawerRoleBadge" class="badge">Seller</span>
+          <span id="drawerTempBadge" class="badge">HOT</span>
+          <span id="drawerCallsCountBadge" class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">1 Call</span>
+        </div>
+      </div>
+      <button class="drawer-close-btn" id="drawerCloseBtn" title="Close Drawer">✕</button>
+    </div>
+
+    <!-- Next Action Engine Prominent Banner -->
+    <div style="padding: 16px 24px 0 24px;">
+      <div class="next-action-card">
+        <div class="next-action-header">
+          <span class="next-action-title">⚡ Next Action Engine</span>
+          <span id="drawerDueBadge" class="badge badge-warm" style="font-size: 10px;">Due: Today</span>
+        </div>
+        <div class="next-action-grid">
+          <div class="next-action-box">
+            <div class="next-action-label">Current Status</div>
+            <div class="next-action-val" id="drawerCurrentStatus">Waiting for RC/NOC</div>
+          </div>
+          <div class="next-action-box">
+            <div class="next-action-label">Next Action</div>
+            <div class="next-action-val" id="drawerNextActionVal">Follow up with seller and verify documents</div>
+          </div>
+          <div class="next-action-box">
+            <div class="next-action-label">Owner / Responsibility</div>
+            <div class="next-action-val" id="drawerOwnerVal">Vaani / Sales Operator</div>
+          </div>
+          <div class="next-action-box">
+            <div class="next-action-label">Follow-up Due</div>
+            <div class="next-action-val" id="drawerDueVal">12 Sep 2026, 11:00 AM</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lead 360 Tab Bar -->
+    <div class="drawer-tabs">
+      <button class="drawer-tab active" data-dtab="overview">🧭 Overview & Journey</button>
+      <button class="drawer-tab" data-dtab="learned">🧠 What Vaani Learned</button>
+      <button class="drawer-tab" data-dtab="evidence">📋 Evidence (8-Point)</button>
+      <button class="drawer-tab" data-dtab="timeline">⏳ Activity Timeline</button>
+      <button class="drawer-tab" data-dtab="calls">🎙️ Calls & Transcript</button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Tab 1: Overview & Sales Journey -->
+      <div class="drawer-tab-pane active" id="pane-overview">
+        <!-- Sales Journey Progression -->
+        <div class="drawer-card">
+          <div class="drawer-card-title">
+            <span>Sales Operations Journey</span>
+            <span id="drawerJourneyType" style="font-size: 10px; color: var(--text-dim); text-transform: none;">Seller Pipeline (14 Stages)</span>
+          </div>
+          <div class="journey-tracker" id="drawerJourneyTracker">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Commercial & Status Summary -->
+        <div class="drawer-card">
+          <div class="drawer-card-title">Commercials & Technical Overview</div>
+          <div class="drawer-field-grid">
+            <div class="drawer-field">
+              <span class="drawer-field-label">Stage</span>
+              <span class="drawer-field-value" id="drawerStage">QUALIFIED</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Expected Price / Budget</span>
+              <span class="drawer-field-value" id="drawerPrice">₹25.00 Lakh</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Machine / Class</span>
+              <span class="drawer-field-value" id="drawerMachine">Tata Hitachi EX 200 LC</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Year & Hours</span>
+              <span class="drawer-field-value" id="drawerYearHours">2019 • 5,400 hrs</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Operating Application</span>
+              <span class="drawer-field-value" id="drawerApplication">Soil / Earthwork</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Location / Site</span>
+              <span class="drawer-field-value" id="drawerLocation">Jaipur, Rajasthan</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Document / NOC Status</span>
+              <span class="drawer-field-value" id="drawerNocStatus">Clear / Finance Paid</span>
+            </div>
+            <div class="drawer-field">
+              <span class="drawer-field-label">Last Interaction</span>
+              <span class="drawer-field-value" id="drawerLastActivity">Inbound voice call</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: What Vaani Learned -->
+      <div class="drawer-tab-pane" id="pane-learned">
+        <div class="learned-grid">
+          <!-- Captured Information -->
+          <div class="learned-column">
+            <div class="learned-col-title" style="color: #4ade80;">
+              <span>✓ Information Captured</span>
+              <span class="badge badge-qualified" id="learnedCapturedCount">0</span>
+            </div>
+            <div id="drawerLearnedCaptured" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Missing Information -->
+          <div class="learned-column">
+            <div class="learned-col-title" style="color: var(--text-dim);">
+              <span>○ Missing / Action Items</span>
+              <span class="badge" id="learnedMissingCount">0</span>
+            </div>
+            <div id="drawerLearnedMissing" style="display: flex; flex-direction: column; gap: 8px;">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 3: 8-Point Physical Evidence Checklist -->
+      <div class="drawer-tab-pane" id="pane-evidence">
+        <!-- WhatsApp Dry Run Indicator & Readiness Status Banner -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 14px; background:rgba(30,58,138,0.25); border:1px solid rgba(59,130,246,0.35); border-radius:6px;">
+          <div>
+            <span id="waDryRunIndicator" style="font-weight:700; color:#60a5fa; font-size:12px; letter-spacing:0.5px;">WHATSAPP: DRY RUN</span>
+            <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">• Provider: MockWhatsAppProvider (Simulated)</span>
+          </div>
+          <span id="evidenceReadinessBadge" class="badge badge-warm">NOT_STARTED (0%)</span>
+        </div>
+
+        <!-- WhatsApp Telemetry & Status -->
+        <div class="drawer-card" style="margin-bottom:12px; padding:12px 16px;">
+          <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; letter-spacing:0.5px;">WhatsApp Channel Telemetry</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:12px;">
+            <div><span style="color:var(--text-muted);">Last Message:</span> <strong id="waLastMsg" style="display:block; margin-top:2px;">—</strong></div>
+            <div><span style="color:var(--text-muted);">Last Response:</span> <strong id="waLastInbound" style="display:block; margin-top:2px;">—</strong></div>
+            <div><span style="color:var(--text-muted);">Pending Requests:</span> <strong id="waPendingReq" style="display:block; margin-top:2px;">0</strong></div>
+          </div>
+        </div>
+
+        <!-- Quick Evidence Actions (Backend API Triggered) -->
+        <div class="drawer-card" style="margin-bottom:12px; padding:12px 16px;">
+          <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; letter-spacing:0.5px;">Request Evidence via WhatsApp</div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('BOOM_PHOTOS')">Request Photos</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('HOUR_METER_PHOTO')">Request Meter</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('RUNNING_VIDEO')">Request Running Video</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('RC_DOCUMENT')">Request RC</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('BANK_NOC_DOCUMENT')">Request NOC</button>
+          </div>
+        </div>
+
+        <div class="evidence-disclaimer" id="evidenceDisclaimerText">
+          ℹ️ <strong>Physical Verification Protocol:</strong> Digital evidence requires verified photo/video matching chassis stamp. WhatsApp automation actions require active channel integration; items marked "Received" reflect direct operator ingestion or yard trial.
+        </div>
+
+        <div class="drawer-card">
+          <div class="drawer-card-title">
+            <span>8-Point Heavy Equipment Checklist</span>
+            <span id="evidenceVerifiedRatio" class="badge badge-owner">0/8 Verified</span>
+          </div>
+          <table class="evidence-table">
+            <thead>
+              <tr>
+                <th>Inspection Item</th>
+                <th>Status</th>
+                <th>Verification Note</th>
+              </tr>
+            </thead>
+            <tbody id="drawerEvidenceTableBody">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tab 4: Activity Timeline -->
+      <div class="drawer-tab-pane" id="pane-timeline">
+        <div class="timeline-container" id="drawerTimelineList">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Tab 5: Calls & Transcript -->
+      <div class="drawer-tab-pane" id="pane-calls">
+        <!-- Linked Calls Summary -->
+        <div class="drawer-card">
+          <div class="drawer-card-title">Associated Call Sessions</div>
+          <div id="drawerLinkedCallsList" style="display: flex; flex-direction: column; gap: 8px;">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div class="drawer-card" id="drawerAudioCard">
+          <div class="drawer-card-title">Audio Recording</div>
+          <div id="drawerAudioContainer">
+            <div class="empty-desc" style="font-size: 12px; margin: 0;">Audio recording not available for this session.</div>
+          </div>
+        </div>
+
+        <!-- Transcript -->
+        <div class="drawer-card">
+          <div class="drawer-card-title">Voice Dialogue Transcript</div>
+          <div class="transcript-box" id="drawerTranscript">
+            <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Global Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Session Expired / Unauthorized Modal Overlay -->
+  <div id="sessionOverlay" style="display: none; position: fixed; inset: 0; background: rgba(10,11,16,0.92); backdrop-filter: blur(8px); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--bg-card); border: 1px solid var(--gold); border-radius: var(--radius-lg); padding: 32px; max-width: 440px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
+      <div style="font-size: 40px; margin-bottom: 12px;">🔒</div>
+      <h2 id="sessionOverlayTitle" style="color: var(--text-main); font-size: 18px; margin-bottom: 8px;">Session Expired</h2>
+      <p id="sessionOverlayMsg" style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">Your session has expired or is invalid. Redirecting to sign in...</p>
+      <button id="sessionOverlayAction" class="btn-primary" style="width: 100%; padding: 10px 16px; background: var(--gold); color: #111; border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer;">Go to Sign In</button>
+    </div>
+  </div>
+
+  <!-- Safe Access Denied Banner -->
+  <div id="accessDeniedBanner" style="display: none; position: fixed; top: 16px; left: 50%; transform: translateX(-50%); background: rgba(244,63,94,0.15); border: 1px solid var(--rose); color: #fecdd3; padding: 12px 24px; border-radius: var(--radius); z-index: 9998; font-size: 13px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,0.6);">
+    <span style="margin-right: 8px;">⛔</span> <span id="accessDeniedText">Access Denied: You do not have permission to access this resource.</span>
+  </div>
+
+  <script>
+    // State management
+    const state = {
+      me: null,
+      isDemo: new URLSearchParams(window.location.search).get('demo') === '1',
+      activeView: 'overview',
+      overview: null,
+      sellers: [],
+      buyers: [],
+      machines: { machine_master: [], actual_stock: [] },
+      demand: null,
+      followups: { overdue: [], due_today: [], upcoming: [] },
+      calls: [],
+      dnc: [],
+      activeDrawerItem: null
+    };
+
+    // Centralized API fetch wrapper with 401 & 403 handling
+    async function apiFetch(url, options = {}) {
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        clearSensitiveState();
+        showSessionExpired('Your session has expired or is invalid. Redirecting to sign in...');
+        throw new Error('Unauthorized');
+      }
+      if (res.status === 403) {
+        showAccessDenied('Access Denied: You do not have permission to access this resource.');
+        throw new Error('Forbidden');
+      }
+      return res;
+    }
+
+    // Clear all in-memory dashboard state and DOM representations
+    function clearSensitiveState() {
+      state.overview = null;
+      state.sellers = [];
+      state.buyers = [];
+      state.machines = { machine_master: [], actual_stock: [] };
+      state.demand = null;
+      state.followups = { overdue: [], due_today: [], upcoming: [] };
+      state.calls = [];
+      state.dnc = [];
+      state.activeDrawerItem = null;
+      state.recentActivities = [];
+
+      const containerIds = [
+        'sellersTableBody', 'buyersTableBody', 'stockTableBody',
+        'masterTableBody', 'demandTableBody', 'followupsTableBody',
+        'callsTableBody', 'dncTableBody', 'activitiesTimeline'
+      ];
+      containerIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerHTML = '';
+      });
+      const drawer = document.getElementById('leadDrawer');
+      if (drawer) drawer.classList.remove('open');
+    }
+
+    function showSessionExpired(msg) {
+      const overlay = document.getElementById('sessionOverlay');
+      const msgEl = document.getElementById('sessionOverlayMsg');
+      if (msgEl && msg) msgEl.textContent = msg;
+      if (overlay) overlay.style.display = 'flex';
+      setTimeout(() => {
+        window.location.href = '/app.html?redirect=/vaani-sales';
+      }, 1200);
+    }
+
+    function showAccessDenied(msg) {
+      const banner = document.getElementById('accessDeniedBanner');
+      const text = document.getElementById('accessDeniedText');
+      if (text && msg) text.textContent = msg;
+      if (banner) {
+        banner.style.display = 'block';
+        setTimeout(() => { banner.style.display = 'none'; }, 4000);
+      }
+    }
+
+    // Authenticated identity verification on boot
+    async function checkAuthAndInit() {
+      try {
+        const res = await fetch('/api/me');
+        if (res.status === 401 || !res.ok) {
+          clearSensitiveState();
+          showSessionExpired('Authentication required. Redirecting to sign in...');
+          return false;
+        }
+        const data = await res.json();
+        state.me = data;
+        applyUserTenantContext(data);
+        return true;
+      } catch (err) {
+        clearSensitiveState();
+        showSessionExpired('Authentication check failed. Redirecting to sign in...');
+        return false;
+      }
+    }
+
+    // Dynamically apply tenant/company branding and user info
+    function applyUserTenantContext(data) {
+      const user = data.user || {};
+      const tenant = data.tenant || {};
+
+      let companyName = 'SHYAM EARTHMOVER';
+      if (tenant.organization_id && Number(tenant.organization_id) !== 1) {
+        companyName = (tenant.name || 'CLIENT WORKSPACE').toUpperCase();
+      } else if (tenant.name && tenant.name.toLowerCase() !== 'braviex') {
+        companyName = tenant.name.toUpperCase();
+      }
+
+      // Set company name in header
+      const brandNameEl = document.getElementById('tenantBrandName');
+      if (brandNameEl) brandNameEl.textContent = companyName;
+
+      // Set initials monogram in badge
+      const words = companyName.trim().split(/\s+/).filter(Boolean);
+      let initials = 'SE';
+      if (words.length >= 2) {
+        initials = (words[0][0] + words[1][0]).toUpperCase();
+      } else if (words.length === 1 && words[0].length >= 2) {
+        initials = words[0].slice(0, 2).toUpperCase();
+      }
+      const badgeLogoEl = document.getElementById('brandLogoBadge');
+      if (badgeLogoEl) badgeLogoEl.textContent = initials;
+
+      // User email / name
+      const emailEl = document.getElementById('userEmailLabel');
+      if (emailEl) emailEl.textContent = user.email || user.name || 'User';
+
+      // User role badge
+      const roleEl = document.getElementById('userRoleBadge');
+      if (roleEl) roleEl.textContent = (user.role || 'member').toUpperCase();
+    }
+
+    async function handleLogout() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (_) {}
+      clearSensitiveState();
+      window.location.href = '/app.html';
+    }
+
+    function initAuthHandlers() {
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', handleLogout);
+      }
+      const overlayBtn = document.getElementById('sessionOverlayAction');
+      if (overlayBtn) {
+        overlayBtn.addEventListener('click', () => {
+          window.location.href = '/app.html?redirect=/vaani-sales';
+        });
+      }
+    }
+
+    // Toast notification
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    // Initialize UI
+    document.addEventListener('DOMContentLoaded', async () => {
+      initNavigation();
+      initModeToggle();
+      initSearch();
+      initDrawer();
+      initFilters();
+      initAuthHandlers();
+
+      const authed = await checkAuthAndInit();
+      if (authed) {
+        loadAllData();
+      }
+    });
+
+    // Navigation setup
+    function initNavigation() {
+      const tabs = document.querySelectorAll('.nav-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const view = tab.getAttribute('data-view');
+          if (view) switchView(view);
+        });
+      });
+
+      // Machine subtabs
+      const btnStock = document.getElementById('subtabActualStock');
+      const btnMaster = document.getElementById('subtabMachineMaster');
+      const secStock = document.getElementById('sectionActualStock');
+      const secMaster = document.getElementById('sectionMachineMaster');
+
+      btnStock.addEventListener('click', () => {
+        btnStock.classList.add('active');
+        btnMaster.classList.remove('active');
+        secStock.style.display = 'block';
+        secMaster.style.display = 'none';
+      });
+
+      btnMaster.addEventListener('click', () => {
+        btnMaster.classList.add('active');
+        btnStock.classList.remove('active');
+        secMaster.style.display = 'block';
+        secStock.style.display = 'none';
+      });
+    }
+
+    function switchView(viewName) {
+      state.activeView = viewName;
+      document.querySelectorAll('.nav-tab').forEach(t => {
+        if (t.getAttribute('data-view') === viewName) t.classList.add('active');
+        else if (t.getAttribute('data-view')) t.classList.remove('active');
+      });
+      document.querySelectorAll('.view-content').forEach(v => {
+        if (v.id === `view-${viewName}`) v.classList.add('active');
+        else v.classList.remove('active');
+      });
+    }
+
+    // Mode Toggle (Real vs Demo)
+    function initModeToggle() {
+      const btnReal = document.getElementById('modeRealBtn');
+      const btnDemo = document.getElementById('modeDemoBtn');
+
+      if (state.isDemo) {
+        btnDemo.classList.add('active');
+        btnReal.classList.remove('active');
+      } else {
+        btnReal.classList.add('active');
+        btnDemo.classList.remove('active');
+      }
+
+      btnReal.addEventListener('click', () => switchDataMode(false));
+      btnDemo.addEventListener('click', () => switchDataMode(true));
+    }
+
+    function switchDataMode(demo) {
+      const url = new URL(window.location.href);
+      if (demo) url.searchParams.set('demo', '1');
+      else url.searchParams.delete('demo');
+      window.location.href = url.toString();
+    }
+
+    // Global Search & Keyboard Shortcut '/'
+    function initSearch() {
+      const input = document.getElementById('globalSearchInput');
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== input) {
+          e.preventDefault();
+          input.focus();
+        }
+      });
+
+      let debounceTimer = null;
+      input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          performSearch(input.value.trim());
+        }, 250);
+      });
+    }
+
+    async function performSearch(query) {
+      if (!query) {
+        renderSellers(state.sellers);
+        renderBuyers(state.buyers);
+        return;
+      }
+
+      try {
+        const url = `/api/vaani/sales/search?q=${encodeURIComponent(query)}${state.isDemo ? '&demo=1' : ''}`;
+        const res = await apiFetch(url);
+        const data = await res.json();
+        const results = data.results || [];
+
+        // Distribute to sellers/buyers table
+        const matchingSellers = results.filter(r => r.customer_type === 'seller');
+        const matchingBuyers = results.filter(r => r.customer_type === 'buyer');
+
+        if (state.activeView === 'sellers') renderSellers(matchingSellers);
+        else if (state.activeView === 'buyers') renderBuyers(matchingBuyers);
+        else {
+          switchView('sellers');
+          renderSellers(matchingSellers);
+        }
+      } catch (err) {
+        console.error('Search error:', err);
+      }
+    }
+
+    // Drawer Setup
+    function initDrawer() {
+      const drawer = document.getElementById('detailDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+      const closeBtn = document.getElementById('drawerCloseBtn');
+
+      closeBtn.addEventListener('click', closeDrawer);
+      backdrop.addEventListener('click', closeDrawer);
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDrawer();
+      });
+
+      // Tab switcher inside drawer
+      document.querySelectorAll('.drawer-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          const dtab = tab.getAttribute('data-dtab');
+          if (dtab) switchDrawerTab(dtab);
+        });
+      });
+    }
+
+    function switchDrawerTab(tabId) {
+      state.activeDrawerTab = tabId;
+      document.querySelectorAll('.drawer-tab').forEach(t => {
+        if (t.getAttribute('data-dtab') === tabId) t.classList.add('active');
+        else t.classList.remove('active');
+      });
+      document.querySelectorAll('.drawer-tab-pane').forEach(p => {
+        if (p.id === `pane-${tabId}`) p.classList.add('active');
+        else p.classList.remove('active');
+      });
+    }
+
+    function closeDrawer() {
+      document.getElementById('detailDrawer').classList.remove('open');
+      document.getElementById('drawerBackdrop').classList.remove('open');
+    }
+
+    async function openDrawer(itemOrId) {
+      let leadId = null;
+      let initialItem = null;
+
+      if (typeof itemOrId === 'string' || typeof itemOrId === 'number') {
+        leadId = String(itemOrId);
+      } else if (itemOrId && typeof itemOrId === 'object') {
+        initialItem = itemOrId;
+        leadId = itemOrId.lead_id || itemOrId.run_id || itemOrId.primary_phone || itemOrId.callback_number || itemOrId.phone_number;
+      }
+
+      state.activeDrawerItem = initialItem || { lead_id: leadId };
+      const drawer = document.getElementById('detailDrawer');
+      const backdrop = document.getElementById('drawerBackdrop');
+
+      drawer.classList.add('open');
+      backdrop.classList.add('open');
+      switchDrawerTab('overview');
+
+      // Populate placeholder while fetching
+      if (initialItem) {
+        populateDrawerHeader(initialItem);
+      }
+
+      // Fetch full Lead 360 data
+      try {
+        const queryParam = state.isDemo ? '?demo=1' : '';
+        const res = await apiFetch(`/api/vaani/sales/leads/${encodeURIComponent(leadId)}${queryParam}`);
+        if (res.ok) {
+          const l360 = await res.json();
+          state.activeLead360 = l360;
+          renderLead360(l360);
+          return;
+        }
+      } catch (err) {
+        if (err.message === 'Unauthorized' || err.message === 'Forbidden') {
+          backdrop.classList.remove('open');
+          drawer.classList.remove('open');
+          return;
+        }
+        console.warn('Failed to load Lead 360 from API:', err);
+      }
+
+      // Fallback if API couldn't resolve
+      if (initialItem) {
+        renderLead360Fallback(initialItem);
+      }
+    }
+
+    function populateDrawerHeader(item) {
+      document.getElementById('drawerCustomerName').textContent = item.customer_name || item.caller_name || 'Customer';
+      document.getElementById('drawerLeadIdBadge').textContent = `ID: ${item.lead_id || item.run_id || '—'}`;
+      document.getElementById('drawerPhone').textContent = item.primary_phone || item.callback_number || 'N/A';
+      
+      const roleBadge = document.getElementById('drawerRoleBadge');
+      roleBadge.textContent = (item.customer_type || 'Customer').toUpperCase();
+      roleBadge.className = `badge ${item.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}`;
+
+      const tempBadge = document.getElementById('drawerTempBadge');
+      tempBadge.textContent = item.lead_temperature || 'WARM';
+      tempBadge.className = `badge badge-${(item.lead_temperature || 'warm').toLowerCase()}`;
+
+      const callCount = item.call_count || (item.linked_calls ? item.linked_calls.length : 1);
+      document.getElementById('drawerCallsCountBadge').textContent = `${callCount} Call${callCount > 1 ? 's' : ''}`;
+    }
+
+    function renderLead360(l360) {
+      populateDrawerHeader(l360);
+
+      // Next Action Engine
+      document.getElementById('drawerCurrentStatus').textContent = l360.current_status || 'Waiting for action';
+      document.getElementById('drawerNextActionVal').textContent = l360.next_action || 'Follow up with customer';
+      document.getElementById('drawerOwnerVal').textContent = l360.owner || 'Vaani / Sales Operator';
+      document.getElementById('drawerDueVal').textContent = l360.due_datetime || 'Today';
+      document.getElementById('drawerDueBadge').textContent = `Due: ${l360.due_datetime || 'Today'}`;
+
+      // Tab 1: Sales Journey Progression
+      const journey = l360.sales_journey || { stages: [], type: l360.customer_type };
+      document.getElementById('drawerJourneyType').textContent = journey.type === 'seller'
+        ? 'Seller Pipeline (14 Stages)'
+        : 'Buyer Pipeline (14 Stages)';
+
+      const tracker = document.getElementById('drawerJourneyTracker');
+      tracker.innerHTML = (journey.stages || []).map((step, idx) => {
+        const isCompleted = step.status === 'completed';
+        const isCurrent = step.status === 'current';
+        const icon = isCompleted ? '✓' : isCurrent ? '▶' : `${idx + 1}.`;
+        return `
+          <div class="journey-step ${step.status}" title="Stage: ${step.label}">
+            <span>${icon}</span>
+            <span>${escapeHtml(step.label)}</span>
+          </div>
+        `;
+      }).join('');
+
+      // Tab 1: Commercials & Specs
+      document.getElementById('drawerStage').textContent = l360.lifecycle_stage || l360.qualification_state || 'QUALIFIED';
+
+      const raw = l360.raw_lead || l360;
+      let priceDisplay = 'N/A';
+      if (raw.expected_price_inr || raw.expected_selling_price_inr) {
+        const p = raw.expected_price_inr || raw.expected_selling_price_inr;
+        priceDisplay = `₹${(p / 100000).toFixed(2)} Lakh`;
+      } else if (raw.buyer_budget_max_inr || raw.budget_max_inr) {
+        const b = raw.buyer_budget_max_inr || raw.budget_max_inr;
+        priceDisplay = `Budget Max: ₹${(b / 100000).toFixed(2)} Lakh`;
+      } else if (raw.price_raw) {
+        priceDisplay = raw.price_raw;
+      }
+      document.getElementById('drawerPrice').textContent = priceDisplay;
+
+      document.getElementById('drawerMachine').textContent = `${raw.machine_brand || ''} ${raw.machine_model || raw.required_tonnage_class || 'Excavator'}`.trim();
+      document.getElementById('drawerYearHours').textContent = `${raw.model_year || raw.manufacturing_year || 'Year N/A'} • ${raw.running_hours ? raw.running_hours.toLocaleString() + ' hrs' : 'Hours N/A'}`;
+
+      let appText = 'Standard Soil/Earthwork';
+      if (raw.application_history && (raw.application_history.includes('breaker') || raw.application_history.includes('rock'))) {
+        appText = '⚠️ Rock Breaker / Quarry Used (Heavy)';
+      }
+      document.getElementById('drawerApplication').textContent = appText;
+      document.getElementById('drawerLocation').textContent = raw.location_city ? `${raw.location_city}${raw.location_state ? ', ' + raw.location_state : ''}` : (raw.delivery_location || raw.location || 'Location Not Specified');
+      document.getElementById('drawerNocStatus').textContent = raw.document_status || (raw.finance_noc_status || 'Under Verification');
+      document.getElementById('drawerLastActivity').textContent = l360.last_activity || 'Recent conversation logged';
+
+      // Tab 2: What Vaani Learned
+      const learned = l360.what_vaani_learned || { captured: [], missing: [] };
+      document.getElementById('learnedCapturedCount').textContent = learned.captured.length;
+      document.getElementById('learnedMissingCount').textContent = learned.missing.length;
+
+      const capturedContainer = document.getElementById('drawerLearnedCaptured');
+      if (learned.captured.length === 0) {
+        capturedContainer.innerHTML = '<div style="font-size: 11px; color: var(--text-dim);">No variables captured yet.</div>';
+      } else {
+        capturedContainer.innerHTML = learned.captured.map(c => `
+          <div class="learned-item">
+            <span class="learned-item-title" style="color: #4ade80;">✓ ${escapeHtml(c.label)}</span>
+            <span class="learned-item-val">${escapeHtml(c.value)}</span>
+          </div>
+        `).join('');
+      }
+
+      const missingContainer = document.getElementById('drawerLearnedMissing');
+      if (learned.missing.length === 0) {
+        missingContainer.innerHTML = '<div style="font-size: 11px; color: #4ade80; padding: 6px;">All key operational data captured!</div>';
+      } else {
+        missingContainer.innerHTML = learned.missing.map(m => `
+          <div class="learned-item">
+            <span class="learned-item-title" style="color: var(--text-dim);">○ ${escapeHtml(m.label)}</span>
+            <span class="learned-item-hint">Action: ${escapeHtml(m.hint || 'Collect during follow-up')}</span>
+          </div>
+        `).join('');
+      }
+
+      // Tab 3: 8-Point Physical Evidence Checklist & WhatsApp Engine
+      const waInfo = l360.whatsapp || {};
+      const readiness = l360.evidence_readiness || {};
+
+      const dryRunEl = document.getElementById('waDryRunIndicator');
+      if (dryRunEl) {
+        dryRunEl.textContent = waInfo.indicator || 'WHATSAPP: DRY RUN';
+      }
+
+      const lastMsgEl = document.getElementById('waLastMsg');
+      if (lastMsgEl) {
+        lastMsgEl.textContent = waInfo.status ? `${waInfo.status} (${waInfo.last_message ? waInfo.last_message.slice(0, 35) + '...' : 'Sent'})` : '—';
+      }
+
+      const lastInboundEl = document.getElementById('waLastInbound');
+      if (lastInboundEl) {
+        lastInboundEl.textContent = waInfo.last_inbound ? String(waInfo.last_inbound).slice(0, 35) : '—';
+      }
+
+      const pendingReqEl = document.getElementById('waPendingReq');
+      if (pendingReqEl) {
+        pendingReqEl.textContent = String(waInfo.pending_requests || 0);
+      }
+
+      const readinessBadge = document.getElementById('evidenceReadinessBadge');
+      if (readinessBadge) {
+        const rStatus = readiness.status || 'NOT_STARTED';
+        const rPct = readiness.completion_percent !== undefined ? readiness.completion_percent : 0;
+        readinessBadge.textContent = `${rStatus} (${rPct}%)`;
+        readinessBadge.className = `badge ${rStatus === 'VERIFIED' ? 'badge-qualified' : rStatus === 'READY_FOR_VERIFICATION' ? 'badge-owner' : 'badge-warm'}`;
+      }
+
+      const evidence = l360.evidence_checklist || {};
+      const evKeys = Object.keys(evidence);
+      let verifiedCount = 0;
+      evKeys.forEach(k => { if (evidence[k].verified || evidence[k].status === 'verified') verifiedCount++; });
+
+      document.getElementById('evidenceVerifiedRatio').textContent = `${verifiedCount}/${evKeys.length || 8} Verified`;
+      if (l360.evidence_integration_note) {
+        document.getElementById('evidenceDisclaimerText').innerHTML = `ℹ️ <strong>Physical Verification Protocol:</strong> ${escapeHtml(l360.evidence_integration_note)}`;
+      }
+
+      const evTbody = document.getElementById('drawerEvidenceTableBody');
+      if (evKeys.length === 0) {
+        evTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-dim); padding: 16px;">No evidence checklist generated for this lead.</td></tr>';
+      } else {
+        evTbody.innerHTML = evKeys.map(k => {
+          const item = evidence[k];
+          let badgeHtml = '<span class="badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim);">⏳ Pending</span>';
+          if (item.status === 'verified' || item.verified) {
+            badgeHtml = '<span class="badge badge-qualified">✓ Verified</span>';
+          } else if (item.status === 'received') {
+            badgeHtml = '<span class="badge badge-owner">✓ Received</span>';
+          } else if (item.status === 'requested') {
+            badgeHtml = '<span class="badge badge-warm">Requested</span>';
+          }
+
+          return `
+            <tr>
+              <td><strong>${escapeHtml(item.name || k)}</strong></td>
+              <td>${badgeHtml}</td>
+              <td style="color: var(--text-muted); font-size: 11px;">${escapeHtml(item.note || 'Evidence upload pending')}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Tab 4: Activity Timeline
+      const timeline = l360.timeline || [];
+      const tlContainer = document.getElementById('drawerTimelineList');
+
+      if (!timeline || timeline.length === 0) {
+        tlContainer.innerHTML = '<div style="text-align: center; color: var(--text-dim); padding: 30px; font-size: 12px;">Activity history will appear after Vaani processes calls.</div>';
+      } else {
+        const days = {};
+        timeline.forEach(evt => {
+          const day = evt.day || 'DAY 1';
+          if (!days[day]) days[day] = [];
+          days[day].push(evt);
+        });
+
+        let tlHtml = '';
+        Object.keys(days).forEach(dayName => {
+          tlHtml += `
+            <div class="timeline-day-header">
+              <span>📅 ${escapeHtml(dayName)}</span>
+              <div class="timeline-day-line"></div>
+            </div>
+          `;
+          days[dayName].forEach(evt => {
+            const actorType = (evt.actor && evt.actor.type ? evt.actor.type.toLowerCase() : 'vaani');
+            const actorLabel = (evt.actor && evt.actor.label) || '🤖 VAANI';
+            let quoteHtml = '';
+            if (evt.customer_quote) {
+              quoteHtml = `<div class="customer-quote-box">💬 Customer said: "${escapeHtml(evt.customer_quote)}"</div>`;
+            }
+
+            tlHtml += `
+              <div class="timeline-card actor-${actorType}">
+                <div class="timeline-card-header">
+                  <span class="timeline-actor">${escapeHtml(actorLabel)}</span>
+                  <span class="timeline-time">${escapeHtml(evt.formatted_time || '')}</span>
+                </div>
+                <div class="timeline-title">${escapeHtml(evt.title || '')}</div>
+                <div class="timeline-desc">${escapeHtml(evt.description || '')}</div>
+                ${quoteHtml}
+              </div>
+            `;
+          });
+        });
+        tlContainer.innerHTML = tlHtml;
+      }
+
+      // Tab 5: Associated Calls & Audio & Transcript
+      const calls = l360.linked_calls || [];
+      const callsContainer = document.getElementById('drawerLinkedCallsList');
+
+      if (calls.length === 0) {
+        callsContainer.innerHTML = '<div style="font-size: 12px; color: var(--text-dim); padding: 8px;">No call sessions logged.</div>';
+      } else {
+        callsContainer.innerHTML = calls.map((c, idx) => `
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle); border-radius: 4px; font-size: 11px;">
+            <div>
+              <strong>Call #${c.call_number || idx + 1} (Run ${c.run_id})</strong>
+              <div style="color: var(--text-dim);">${c.formatted_time || c.created_at || ''}</div>
+            </div>
+            <span class="badge badge-owner">${escapeHtml(c.conversation_outcome || 'Completed')}</span>
+          </div>
+        `).join('');
+      }
+
+      const primaryCall = calls[0] || raw;
+      renderAudioPlayer(primaryCall);
+      renderTranscript(primaryCall.transcript || raw.transcript || []);
+    }
+
+    function renderLead360Fallback(item) {
+      populateDrawerHeader(item);
+      document.getElementById('drawerCurrentStatus').textContent = item.current_status || 'Under review';
+      document.getElementById('drawerNextActionVal').textContent = item.next_action || 'Follow-up call';
+      document.getElementById('drawerOwnerVal').textContent = item.owner || 'Sales Operator';
+      document.getElementById('drawerDueVal').textContent = 'Today';
+      document.getElementById('drawerDueBadge').textContent = 'Due: Today';
+      document.getElementById('drawerStage').textContent = item.qualification_state || item.conversation_outcome || 'IN_PROGRESS';
+
+      let priceDisplay = 'N/A';
+      if (item.expected_price_inr) priceDisplay = `₹${(item.expected_price_inr / 100000).toFixed(2)} Lakh`;
+      else if (item.buyer_budget_max_inr) priceDisplay = `Budget Max: ₹${(item.buyer_budget_max_inr / 100000).toFixed(2)} Lakh`;
+      else if (item.price_raw) priceDisplay = item.price_raw;
+      document.getElementById('drawerPrice').textContent = priceDisplay;
+
+      document.getElementById('drawerMachine').textContent = `${item.machine_brand || ''} ${item.machine_model || item.required_tonnage_class || 'Excavator'}`.trim();
+      document.getElementById('drawerYearHours').textContent = `${item.manufacturing_year || 'Year N/A'} • ${item.hour_meter_reading ? item.hour_meter_reading.toLocaleString() + ' hrs' : 'Hours N/A'}`;
+      document.getElementById('drawerApplication').textContent = item.application_history || 'Standard Soil/Earthwork';
+      document.getElementById('drawerLocation').textContent = item.location_city || item.location || 'Location Not Specified';
+      document.getElementById('drawerNocStatus').textContent = item.finance_noc_status || 'Under Verification';
+      document.getElementById('drawerLastActivity').textContent = 'Inbound conversation logged';
+
+      renderAudioPlayer(item);
+      renderTranscript(item.transcript || []);
+    }
+
+    async function triggerEvidenceRequest(evidenceType) {
+      const activeLead = state.activeLead360;
+      const leadId = activeLead ? (activeLead.lead_id || activeLead.raw_lead?.run_id) : null;
+      if (!leadId) {
+        alert('No active lead selected');
+        return;
+      }
+      try {
+        const res = await apiFetch(`/api/vaani/sales/leads/${encodeURIComponent(leadId)}/evidence/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ evidence_type: evidenceType })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          alert(`Could not request evidence: ${errData.error || 'Failed'}`);
+          return;
+        }
+        const data = await res.json();
+        alert(`Evidence Requested [DRY RUN]\nType: ${evidenceType}\nStatus: ${data.status}\nMessage ID: ${data.message_id || data.id}`);
+        openLeadDrawer(leadId);
+      } catch (err) {
+        alert(`Error triggering request: ${err.message}`);
+      }
+    }
+
+    // Filter Listeners
+    function initFilters() {
+      // Seller filters
+      ['sellerFilterTemp', 'sellerFilterRole', 'sellerFilterBrand', 'sellerFilterApp', 'sellerFilterFollowup'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applySellerFilters);
+      });
+      document.getElementById('sellerResetFilters').addEventListener('click', () => {
+        document.getElementById('sellerFilterTemp').value = 'ALL';
+        document.getElementById('sellerFilterRole').value = 'ALL';
+        document.getElementById('sellerFilterBrand').value = 'ALL';
+        document.getElementById('sellerFilterApp').value = 'ALL';
+        document.getElementById('sellerFilterFollowup').value = 'ALL';
+        renderSellers(state.sellers);
+      });
+
+      // Buyer filters
+      ['buyerFilterTemp', 'buyerFilterTonnage', 'buyerFilterTimeline'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applyBuyerFilters);
+      });
+      document.getElementById('buyerResetFilters').addEventListener('click', () => {
+        document.getElementById('buyerFilterTemp').value = 'ALL';
+        document.getElementById('buyerFilterTonnage').value = 'ALL';
+        document.getElementById('buyerFilterTimeline').value = 'ALL';
+        renderBuyers(state.buyers);
+      });
+    }
+
+    function applySellerFilters() {
+      const temp = document.getElementById('sellerFilterTemp').value;
+      const role = document.getElementById('sellerFilterRole').value;
+      const brand = document.getElementById('sellerFilterBrand').value;
+      const app = document.getElementById('sellerFilterApp').value;
+      const fup = document.getElementById('sellerFilterFollowup').value;
+
+      const filtered = state.sellers.filter(s => {
+        if (temp !== 'ALL' && s.lead_temperature !== temp) return false;
+        if (role !== 'ALL' && s.caller_role !== role) return false;
+        if (brand !== 'ALL' && s.machine_brand !== brand) return false;
+        if (app !== 'ALL' && s.application_history !== app) return false;
+        if (fup === 'YES' && !s.follow_up_required) return false;
+        return true;
+      });
+
+      renderSellers(filtered);
+    }
+
+    function applyBuyerFilters() {
+      const temp = document.getElementById('buyerFilterTemp').value;
+      const tonnage = document.getElementById('buyerFilterTonnage').value;
+      const timeline = document.getElementById('buyerFilterTimeline').value;
+
+      const filtered = state.buyers.filter(b => {
+        if (temp !== 'ALL' && b.lead_temperature !== temp) return false;
+        if (tonnage !== 'ALL' && b.required_tonnage_class !== tonnage) return false;
+        if (timeline !== 'ALL' && b.purchase_timeline !== timeline) return false;
+        return true;
+      });
+
+      renderBuyers(filtered);
+    }
+
+    // Data Fetching
+    async function loadAllData() {
+      const queryParam = state.isDemo ? '?demo=1' : '';
+
+      try {
+        const [ovRes, selRes, buyRes, machRes, demRes, fupRes, callRes, dncRes, actRes] = await Promise.all([
+          apiFetch(`/api/vaani/sales/overview${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/sellers${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/buyers${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/machines${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/demand${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/follow-ups${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/calls${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/dnc${queryParam}`).then(r => r.json()),
+          apiFetch(`/api/vaani/sales/activities${queryParam}`).then(r => r.json()).catch(e => {
+            if (e.message === 'Unauthorized' || e.message === 'Forbidden') throw e;
+            return { activities: [] };
+          })
+        ]);
+
+        state.overview = ovRes;
+        state.sellers = selRes.sellers || [];
+        state.buyers = buyRes.buyers || [];
+        state.machines = machRes || { machine_master: [], actual_stock: [] };
+        state.demand = demRes || {};
+        state.followups = fupRes || { overdue: [], due_today: [], upcoming: [] };
+        state.calls = Array.isArray(callRes) ? callRes : [];
+        state.dnc = dncRes.dnc_records || [];
+        state.recentActivities = (actRes && actRes.activities) ? actRes.activities : (ovRes.recent_activities || []);
+
+        renderAll();
+      } catch (err) {
+        if (err.message === 'Unauthorized' || err.message === 'Forbidden') {
+          return;
+        }
+        console.error('Failed to load dashboard data:', err);
+        showToast('Error connecting to sales API');
+      }
+    }
+
+    function renderAll() {
+      // Update badge counts in tabs
+      document.getElementById('sellerTabCount').textContent = state.sellers.length;
+      document.getElementById('buyerTabCount').textContent = state.buyers.length;
+      const stockUnits = (state.machines.actual_stock || []).length;
+      document.getElementById('machineTabCount').textContent = `${stockUnits} in Yard`;
+      
+      const totalFollowups = (state.followups.overdue || []).length + (state.followups.due_today || []).length + (state.followups.upcoming || []).length;
+      document.getElementById('followupTabCount').textContent = totalFollowups;
+      document.getElementById('callsTabCount').textContent = state.calls.length;
+      document.getElementById('dncTabCount').textContent = state.dnc.length;
+
+      // Render Individual Views
+      renderOverview();
+      renderSellers(state.sellers);
+      renderBuyers(state.buyers);
+      renderMachines();
+      renderDemand();
+      renderFollowups();
+      renderCalls();
+      renderDnc();
+    }
+
+    // Render 1. Overview
+    function renderOverview() {
+      const ov = state.overview || {};
+      document.getElementById('kpiTotalLeads').textContent = ov.total_leads || 0;
+      document.getElementById('kpiConnectedCalls').textContent = ov.connected_calls || 0;
+      document.getElementById('kpiHotSellers').textContent = ov.hot_sellers || 0;
+      document.getElementById('kpiHotBuyers').textContent = ov.hot_buyers || 0;
+      document.getElementById('kpiQualifiedLeads').textContent = ov.qualified_leads || 0;
+      document.getElementById('kpiFollowUpsDue').textContent = ov.follow_ups_due || 0;
+      document.getElementById('kpiClosedWon').textContent = ov.closed_won || 0;
+      document.getElementById('kpiDncTotal').textContent = ov.dnc_total || 0;
+
+      // Funnel (Counting Unique Leads)
+      const funnel = ov.funnel || [];
+      const funnelContainer = document.getElementById('funnelBars');
+      const maxCount = Math.max(...funnel.map(f => f.count), 1);
+      const totalUniqueLeads = ov.total_leads || maxCount;
+      document.getElementById('funnelTotalCount').textContent = `${ov.total_leads || 0} Unique Leads`;
+
+      const colors = {
+        NEW: 'var(--text-muted)',
+        CONTACTED: 'var(--blue)',
+        CONNECTED: 'var(--blue)',
+        INTERESTED: 'var(--gold)',
+        QUALIFIED: 'var(--green)',
+        PRICE_DISCUSSION: 'var(--amber)',
+        FOLLOW_UP: 'var(--purple)',
+        NEGOTIATION: 'var(--gold-bright)',
+        CLOSED_WON: '#34d399',
+        CLOSED_LOST: 'var(--text-dim)',
+        DO_NOT_CALL: 'var(--rose)'
+      };
+
+      funnelContainer.innerHTML = funnel.map(step => {
+        const pct = totalUniqueLeads > 0 ? Math.round((step.count / totalUniqueLeads) * 100) : 0;
+        const fillWidth = step.count === 0 ? 0 : Math.max(pct, 3);
+        const barColor = colors[step.stage] || 'var(--gold)';
+        return `
+          <div class="funnel-step">
+            <div class="funnel-label">${step.stage.replace(/_/g, ' ')}</div>
+            <div class="funnel-bar-bg">
+              <div class="funnel-bar-fill" style="width: ${fillWidth}%; background: ${barColor};"></div>
+            </div>
+            <div class="funnel-count">${step.count} <span style="font-size: 10px; color: var(--text-dim); font-weight: normal;">(${pct}%)</span></div>
+          </div>
+        `;
+      }).join('');
+
+      // Sourcing vs Buyer Ratio
+      const sellers = state.sellers.length;
+      const buyers = state.buyers.length;
+      const total = sellers + buyers || 1;
+      const selPct = Math.round((sellers / total) * 100);
+      const buyPct = Math.round((buyers / total) * 100);
+
+      document.getElementById('ratioSeller').style.width = `${selPct}%`;
+      document.getElementById('ratioBuyer').style.width = `${buyPct}%`;
+      document.getElementById('ratioInquiry').style.width = '0%';
+      document.getElementById('ratioSellerText').textContent = sellers;
+      document.getElementById('ratioBuyerText').textContent = buyers;
+      document.getElementById('ratioInquiryText').textContent = '0';
+
+      // Recent leads table
+      const recentTbody = document.querySelector('#recentLeadsTable tbody');
+      const recent = ov.recent_leads || state.sellers.concat(state.buyers).slice(0, 8);
+      
+      if (!recent || recent.length === 0) {
+        recentTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 30px;">No inbound leads recorded yet.</td></tr>';
+      } else {
+        recentTbody.innerHTML = recent.map(lead => {
+          const tempClass = (lead.lead_temperature || 'warm').toLowerCase();
+          const roleClass = lead.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer';
+          return `
+            <tr onclick='openDrawer(${JSON.stringify(lead)})'>
+              <td>${lead.formatted_time || lead.created_at || 'Just Now'}</td>
+              <td><strong>${escapeHtml(lead.caller_name || lead.customer_name || 'Anonymous')}</strong></td>
+              <td><span class="phone-link">${escapeHtml(lead.callback_number || lead.primary_phone || '')}</span></td>
+              <td><span class="badge ${roleClass}">${(lead.customer_type || 'lead').toUpperCase()}</span></td>
+              <td>${escapeHtml(lead.machine_model || lead.machine_brand || lead.required_tonnage_class || '20-Ton Excavator')}</td>
+              <td><span class="badge badge-${tempClass}">${lead.lead_temperature || 'WARM'}</span></td>
+              <td><span class="badge badge-owner">${escapeHtml(lead.qualification_state || lead.conversation_outcome || 'IN_PROGRESS')}</span></td>
+              <td style="color: var(--text-muted); font-size: 12px;">${escapeHtml(lead.next_action || 'Follow-up call')}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      // Render Vaani Activity Operations Feed
+      renderOverviewActivities(ov.recent_activities || state.recentActivities || []);
+    }
+
+    // Render 1b. Vaani Activity Operations Feed
+    function renderOverviewActivities(activities) {
+      const container = document.getElementById('overviewActivityFeed');
+      const countEl = document.getElementById('overviewActivityCount');
+      if (!container) return;
+
+      if (!activities || activities.length === 0) {
+        if (countEl) countEl.textContent = '0 Activities';
+        container.innerHTML = `
+          <div style="padding: 28px; text-align: center; color: var(--text-dim); font-size: 12px;">
+            Activity history will appear after Vaani processes calls.
+          </div>
+        `;
+        return;
+      }
+
+      if (countEl) countEl.textContent = `${activities.length} Activities`;
+      const actorBadges = {
+        vaani: { label: '🤖 VAANI', class: 'actor-vaani' },
+        customer: { label: '📞 CUSTOMER', class: 'actor-customer' },
+        operator: { label: '👤 SALES OPERATOR', class: 'actor-operator' },
+        system: { label: '⚙️ SYSTEM', class: 'actor-system' }
+      };
+
+      container.innerHTML = activities.map(act => {
+        const actorKey = (typeof act.actor === 'string' ? act.actor : (act.actor?.type || act.actor?.role || 'system')).toLowerCase();
+        const actorLabel = (typeof act.actor === 'object' && act.actor?.label) ? act.actor.label : (actorBadges[actorKey]?.label || actorKey.toUpperCase());
+        const actorClass = actorBadges[actorKey]?.class || 'actor-system';
+        const actor = { label: actorLabel, class: actorClass };
+        const timeStr = act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (act.time_display || 'Recent');
+        const quoteHtml = act.customer_quote ? `
+          <div style="font-size: 11px; font-style: italic; color: var(--gold); margin-top: 4px; padding-left: 8px; border-left: 2px solid rgba(210, 174, 89, 0.4);">
+            "${escapeHtml(act.customer_quote)}"
+          </div>
+        ` : '';
+
+        const leadLink = act.lead_id ? `
+          <span style="font-size: 11px; color: var(--gold); cursor: pointer; text-decoration: underline; margin-left: 8px;" onclick="event.stopPropagation(); openDrawer('${act.lead_id}')">
+            View Lead 360 →
+          </span>
+        ` : '';
+
+        return `
+          <div class="activity-feed-row" style="cursor: pointer;" onclick="${act.lead_id ? `openDrawer('${act.lead_id}')` : ''}">
+            <div class="activity-feed-time">${timeStr}</div>
+            <div class="activity-feed-main">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span class="actor-badge ${actor.class}">${actor.label}</span>
+                <strong style="color: #fff; font-size: 12px;">${escapeHtml(act.title || act.activity_type || '')}</strong>
+                ${act.customer_name ? `<span style="color: var(--text-muted); font-size: 11px;">• ${escapeHtml(act.customer_name)}</span>` : ''}
+                ${leadLink}
+              </div>
+              <div class="activity-feed-desc">${escapeHtml(act.description || '')}</div>
+              ${quoteHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render 2. Sellers
+    function renderSellers(list) {
+      const tbody = document.querySelector('#sellersTable tbody');
+      const emptyState = document.getElementById('sellersEmptyState');
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+
+      tbody.innerHTML = list.map(s => {
+        const tempBadge = `<span class="badge badge-${(s.lead_temperature || 'warm').toLowerCase()}">${s.lead_temperature || 'WARM'}</span>`;
+        const roleBadge = `<span class="badge ${s.caller_role === 'broker' ? 'badge-broker' : 'badge-owner'}">${(s.caller_role || 'owner').toUpperCase()}</span>`;
+        
+        let price = 'N/A';
+        if (s.expected_price_inr) price = `₹${(s.expected_price_inr / 100000).toFixed(1)}L`;
+        else if (s.price_raw) price = s.price_raw;
+
+        const ev = s.digital_evidence || {};
+        const evIcons = `
+          <div class="evidence-icons">
+            <span class="evidence-chip ${ev.rc_smart_card_collected ? 'verified' : ''}" title="RC Copy">RC</span>
+            <span class="evidence-chip ${ev.hour_meter_photo_collected ? 'verified' : ''}" title="Meter Photo">HMR</span>
+            <span class="evidence-chip ${ev.working_video_collected ? 'verified' : ''}" title="Working Video">VID</span>
+          </div>
+        `;
+
+        return `
+          <tr onclick='openDrawer(${JSON.stringify(s)})'>
+            <td><strong>${escapeHtml(s.customer_name)}</strong></td>
+            <td><span class="phone-link">${escapeHtml(s.primary_phone)}</span></td>
+            <td>${roleBadge}</td>
+            <td><strong>${escapeHtml(s.machine_brand || '')}</strong> ${escapeHtml(s.machine_model || '')}</td>
+            <td>${s.manufacturing_year || 'N/A'}</td>
+            <td>${s.hour_meter_reading ? s.hour_meter_reading.toLocaleString() + ' hrs' : 'N/A'}</td>
+            <td><span style="font-size: 11px; color: var(--text-muted);">${s.application_history === 'breaker_quarry' ? '⚠️ Rock Breaker' : 'Soil/Mitti'}</span></td>
+            <td>${escapeHtml(s.machine_location_city || s.machine_location_state || 'Rajasthan')}</td>
+            <td><strong>${price}</strong></td>
+            <td>${evIcons}</td>
+            <td>${tempBadge}</td>
+            <td><span class="badge badge-owner">${escapeHtml(s.qualification_state || 'IN_PROGRESS')}</span></td>
+            <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(s.next_action || 'WhatsApp summary')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render 3. Buyers
+    function renderBuyers(list) {
+      const tbody = document.querySelector('#buyersTable tbody');
+      const emptyState = document.getElementById('buyersEmptyState');
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+
+      tbody.innerHTML = list.map(b => {
+        const tempBadge = `<span class="badge badge-${(b.lead_temperature || 'warm').toLowerCase()}">${b.lead_temperature || 'WARM'}</span>`;
+        let budget = 'Not stated';
+        if (b.buyer_budget_max_inr) budget = `₹${(b.buyer_budget_max_inr / 100000).toFixed(1)} Lakh`;
+
+        return `
+          <tr onclick='openDrawer(${JSON.stringify(b)})'>
+            <td><strong>${escapeHtml(b.customer_name)}</strong></td>
+            <td><span class="phone-link">${escapeHtml(b.primary_phone)}</span></td>
+            <td><strong>${escapeHtml(b.machine_brand || 'Any')}</strong> ${escapeHtml(b.required_tonnage_class || '')}</td>
+            <td>${escapeHtml(b.required_tonnage_class || '20-Ton Class')}</td>
+            <td>${escapeHtml(b.intended_application || 'General earthwork')}</td>
+            <td><strong style="color: var(--gold);">${budget}</strong></td>
+            <td>${escapeHtml(b.delivery_location || 'Rajasthan')}</td>
+            <td><span class="badge badge-owner">${escapeHtml(b.purchase_timeline || 'Immediate')}</span></td>
+            <td>${b.yard_visit_interest ? '<span class="badge badge-qualified">✓ Interested</span>' : '<span style="color: var(--text-dim);">No</span>'}</td>
+            <td>${tempBadge}</td>
+            <td><span class="badge badge-owner">${escapeHtml(b.qualification_state || 'QUALIFIED')}</span></td>
+            <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(b.next_action || 'Share yard inventory')}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Render 4. Machines (Stock vs Master)
+    function renderMachines() {
+      const stock = state.machines.actual_stock || [];
+      const master = state.machines.machine_master || [];
+
+      document.getElementById('stockCountBadge').textContent = stock.length;
+      document.getElementById('masterCountBadge').textContent = master.length;
+
+      const stockGrid = document.getElementById('stockGrid');
+      const stockEmptyState = document.getElementById('stockEmptyState');
+
+      if (stock.length === 0) {
+        stockGrid.innerHTML = '';
+        stockEmptyState.style.display = 'block';
+      } else {
+        stockEmptyState.style.display = 'none';
+        stockGrid.innerHTML = stock.map(unit => `
+          <div class="panel-card" style="border: 1px solid rgba(16, 185, 129, 0.3);">
+            <div class="panel-header">
+              <div>
+                <span class="badge badge-qualified">CERTIFIED YARD STOCK</span>
+                <h3 style="font-size: 16px; margin-top: 6px; color: #fff;">${escapeHtml(unit.brand)} ${escapeHtml(unit.model)}</h3>
+                <div style="font-size: 12px; color: var(--text-dim); font-family: var(--mono);">${unit.machine_id}</div>
+              </div>
+            </div>
+            <div class="drawer-field-grid" style="margin-bottom: 12px;">
+              <div class="drawer-field">
+                <span class="drawer-field-label">Year & Hours</span>
+                <span class="drawer-field-value">${unit.manufacturing_year} • ${unit.hour_meter_reading.toLocaleString()} hrs</span>
+              </div>
+              <div class="drawer-field">
+                <span class="drawer-field-label">Target Resale Price</span>
+                <span class="drawer-field-value" style="color: var(--gold-bright);">₹${(unit.target_resale_inr / 100000).toFixed(2)} Lakh</span>
+              </div>
+              <div class="drawer-field">
+                <span class="drawer-field-label">Location</span>
+                <span class="drawer-field-value">${escapeHtml(unit.current_location)}</span>
+              </div>
+              <div class="drawer-field">
+                <span class="drawer-field-label">Application History</span>
+                <span class="drawer-field-value">${unit.application_history === 'soil_earthwork' ? 'Soil only (No Breaker)' : 'Quarry / Breaker'}</span>
+              </div>
+            </div>
+            <div style="background: rgba(255, 255, 255, 0.03); padding: 8px 12px; border-radius: var(--radius-sm); font-size: 11px;">
+              <strong style="color: var(--green);">Verified Inspection Points:</strong>
+              <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+                ${(unit.verified_features || []).map(f => `<span class="badge badge-owner">✓ ${escapeHtml(f)}</span>`).join('')}
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+
+      // Master Table
+      const masterTbody = document.querySelector('#machineMasterTable tbody');
+      masterTbody.innerHTML = master.map(m => `
+        <tr>
+          <td><strong>${escapeHtml(m.brand)}</strong></td>
+          <td><strong style="color: var(--gold);">${escapeHtml(m.canonical_model)}</strong></td>
+          <td>${(m.aliases || []).map(a => `<span class="badge badge-owner">${escapeHtml(a)}</span>`).join(' ')}</td>
+          <td>${escapeHtml(m.tonnage_class)}</td>
+          <td>${escapeHtml(m.standard_engine)}</td>
+          <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(m.market_positioning)}</td>
+          <td><strong>${m.indicative_bands?.['2023_2024'] || 'N/A'}</strong></td>
+          <td><strong>${m.indicative_bands?.['2021_2022'] || 'N/A'}</strong></td>
+          <td><strong>${m.indicative_bands?.['2018_2019'] || 'N/A'}</strong></td>
+        </tr>
+      `).join('');
+    }
+
+    // Render 5. Demand & Matchmaking
+    function renderDemand() {
+      const dem = state.demand || {};
+      const brands = dem.top_requested_brands || [];
+      const tonnage = dem.top_requested_tonnage || [];
+      const matches = dem.matches || [];
+
+      // Top Brands Bar
+      const brandContainer = document.getElementById('demandBrandBars');
+      brandContainer.innerHTML = brands.map(b => `
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+            <span><strong>${escapeHtml(b.brand)}</strong> (${b.inquiries_count || 0} inquiries)</span>
+            <span style="font-weight: 700; color: var(--gold);">${b.share_percentage || 0}%</span>
+          </div>
+          <div class="funnel-bar-bg">
+            <div class="funnel-bar-fill" style="width: ${b.share_percentage || 0}%; background: var(--gold);"></div>
+          </div>
+        </div>
+      `).join('');
+
+      // Top Tonnage Bar
+      const tonnageContainer = document.getElementById('demandTonnageBars');
+      tonnageContainer.innerHTML = tonnage.map(t => `
+        <div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+            <span><strong>${escapeHtml(t.tonnage.replace(/_/g, ' '))}</strong></span>
+            <span style="font-weight: 700; color: var(--blue);">${t.percentage || 0}%</span>
+          </div>
+          <div class="funnel-bar-bg">
+            <div class="funnel-bar-fill" style="width: ${t.percentage || 0}%; background: var(--blue);"></div>
+          </div>
+        </div>
+      `).join('');
+
+      // Matchmaking Engine List
+      const matchingContainer = document.getElementById('matchingListContainer');
+      if (matches.length === 0) {
+        matchingContainer.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">🤝</div>
+            <div class="empty-title">0 Matches Against Current Verified Stock</div>
+            <div class="empty-desc">
+              All matches require verified stock in yard with cleared NOC. Sourcing teams are dispatched to fulfill pending buyer specs.
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      matchingContainer.innerHTML = matches.map(m => {
+        const units = m.matching_stock || [];
+        const hasStock = units.length > 0;
+        return `
+          <div class="match-card" style="border-left: 4px solid ${hasStock ? 'var(--green)' : 'var(--border-subtle)'};">
+            <div class="match-header">
+              <div>
+                <h4 style="font-size: 14px; color: #fff;">Buyer: ${escapeHtml(m.buyer_name)} (<span class="phone-link">${m.buyer_phone}</span>)</h4>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+                  Requested: <strong>${escapeHtml(m.requested_machine || '20-Ton Excavator')}</strong> • Budget: <strong>₹${((m.budget_max_inr || 0) / 100000).toFixed(1)}L</strong>
+                </div>
+              </div>
+              <span class="badge ${hasStock ? 'badge-qualified' : 'badge-cold'}">
+                ${hasStock ? `${units.length} Unit(s) Matched` : '0 Stock Units Available'}
+              </span>
+            </div>
+            ${hasStock ? `
+              <div class="stock-unit-chip">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div>
+                    <strong style="color: #fff;">${escapeHtml(units[0].brand)} ${escapeHtml(units[0].model)} (${units[0].manufacturing_year})</strong>
+                    <div style="font-size: 11px; color: var(--text-muted);">${units[0].current_location} • ${units[0].hour_meter_reading.toLocaleString()} hrs</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-weight: 700; color: var(--gold-bright);">₹${(units[0].target_resale_inr / 100000).toFixed(2)} Lakh</div>
+                    <div style="font-size: 10px; color: var(--green);">Match margin within budget</div>
+                  </div>
+                </div>
+              </div>
+            ` : `
+              <div style="font-size: 11px; color: var(--text-dim); padding-top: 4px;">
+                * Sourcing alert issued to field procurement agents for ${escapeHtml(m.requested_machine || '20-ton class')}.
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Render 6. Follow-ups
+    function renderFollowups() {
+      const f = state.followups || { overdue: [], due_today: [], upcoming: [] };
+      document.getElementById('countOverdue').textContent = (f.overdue || []).length;
+      document.getElementById('countDueToday').textContent = (f.due_today || []).length;
+      document.getElementById('countUpcoming').textContent = (f.upcoming || []).length;
+
+      renderFollowupList('listOverdue', f.overdue || []);
+      renderFollowupList('listDueToday', f.due_today || []);
+      renderFollowupList('listUpcoming', f.upcoming || []);
+    }
+
+    function renderFollowupList(containerId, list) {
+      const container = document.getElementById(containerId);
+      if (!list || list.length === 0) {
+        container.innerHTML = '<div style="font-size: 12px; color: var(--text-dim); text-align: center; padding: 24px;">No items in this queue.</div>';
+        return;
+      }
+
+      container.innerHTML = list.map(item => `
+        <div class="drawer-card" style="margin-bottom: 8px; cursor: pointer;" onclick="openDrawer('${item.lead_id || item.primary_phone || item.id}')">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+            <div>
+              <strong style="color: #fff; font-size: 13px;">${escapeHtml(item.customer_name)}</strong>
+              <div class="phone-link">${item.primary_phone}</div>
+            </div>
+            <span class="badge ${item.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${(item.customer_type || 'lead').toUpperCase()}</span>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+            <strong>Requirement:</strong> ${escapeHtml(item.machine_requirement || '20-Ton Excavator')}<br/>
+            <strong>Reason:</strong> ${escapeHtml(item.reason || 'Follow-up discussion')}
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
+            <span style="font-size: 11px; color: var(--text-dim);">${item.follow_up_datetime ? new Date(item.follow_up_datetime).toLocaleDateString() : 'Scheduled'}</span>
+            <button class="action-btn" onclick="event.stopPropagation(); updateFollowupStatus('${item.id}', 'completed')">✓ Mark Done</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    async function updateFollowupStatus(id, newStatus) {
+      try {
+        const res = await apiFetch('/api/vaani/sales/follow-up/status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, status: newStatus })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Follow-up #${id} updated`);
+          loadAllData();
+        }
+      } catch (err) {
+        if (err.message === 'Unauthorized' || err.message === 'Forbidden') return;
+        showToast('Failed to update follow-up');
+      }
+    }
+
+    // Render 7. Calls
+    function renderCalls() {
+      const tbody = document.querySelector('#callsTable tbody');
+      if (!state.calls || state.calls.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align: center; color: var(--text-dim); padding: 40px;">No call recordings found in database.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = state.calls.map(c => `
+        <tr onclick='openDrawer(${JSON.stringify(c)})'>
+          <td>${c.formatted_time || c.created_at || 'Recent'}</td>
+          <td><strong>${escapeHtml(c.caller_name || c.customer_name || 'Caller')}</strong></td>
+          <td><span class="phone-link">${escapeHtml(c.primary_phone || c.callback_number || '')}</span></td>
+          <td><span class="badge ${c.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${(c.customer_type || 'lead').toUpperCase()}</span></td>
+          <td><span class="badge badge-owner">${escapeHtml(c.conversation_outcome || 'completed')}</span></td>
+          <td><span class="badge badge-${(c.lead_temperature || 'warm').toLowerCase()}">${c.lead_temperature || 'WARM'}</span></td>
+          <td>${escapeHtml(c.machine_summary || '20-Ton Excavator')}</td>
+          <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.next_action || 'Review extraction')}</td>
+          <td><button class="action-btn" onclick='event.stopPropagation(); openDrawer(${JSON.stringify(c)});'>Inspect</button></td>
+        </tr>
+      `).join('');
+    }
+
+    // Render 8. DNC
+    function renderDnc() {
+      const tbody = document.querySelector('#dncTable tbody');
+      if (!state.dnc || state.dnc.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 40px;">DNC registry is clean. Zero suppressed numbers.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = state.dnc.map(d => `
+        <tr>
+          <td><span class="phone-link" style="color: var(--rose); font-weight: 700;">${escapeHtml(d.phone_number)}</span></td>
+          <td><strong>${escapeHtml(d.customer_name || 'Opt-Out Request')}</strong></td>
+          <td style="color: #fecdd3;">${escapeHtml(d.reason || 'Seller requested do not call')}</td>
+          <td style="font-size: 12px; color: var(--text-dim);">${d.created_at || 'Recorded'}</td>
+          <td style="font-family: var(--mono); font-size: 11px;">${d.source_run_id ? 'Run #' + d.source_run_id : 'Inbound Voice Opt-Out'}</td>
+          <td><span class="badge badge-dnc">DO NOT CALL</span></td>
+        </tr>
+      `).join('');
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
+</body>
+</html>

@@ -9,16 +9,16 @@
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
   <style>
     :root {
-      --bg-base: #0a0b10;
-      --bg-surface: #11131c;
-      --bg-card: #161926;
-      --bg-card-hover: #1c2032;
-      --bg-active: #22273d;
-      --border-subtle: rgba(255, 255, 255, 0.08);
-      --border-strong: rgba(255, 255, 255, 0.16);
+      --bg-base: #f8fafc;
+      --bg-surface: #ffffff;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f1f5f9;
+      --bg-active: #e2e8f0;
+      --border-subtle: #e2e8f0;
+      --border-strong: #cbd5e1;
       --border-focus: rgba(210, 174, 89, 0.5);
-      --text-main: #f3f4f6;
-      --text-muted: #94a3b8;
+      --text-main: #0f172a;
+      --text-muted: #475569;
       --text-dim: #64748b;
       --gold: #d2ae59;
       --gold-bright: #eab308;
@@ -36,7 +36,7 @@
       --radius: 10px;
       --radius-sm: 6px;
       --radius-lg: 14px;
-      --shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+      --shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
       --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       --mono: 'SF Mono', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
     }
@@ -56,7 +56,7 @@
     .glow-layer {
       position: fixed;
       top: 0; left: 0; right: 0; height: 320px;
-      background: radial-gradient(circle at 50% -15%, rgba(210, 174, 89, 0.08), transparent 70%);
+      background: radial-gradient(circle at 50% -15%, rgba(210, 174, 89, 0.03), transparent 70%);
       pointer-events: none;
       z-index: 0;
     }
@@ -104,7 +104,7 @@
       font-size: 18px;
       font-weight: 700;
       letter-spacing: -0.01em;
-      color: #fff;
+      color: #0f172a;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -290,7 +290,7 @@
     .kpi-value {
       font-size: 26px;
       font-weight: 700;
-      color: #fff;
+      color: #0f172a;
       letter-spacing: -0.02em;
     }
     .kpi-sub {
@@ -331,7 +331,7 @@
     .panel-title {
       font-size: 15px;
       font-weight: 700;
-      color: #fff;
+      color: #0f172a;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -378,7 +378,7 @@
       width: 45px;
       text-align: right;
       font-weight: 700;
-      color: #fff;
+      color: #0f172a;
       font-family: var(--mono);
     }
 
@@ -460,7 +460,7 @@
       margin-top: auto;
     }
     .btn-reset:hover {
-      color: #fff;
+      color: #0f172a;
       border-color: var(--border-strong);
     }
 
@@ -479,7 +479,7 @@
       font-size: 13px;
     }
     table.data-table th {
-      background: #11131c;
+      background: #f1f5f9;
       color: var(--text-muted);
       font-weight: 600;
       font-size: 11px;
@@ -604,7 +604,7 @@
       height: 44px;
       border-radius: 50%;
       background: #e11d48;
-      color: #fff;
+      color: #0f172a;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -614,7 +614,7 @@
     .dnc-banner-text h3 {
       font-size: 16px;
       font-weight: 700;
-      color: #fff;
+      color: #0f172a;
       letter-spacing: 0.02em;
     }
     .dnc-banner-text p {
@@ -679,7 +679,7 @@
       font-size: 16px;
     }
     .drawer-close-btn:hover {
-      color: #fff;
+      color: #0f172a;
       border-color: var(--border-strong);
     }
     .drawer-body {
@@ -790,7 +790,7 @@
       transition: all 0.15s ease;
     }
     .drawer-tab:hover {
-      color: #fff;
+      color: #0f172a;
       border-color: var(--border-strong);
     }
     .drawer-tab.active {
@@ -851,7 +851,7 @@
     .next-action-val {
       font-size: 12px;
       font-weight: 600;
-      color: #fff;
+      color: #0f172a;
       line-height: 1.3;
     }
 
@@ -938,7 +938,7 @@
     }
     .learned-item-val {
       font-size: 12px;
-      color: #fff;
+      color: #0f172a;
       padding-left: 15px;
     }
     .learned-item-hint {
@@ -1033,7 +1033,7 @@
     .timeline-title {
       font-size: 12px;
       font-weight: 600;
-      color: #fff;
+      color: #0f172a;
     }
     .timeline-desc {
       font-size: 11px;
@@ -1094,7 +1094,7 @@
     }
     .activity-feed-title {
       font-weight: 600;
-      color: #fff;
+      color: #0f172a;
     }
     .activity-feed-desc {
       font-size: 11px;
@@ -1118,7 +1118,7 @@
     .empty-title {
       font-size: 16px;
       font-weight: 700;
-      color: #fff;
+      color: #0f172a;
       margin-bottom: 6px;
     }
     .empty-desc {
@@ -1188,13 +1188,206 @@
       right: 24px;
       background: var(--bg-surface);
       border: 1px solid var(--gold);
-      color: #fff;
+      color: #0f172a;
       padding: 12px 18px;
       border-radius: var(--radius);
       box-shadow: 0 8px 30px rgba(0,0,0,0.6);
       font-size: 13px;
       z-index: 1000;
       display: none;
+    }
+
+    /* Live Simulation Controller Bar */
+    .sim-controller {
+      background: linear-gradient(135deg, rgba(20, 24, 38, 0.95) 0%, rgba(28, 34, 52, 0.92) 100%);
+      border: 1px solid rgba(245, 158, 11, 0.28);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 15px rgba(245, 158, 11, 0.06);
+    }
+    .sim-controller-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .sim-controller-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .sim-pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--gold);
+      box-shadow: 0 0 10px var(--gold);
+      display: inline-block;
+      animation: pulseGlow 2s infinite ease-in-out;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; box-shadow: 0 0 16px var(--gold); }
+    }
+    .sim-actions-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn-sim {
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+      outline: none;
+    }
+    .btn-sim-seller {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.2) 100%);
+      color: #fbbf24;
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+    .btn-sim-seller:hover {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.4) 0%, rgba(217, 119, 6, 0.35) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(245, 158, 11, 0.25);
+    }
+    .btn-sim-buyer {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.15) 100%);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.4);
+    }
+    .btn-sim-buyer:hover {
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.35) 0%, rgba(5, 150, 105, 0.28) 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+    }
+    .btn-sim-toggle {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+    .btn-sim-toggle.active {
+      background: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+      border-color: rgba(14, 165, 233, 0.5);
+      box-shadow: 0 0 10px rgba(14, 165, 233, 0.25);
+    }
+    .btn-sim-clean {
+      background: rgba(244, 63, 94, 0.1);
+      color: #fda4af;
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+    .btn-sim-clean:hover {
+      background: rgba(244, 63, 94, 0.25);
+      border-color: rgba(244, 63, 94, 0.6);
+    }
+    /* Phase 2: Buyer CRM panel */
+    .buyer-crm-panel {
+      background: rgba(16, 185, 129, 0.05);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    .buyer-crm-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .buyer-crm-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #34d399;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .buyer-crm-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .buyer-crm-table th {
+      text-align: left; padding: 8px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      color: var(--text-dim); font-weight: 500; font-size: 11px; text-transform: uppercase;
+    }
+    .buyer-crm-table td { padding: 9px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+    .buyer-crm-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .call-status-badge {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .call-status-badge.demo     { background: rgba(14,165,233,0.15); color: #38bdf8; }
+    .call-status-badge.dispatched { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .call-status-badge.completed  { background: rgba(16,185,129,0.15); color: #34d399; }
+    .call-status-badge.failed     { background: rgba(244,63,94,0.15); color: #fb7185; }
+    .call-status-badge.queued     { background: rgba(148,163,184,0.15); color: #94a3b8; }
+    .call-status-badge.none       { background: rgba(148,163,184,0.08); color: #64748b; }
+    .btn-call-buyer {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.4);
+      background: linear-gradient(135deg, rgba(16,185,129,0.18) 0%, rgba(5,150,105,0.12) 100%);
+      color: #34d399; font-size: 11px; font-weight: 600; cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-call-buyer:hover:not(:disabled) {
+      background: rgba(16,185,129,0.3); transform: translateY(-1px);
+      box-shadow: 0 3px 10px rgba(16,185,129,0.2);
+    }
+    .btn-call-buyer:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .drawer-call-cta {
+      margin-bottom: 12px; padding: 12px 14px;
+      background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);
+      border-radius: var(--radius-sm); display: flex; align-items: center;
+      justify-content: space-between; gap: 10px;
+    }
+    .drawer-call-cta-info { font-size: 12px; color: var(--text-muted); }
+    .drawer-call-cta-info strong { color: #34d399; }
+    .sim-status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 10px;
+    }
+    .sim-status-box {
+      background: rgba(11, 14, 23, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sim-status-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    .sim-status-val {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sim-status-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   </style>
 </head>
@@ -1266,8 +1459,81 @@
       </button>
     </nav>
 
+    <!-- ==================== LIVE SIMULATION CONTROLLER (PHASE 1) ==================== -->
+    <section class="sim-controller" id="simController">
+      <div class="sim-controller-header">
+        <div class="sim-controller-title">
+          <span class="sim-pulse-dot"></span>
+          <span style="font-weight: 700; color: #0f172a; font-size: 14px;">⚡ Live Pipeline Simulation Controller</span>
+          <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: var(--gold); border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10px;">Zero-Risk Mode</span>
+          <span class="badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 10px;">PostgreSQL Active</span>
+          <span class="badge" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8; border: 1px solid rgba(14, 165, 233, 0.3); font-size: 10px;">WhatsApp Dry-Run</span>
+        </div>
+        <div class="sim-actions-group">
+          <button id="simSellerCallBtn" class="btn-sim btn-sim-seller" onclick="simulateNewCall('seller')" title="Simulate Tata Hitachi EX 200 LC Seller Call through Call Lifecycle → Extraction → Tasks">
+            <span>📞 Simulate Seller Call (EX 200 LC)</span>
+          </button>
+          <button id="simBuyerCallBtn" class="btn-sim btn-sim-buyer" onclick="simulateNewCall('buyer')" title="Simulate JCB 3DX Buyer Call through Extraction → Demand Match">
+            <span>🛒 Simulate Buyer Call (JCB 3DX)</span>
+          </button>
+          <button id="autoRefreshToggleBtn" class="btn-sim btn-sim-toggle" onclick="toggleAutoRefresh()" title="Toggle 5-second automatic dashboard polling">
+            <span>🔄 Auto Refresh: <strong id="autoRefreshStatus">OFF</strong></span>
+          </button>
+          <button id="cleanupSimBtn" class="btn-sim btn-sim-clean" onclick="cleanupSimulations()" title="Safely clean up only simulated test runs (run_id >= 900000)">
+            <span>🧹 Clean Test Data</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Status Telemetry Area -->
+      <div class="sim-status-grid">
+        <div class="sim-status-box">
+          <div class="sim-status-label">Last Simulated Call</div>
+          <div class="sim-status-val" id="simLastCallVal">None (Ready to simulate)</div>
+          <div class="sim-status-sub" id="simLastCallSub">Click button above to trigger pipeline</div>
+        </div>
+        <div class="sim-status-box">
+          <div class="sim-status-label">Qualification & Temp</div>
+          <div class="sim-status-val" id="simQualVal">
+            <span class="badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim);">Awaiting Call</span>
+          </div>
+          <div class="sim-status-sub" id="simQualSub">Extraction & Decision Engine</div>
+        </div>
+        <div class="sim-status-box">
+          <div class="sim-status-label">Tasks Generated</div>
+          <div class="sim-status-val" id="simTasksVal">0 Tasks</div>
+          <div class="sim-status-sub" id="simTasksSub">Follow-up Engine (F3)</div>
+        </div>
+        <div class="sim-status-box">
+          <div class="sim-status-label">WhatsApp Evidence</div>
+          <div class="sim-status-val" id="simEvidenceVal">0 items received</div>
+          <div class="sim-status-sub" id="simEvidenceSub">Inbound Webhook Engine</div>
+        </div>
+        <div class="sim-status-box">
+          <div class="sim-status-label">Evidence Readiness</div>
+          <div class="sim-status-val" id="simReadinessVal">0%</div>
+          <div class="sim-status-sub" id="simReadinessSub">8-Point Verification Gate</div>
+        </div>
+        <div class="sim-status-box">
+          <div class="sim-status-label">Latest Activity</div>
+          <div class="sim-status-val" id="simActivityVal" style="font-size: 11px; font-weight: 500;">Controller initialized</div>
+          <div class="sim-status-sub" id="simActivityTime">Just now</div>
+        </div>
+      </div>
+    </section>
+
     <!-- ==================== 1. OVERVIEW VIEW ==================== -->
     <main id="view-overview" class="view-content active">
+      <div style="margin-bottom: 24px;">
+        <h2 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Good morning, Ankit 👋</h2>
+        <p style="color: var(--text-muted);">Here is your "Today's Work" summary.</p>
+        <div style="display: flex; gap: 12px; margin-top: 16px;">
+           <button class="btn-primary" onclick="alert('Add Machine dialog coming soon!')" style="background: var(--blue); color: #0f172a; padding: 10px 20px; border-radius: var(--radius-sm); border: none; font-weight: 600; cursor: pointer;">+ Add Machine</button>
+           <button class="btn-primary" onclick="alert('Add Seller dialog coming soon!')" style="background: var(--green); color: #0f172a; padding: 10px 20px; border-radius: var(--radius-sm); border: none; font-weight: 600; cursor: pointer;">+ Add Seller</button>
+           <button class="btn-primary" onclick="alert('Add Buyer dialog coming soon!')" style="background: var(--purple); color: #0f172a; padding: 10px 20px; border-radius: var(--radius-sm); border: none; font-weight: 600; cursor: pointer;">+ Add Buyer</button>
+           <button class="btn-primary" style="background: var(--gold); color: #111; padding: 10px 20px; border-radius: var(--radius-sm); border: none; font-weight: 600; cursor: pointer;" onclick="document.querySelector('#startCallBtn').click()">🎙️ Talk to Vaani</button>
+        </div>
+      </div>
       <!-- KPI Cards -->
       <div class="kpi-grid">
         <div class="kpi-card gold-accent">
@@ -1484,7 +1750,18 @@
 
     <!-- ==================== 3. BUYERS VIEW ==================== -->
     <main id="view-buyers" class="view-content">
-      <!-- Filter Bar -->
+      <!-- Phase 2: Buyer CRM Panel (sourced from vaani_customers) -->
+      <div class="buyer-crm-panel" id="buyerCrmPanel">
+        <div class="buyer-crm-header">
+          <span class="buyer-crm-title">📞 Vaani Buyer CRM — Active Buyers</span>
+          <button onclick="loadBuyerCrm()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);border-radius:5px;color:var(--text-muted);cursor:pointer;">↻ Refresh</button>
+        </div>
+        <div id="buyerCrmContent">
+          <div style="color:var(--text-dim);font-size:12px;padding:8px 0;">Loading buyers...</div>
+        </div>
+      </div>
+
+      <!-- Filter Bar (leads-based) -->
       <div class="filter-toolbar">
         <div class="filter-item">
           <label class="filter-label">Temperature</label>
@@ -1716,7 +1993,7 @@
     </main>
 
     <!-- ==================== 8. DNC VIEW ==================== -->
-    <main id="view-dnc" class="view-content">
+    <main id="view-settings" class="view-content">
       <!-- Critical Warning Banner -->
       <div class="dnc-banner">
         <div class="dnc-icon-badge">🛑</div>
@@ -1755,7 +2032,7 @@
     <div class="drawer-header">
       <div>
         <div style="display: flex; gap: 8px; align-items: center;">
-          <h2 id="drawerCustomerName" style="font-size: 18px; color: #fff; margin: 0;">Lead Details</h2>
+          <h2 id="drawerCustomerName" style="font-size: 18px; color: #0f172a; margin: 0;">Lead Details</h2>
           <span id="drawerLeadIdBadge" class="badge" style="font-size: 10px; background: rgba(255,255,255,0.06);">ID: —</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: center; margin-top: 6px;">
@@ -1817,6 +2094,17 @@
           <div class="journey-tracker" id="drawerJourneyTracker">
             <!-- Rendered dynamically -->
           </div>
+        </div>
+
+        <!-- Phase 2: Call Buyer CTA (shown for buyer-type leads) -->
+        <div class="drawer-call-cta" id="drawerCallBuyerCta" style="display:none;">
+          <div class="drawer-call-cta-info">
+            <strong>📞 Initiate Vaani AI Call</strong><br>
+            <span id="drawerCallBuyerStatus">No active call for this buyer yet.</span>
+          </div>
+          <button class="btn-call-buyer" id="drawerCallBuyerBtn" onclick="callBuyerFromDrawer()">
+            📞 Call Buyer (Demo)
+          </button>
         </div>
 
         <!-- Commercial & Status Summary -->
@@ -1888,6 +2176,67 @@
 
       <!-- Tab 3: 8-Point Physical Evidence Checklist -->
       <div class="drawer-tab-pane" id="pane-evidence">
+        <!-- WhatsApp Dry Run Indicator & Readiness Status Banner -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 14px; background:rgba(30,58,138,0.25); border:1px solid rgba(59,130,246,0.35); border-radius:6px;">
+          <div>
+            <span id="waDryRunIndicator" style="font-weight:700; color:#60a5fa; font-size:12px; letter-spacing:0.5px;">WHATSAPP: DRY RUN</span>
+            <span style="font-size:11px; color:var(--text-muted); margin-left:8px;">• Provider: MockWhatsAppProvider (Simulated)</span>
+          </div>
+          <span id="evidenceReadinessBadge" class="badge badge-warm">NOT_STARTED (0%)</span>
+        </div>
+
+        <!-- WhatsApp Telemetry & Status -->
+        <div class="drawer-card" style="margin-bottom:12px; padding:12px 16px;">
+          <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; letter-spacing:0.5px;">WhatsApp Channel Telemetry</div>
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; font-size:12px;">
+            <div><span style="color:var(--text-muted);">Last Message:</span> <strong id="waLastMsg" style="display:block; margin-top:2px;">—</strong></div>
+            <div><span style="color:var(--text-muted);">Last Response:</span> <strong id="waLastInbound" style="display:block; margin-top:2px;">—</strong></div>
+            <div><span style="color:var(--text-muted);">Pending Requests:</span> <strong id="waPendingReq" style="display:block; margin-top:2px;">0</strong></div>
+          </div>
+        </div>
+
+        <!-- Quick Evidence Actions (Backend API Triggered) -->
+        <div class="drawer-card" style="margin-bottom:12px; padding:12px 16px;">
+          <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:var(--text-dim); margin-bottom:8px; letter-spacing:0.5px;">Request Evidence via WhatsApp</div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('BOOM_PHOTOS')">Request Photos</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('HOUR_METER_PHOTO')">Request Meter</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('RUNNING_VIDEO')">Request Running Video</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('RC_DOCUMENT')">Request RC</button>
+            <button class="btn btn-secondary btn-sm" onclick="triggerEvidenceRequest('BANK_NOC_DOCUMENT')">Request NOC</button>
+          </div>
+        </div>
+
+        <!-- Simulate Customer Sending Photo (Zero-Risk Live Simulation) -->
+        <div class="drawer-card" style="margin-bottom:12px; padding:12px 16px; background: rgba(16, 185, 129, 0.04); border: 1px solid rgba(16, 185, 129, 0.25);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:#34d399; letter-spacing:0.5px;">
+              📱 Simulate Customer Sending Photo (WhatsApp Inbound)
+            </div>
+            <span class="badge" style="font-size:10px; background:rgba(16, 185, 129, 0.15); color:#34d399;">Webhook Simulation</span>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
+            Trigger synthetic inbound media into the existing WhatsApp webhook pipeline. Checklist item will update to <strong>RECEIVED</strong> and matching F3 task will complete automatically.
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:8px;">
+            <button class="btn btn-secondary btn-sm" style="border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="simulateCustomerSendingPhoto('BOOM_PHOTOS')">
+              📷 Send Boom Photo
+            </button>
+            <button class="btn btn-secondary btn-sm" style="border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="simulateCustomerSendingPhoto('HOUR_METER_PHOTO')">
+              ⏱️ Send Meter Photo
+            </button>
+            <button class="btn btn-secondary btn-sm" style="border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="simulateCustomerSendingPhoto('RUNNING_VIDEO')">
+              🎥 Send Running Video
+            </button>
+            <button class="btn btn-secondary btn-sm" style="border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="simulateCustomerSendingPhoto('RC_DOCUMENT')">
+              📄 Send RC Copy
+            </button>
+            <button class="btn btn-secondary btn-sm" style="border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="simulateCustomerSendingPhoto('BANK_NOC_DOCUMENT')">
+              🏦 Send Bank NOC
+            </button>
+          </div>
+        </div>
+
         <div class="evidence-disclaimer" id="evidenceDisclaimerText">
           ℹ️ <strong>Physical Verification Protocol:</strong> Digital evidence requires verified photo/video matching chassis stamp. WhatsApp automation actions require active channel integration; items marked "Received" reflect direct operator ingestion or yard trial.
         </div>
@@ -2185,6 +2534,10 @@
         if (v.id === `view-${viewName}`) v.classList.add('active');
         else v.classList.remove('active');
       });
+      // Phase 2: auto-load buyer CRM panel when Buyers tab is activated
+      if (viewName === 'buyers' && typeof loadBuyerCrm === 'function') {
+        loadBuyerCrm();
+      }
     }
 
     // Mode Toggle (Real vs Demo)
@@ -2378,6 +2731,20 @@
         ? 'Seller Pipeline (14 Stages)'
         : 'Buyer Pipeline (14 Stages)';
 
+      // Phase 2: Show Call Buyer CTA for buyer leads
+      const callCta = document.getElementById('drawerCallBuyerCta');
+      const callStatusEl = document.getElementById('drawerCallBuyerStatus');
+      if (callCta) {
+        const isBuyer = (l360.customer_type === 'buyer') || (l360.raw_lead && l360.raw_lead.customer_type === 'buyer');
+        callCta.style.display = isBuyer ? 'flex' : 'none';
+        if (isBuyer && callStatusEl) {
+          const callCount = l360.call_count || 0;
+          callStatusEl.textContent = callCount > 0
+            ? `${callCount} call${callCount > 1 ? 's' : ''} logged. Click to initiate another AI call.`
+            : 'No active call for this buyer yet. Click to initiate Vaani AI call.';
+        }
+      }
+
       const tracker = document.getElementById('drawerJourneyTracker');
       tracker.innerHTML = (journey.stages || []).map((step, idx) => {
         const isCompleted = step.status === 'completed';
@@ -2448,7 +2815,38 @@
         `).join('');
       }
 
-      // Tab 3: 8-Point Physical Evidence Checklist
+      // Tab 3: 8-Point Physical Evidence Checklist & WhatsApp Engine
+      const waInfo = l360.whatsapp || {};
+      const readiness = l360.evidence_readiness || {};
+
+      const dryRunEl = document.getElementById('waDryRunIndicator');
+      if (dryRunEl) {
+        dryRunEl.textContent = waInfo.indicator || 'WHATSAPP: DRY RUN';
+      }
+
+      const lastMsgEl = document.getElementById('waLastMsg');
+      if (lastMsgEl) {
+        lastMsgEl.textContent = waInfo.status ? `${waInfo.status} (${waInfo.last_message ? waInfo.last_message.slice(0, 35) + '...' : 'Sent'})` : '—';
+      }
+
+      const lastInboundEl = document.getElementById('waLastInbound');
+      if (lastInboundEl) {
+        lastInboundEl.textContent = waInfo.last_inbound ? String(waInfo.last_inbound).slice(0, 35) : '—';
+      }
+
+      const pendingReqEl = document.getElementById('waPendingReq');
+      if (pendingReqEl) {
+        pendingReqEl.textContent = String(waInfo.pending_requests || 0);
+      }
+
+      const readinessBadge = document.getElementById('evidenceReadinessBadge');
+      if (readinessBadge) {
+        const rStatus = readiness.status || 'NOT_STARTED';
+        const rPct = readiness.completion_percent !== undefined ? readiness.completion_percent : 0;
+        readinessBadge.textContent = `${rStatus} (${rPct}%)`;
+        readinessBadge.className = `badge ${rStatus === 'VERIFIED' ? 'badge-qualified' : rStatus === 'READY_FOR_VERIFICATION' ? 'badge-owner' : 'badge-warm'}`;
+      }
+
       const evidence = l360.evidence_checklist || {};
       const evKeys = Object.keys(evidence);
       let verifiedCount = 0;
@@ -2577,6 +2975,356 @@
 
       renderAudioPlayer(item);
       renderTranscript(item.transcript || []);
+    }
+
+    async function triggerEvidenceRequest(evidenceType) {
+      const activeLead = state.activeLead360;
+      const leadId = activeLead ? (activeLead.lead_id || (activeLead.raw_lead && activeLead.raw_lead.lead_id) || (activeLead.raw_lead && `lead_${activeLead.raw_lead.run_id}`)) : null;
+      if (!leadId) {
+        showToast('⚠️ No active lead selected');
+        return;
+      }
+      showToast(`📤 Sending WhatsApp request for ${evidenceType}...`);
+      try {
+        const res = await apiFetch(`/api/vaani/sales/leads/${encodeURIComponent(leadId)}/evidence/request`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ evidence_type: evidenceType })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          showToast(`❌ Could not request evidence: ${errData.error || 'Failed'}`);
+          return;
+        }
+        const data = await res.json();
+        showToast(`✅ Evidence Requested [DRY RUN]: ${evidenceType} (${data.status})`);
+        openDrawer(leadId);
+      } catch (err) {
+        showToast(`❌ Error triggering request: ${err.message}`);
+      }
+    }
+
+    // ==================== PHASE 2: BUYER CRM FUNCTIONS ====================
+
+    // Track active buyer call in progress (prevent double-clicks)
+    let _activeBuyerCallId = null;
+
+    async function loadBuyerCrm() {
+      const container = document.getElementById('buyerCrmContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px 0;">Loading...</div>';
+      try {
+        const res = await apiFetch('/api/vaani/buyers');
+        if (!res.ok) { container.innerHTML = '<div style="color:var(--text-muted);font-size:12px;">Unable to load buyers.</div>'; return; }
+        const data = await res.json();
+        const buyers = data.buyers || [];
+        if (!buyers.length) {
+          container.innerHTML = '<div style="color:var(--text-dim);font-size:12px;padding:8px 0;">No buyers in CRM yet. Add buyers from the demo UI.</div>';
+          return;
+        }
+        const statusClass = (s) => {
+          if (!s || s === 'none') return 'none';
+          if (s === 'demo' || s === 'completed') return s === 'demo' ? 'demo' : 'completed';
+          if (s === 'dispatched' || s === 'queued') return s;
+          if (s === 'failed') return 'failed';
+          return 'none';
+        };
+        const statusLabel = (s, mode) => {
+          if (!s) return 'No Call Yet';
+          if (s === 'demo') return 'DEMO ✓';
+          if (s === 'completed') return 'COMPLETED';
+          if (s === 'dispatched') return 'DISPATCHED';
+          if (s === 'queued') return 'QUEUED';
+          if (s === 'failed') return 'FAILED';
+          if (s === 'initiated') return 'INITIATED';
+          return s.toUpperCase();
+        };
+        container.innerHTML = `
+          <table class="buyer-crm-table">
+            <thead><tr>
+              <th>Buyer</th><th>Phone</th><th>Requirement</th>
+              <th>Interest</th><th>Last Call</th><th>Next Action</th><th>Action</th>
+            </tr></thead>
+            <tbody>
+              ${buyers.map(b => `
+                <tr>
+                  <td><strong>${escapeHtml(b.name)}</strong></td>
+                  <td style="color:var(--text-muted);font-size:11px;">${escapeHtml(b.phone)}</td>
+                  <td>${escapeHtml(b.machine_requirement || '—')}</td>
+                  <td>${b.interest_level ? `<span class="badge badge-${(b.interest_level||'').toLowerCase()}">${escapeHtml(b.interest_level)}</span>` : '<span style="color:var(--text-dim)">—</span>'}</td>
+                  <td><span class="call-status-badge ${statusClass(b.last_call_status)}">${statusLabel(b.last_call_status, b.last_call_mode)}</span></td>
+                  <td style="font-size:11px;color:var(--text-muted);max-width:160px;">${escapeHtml(b.next_action || '—')}</td>
+                  <td>
+                    <button class="btn-call-buyer" onclick="callBuyerFromCrm(${b.id}, '${escapeHtml(b.name)}', '${escapeHtml(b.phone)}', '${escapeHtml(b.machine_requirement||'')}', this)" title="Initiate Vaani AI Buyer Call (Demo Mode)">
+                      📞 Call
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        container.innerHTML = `<div style="color:var(--text-muted);font-size:12px;">Error: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    async function callBuyerFromCrm(custId, name, phone, req, btnEl) {
+      if (_activeBuyerCallId) { showToast('⏳ A call is already in progress. Please wait.'); return; }
+      if (btnEl) { btnEl.disabled = true; btnEl.textContent = '⏳ Calling...'; }
+      showToast(`📞 Initiating Vaani AI Call for ${name}...`);
+      try {
+        const res = await apiFetch(`/api/vaani/buyers/${custId}/call`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ budget: '', notes: '' })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Call failed');
+        _activeBuyerCallId = data.call_id;
+        const status = data.call_status || 'DEMO';
+        showToast(`✅ ${status === 'DEMO' ? 'Demo' : 'Live'} call completed for ${name}! Transcript & AI analysis saved.`);
+        // Reload panel after short delay
+        setTimeout(() => { _activeBuyerCallId = null; loadBuyerCrm(); }, 1500);
+        // Show buyer detail in a toast-like notification
+        if (data.summary) {
+          setTimeout(() => {
+            showToast(`🧠 AI: ${data.summary.outcome || ''} | Next: ${data.summary.next_action || ''}`);
+          }, 2200);
+        }
+      } catch (err) {
+        showToast(`❌ Call failed: ${err.message}`);
+        _activeBuyerCallId = null;
+        if (btnEl) { btnEl.disabled = false; btnEl.textContent = '📞 Call'; }
+      }
+    }
+
+    // Drawer: Call Buyer from Lead 360 (for leads from vaani_excavator_sales_leads)
+    async function callBuyerFromDrawer() {
+      const activeLead = state.activeLead360;
+      if (!activeLead) { showToast('⚠️ No active lead selected'); return; }
+      const phone = activeLead.primary_phone || (activeLead.raw_lead && activeLead.raw_lead.callback_number) || '';
+      const name = activeLead.customer_name || (activeLead.raw_lead && activeLead.raw_lead.caller_name) || 'Customer';
+      const req = (activeLead.raw_lead && (activeLead.raw_lead.machine_brand || activeLead.raw_lead.machine_model)) || 'excavator';
+      if (!phone) { showToast('⚠️ No phone number available for this lead'); return; }
+      const btn = document.getElementById('drawerCallBuyerBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Calling...'; }
+      showToast(`📞 Initiating Vaani AI Call for ${name}...`);
+      try {
+        const res = await apiFetch('/api/vaani/sales/outbound/buyer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, machine_requirement: req })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Call failed');
+        const status = data.call_status || 'DEMO';
+        showToast(`✅ ${status} call executed for ${name}. call_id=${data.call_id}`);
+        const statusEl = document.getElementById('drawerCallBuyerStatus');
+        if (statusEl) statusEl.textContent = `Call ${status} — ID: ${data.call_id}`;
+        if (btn) { btn.disabled = false; btn.textContent = '📞 Call Again'; }
+      } catch (err) {
+        showToast(`❌ Call failed: ${err.message}`);
+        if (btn) { btn.disabled = false; btn.textContent = '📞 Call Buyer (Demo)'; }
+      }
+    }
+
+    // Auto-load buyer CRM when Buyers tab is activated
+    const _origNavClick = document.querySelector('[data-view="buyers"]');
+
+    // ==================== LIVE SIMULATION CONTROLLER FUNCTIONS (PHASE 1) ====================
+    window.openDrawer = openDrawer;
+    window.openLeadDrawer = openDrawer;
+    window.loadBuyerCrm = loadBuyerCrm;
+    window.callBuyerFromCrm = callBuyerFromCrm;
+    window.callBuyerFromDrawer = callBuyerFromDrawer;
+
+    function updateSimControllerStatus(data) {
+      if (data.leadId) {
+        document.getElementById('simLastCallVal').textContent = `${data.customerName || data.leadId} (${data.action || 'Call Ingested'})`;
+        document.getElementById('simLastCallSub').textContent = `${data.phone || ''} • ${data.machine || 'Machine Verified'}`;
+      }
+      if (data.qualification || data.temperature) {
+        const tempClass = data.temperature === 'HOT' ? 'badge-hot' : data.temperature === 'WARM' ? 'badge-warm' : 'badge-cold';
+        document.getElementById('simQualVal').innerHTML = `
+          <span class="badge badge-qualified" style="margin-right: 4px;">${escapeHtml(data.qualification || 'QUALIFIED')}</span>
+          <span class="badge ${tempClass}">${escapeHtml(data.temperature || 'HOT')}</span>
+        `;
+        document.getElementById('simQualSub').textContent = `Assigned by Vaani Decision Engine`;
+      }
+      if (data.tasksCreated !== undefined) {
+        document.getElementById('simTasksVal').textContent = `${data.tasksCreated} Task${data.tasksCreated === 1 ? '' : 's'}`;
+        document.getElementById('simTasksSub').textContent = data.taskTypes || 'F3 Follow-ups Created';
+      }
+      if (data.evidenceType) {
+        const evVal = document.getElementById('simEvidenceVal');
+        const curr = parseInt(evVal.textContent, 10) || 0;
+        const newCount = curr + 1;
+        evVal.textContent = `${newCount} item${newCount === 1 ? '' : 's'} received`;
+        document.getElementById('simEvidenceSub').textContent = `Last: ${data.evidenceType}`;
+      }
+      if (data.evidenceReadiness !== undefined) {
+        document.getElementById('simReadinessVal').textContent = data.evidenceReadiness;
+      }
+      if (data.action) {
+        document.getElementById('simActivityVal').textContent = data.action;
+        document.getElementById('simActivityTime').textContent = new Date().toLocaleTimeString();
+      }
+    }
+
+    function resetSimControllerStatus() {
+      document.getElementById('simLastCallVal').textContent = 'None (Cleaned)';
+      document.getElementById('simLastCallSub').textContent = 'Database cleared of test data';
+      document.getElementById('simQualVal').innerHTML = '<span class="badge" style="background: rgba(255,255,255,0.06); color: var(--text-dim);">Awaiting Call</span>';
+      document.getElementById('simQualSub').textContent = 'Extraction & Decision Engine';
+      document.getElementById('simTasksVal').textContent = '0 Tasks';
+      document.getElementById('simTasksSub').textContent = 'Follow-up Engine (F3)';
+      document.getElementById('simEvidenceVal').textContent = '0 items received';
+      document.getElementById('simEvidenceSub').textContent = 'Inbound Webhook Engine';
+      document.getElementById('simReadinessVal').textContent = '0%';
+      document.getElementById('simReadinessSub').textContent = '8-Point Verification Gate';
+      document.getElementById('simActivityVal').textContent = 'Test data wiped';
+      document.getElementById('simActivityTime').textContent = new Date().toLocaleTimeString();
+    }
+
+    async function simulateNewCall(scenario = 'seller') {
+      const btn = document.getElementById(scenario === 'buyer' ? 'simBuyerCallBtn' : 'simSellerCallBtn');
+      if (btn) btn.disabled = true;
+      showToast(`📞 Processing ${scenario.toUpperCase()} call through Call Lifecycle → Extraction → Tasks...`);
+
+      try {
+        const res = await apiFetch('/api/vaani/sales/simulate-call', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ scenario })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          showToast(`❌ Call simulation failed: ${errData.error || 'Server error'}`);
+          return;
+        }
+        const data = await res.json();
+        showToast(`✅ Call Complete! Lead: ${data.lead_id} | ${data.qualification_state} | ${data.temperature}`);
+
+        // Update telemetry card
+        updateSimControllerStatus({
+          action: `Call Completed (${scenario.toUpperCase()})`,
+          leadId: data.lead_id,
+          customerName: data.customer_name,
+          phone: data.primary_phone,
+          qualification: data.qualification_state,
+          temperature: data.temperature,
+          tasksCreated: (data.tasks_created || []).length,
+          taskTypes: (data.tasks_created || []).map(t => t.task_type).join(', ') || 'No tasks',
+          evidenceReadiness: '0%',
+          machine: `${data.machine?.brand || ''} ${data.machine?.model || ''}`.trim()
+        });
+
+        // Refresh entire dashboard data (KPIs, tables, activities)
+        await loadAllData();
+
+        // Automatically open the new Lead in the Lead 360 Command Drawer
+        await openDrawer(data.lead_id);
+
+      } catch (err) {
+        showToast(`❌ Error: ${err.message}`);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    }
+
+    async function simulateCustomerSendingPhoto(evidenceType = 'BOOM_PHOTOS') {
+      const activeLead = state.activeLead360;
+      const leadId = activeLead ? (activeLead.lead_id || (activeLead.raw_lead && activeLead.raw_lead.lead_id) || (activeLead.raw_lead && `lead_${activeLead.raw_lead.run_id}`)) : null;
+      if (!leadId) {
+        showToast('⚠️ Please select a Lead first to simulate WhatsApp reply');
+        return;
+      }
+      showToast(`📱 Customer sending ${evidenceType.replace('_', ' ')} on WhatsApp...`);
+
+      try {
+        const res = await apiFetch('/api/vaani/sales/simulate-inbound-media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lead_id: leadId, evidence_type: evidenceType })
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          showToast(`❌ Media simulation failed: ${errData.error || 'Server error'}`);
+          return;
+        }
+        const data = await res.json();
+        showToast(`✅ WhatsApp Media Received: ${evidenceType} → Status: RECEIVED`);
+
+        // Update telemetry status
+        updateSimControllerStatus({
+          action: `WhatsApp Inbound: ${evidenceType}`,
+          leadId: leadId,
+          evidenceType: evidenceType
+        });
+
+        // Re-open/refresh Lead 360 drawer to reflect newly RECEIVED evidence and resolved tasks
+        await openDrawer(leadId);
+
+        // Also refresh dashboard overview/tables
+        await loadAllData();
+      } catch (err) {
+        showToast(`❌ Error: ${err.message}`);
+      }
+    }
+
+    let autoRefreshInterval = null;
+    function toggleAutoRefresh() {
+      const toggleBtn = document.getElementById('autoRefreshToggleBtn');
+      const statusSpan = document.getElementById('autoRefreshStatus');
+      if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+        autoRefreshInterval = null;
+        if (toggleBtn) toggleBtn.classList.remove('active');
+        if (statusSpan) statusSpan.textContent = 'OFF';
+        showToast('Auto Refresh disabled');
+      } else {
+        autoRefreshInterval = setInterval(() => {
+          loadAllData();
+          if (state.activeLead360 && state.activeLead360.lead_id) {
+            apiFetch(`/api/vaani/sales/leads/${encodeURIComponent(state.activeLead360.lead_id)}${state.isDemo ? '?demo=1' : ''}`)
+              .then(r => r.json())
+              .then(l360 => {
+                state.activeLead360 = l360;
+                renderLead360(l360);
+              }).catch(() => {});
+          }
+        }, 5000);
+        if (toggleBtn) toggleBtn.classList.add('active');
+        if (statusSpan) statusSpan.textContent = 'ON (5s)';
+        showToast('🔄 Auto Refresh enabled (every 5 seconds)');
+      }
+    }
+
+    async function cleanupSimulations() {
+      if (!confirm('Safely clean all simulated test calls and evidence from PostgreSQL?')) return;
+      showToast('🧹 Cleaning simulated test data...');
+      try {
+        const res = await apiFetch('/api/vaani/sales/cleanup-simulations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({})
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showToast(`❌ Cleanup failed: ${err.error || 'Server error'}`);
+          return;
+        }
+        showToast('✨ All simulation records cleaned from database');
+        resetSimControllerStatus();
+        await loadAllData();
+        // Close drawer if open
+        const drawer = document.getElementById('detailDrawer');
+        const backdrop = document.getElementById('drawerBackdrop');
+        if (drawer) drawer.classList.remove('open');
+        if (backdrop) backdrop.classList.remove('open');
+      } catch (err) {
+        showToast(`❌ Error: ${err.message}`);
+      }
     }
 
     // Filter Listeners
@@ -2842,7 +3590,7 @@
             <div class="activity-feed-main">
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                 <span class="actor-badge ${actor.class}">${actor.label}</span>
-                <strong style="color: #fff; font-size: 12px;">${escapeHtml(act.title || act.activity_type || '')}</strong>
+                <strong style="color: #0f172a; font-size: 12px;">${escapeHtml(act.title || act.activity_type || '')}</strong>
                 ${act.customer_name ? `<span style="color: var(--text-muted); font-size: 11px;">• ${escapeHtml(act.customer_name)}</span>` : ''}
                 ${leadLink}
               </div>
@@ -2960,7 +3708,7 @@
             <div class="panel-header">
               <div>
                 <span class="badge badge-qualified">CERTIFIED YARD STOCK</span>
-                <h3 style="font-size: 16px; margin-top: 6px; color: #fff;">${escapeHtml(unit.brand)} ${escapeHtml(unit.model)}</h3>
+                <h3 style="font-size: 16px; margin-top: 6px; color: #0f172a;">${escapeHtml(unit.brand)} ${escapeHtml(unit.model)}</h3>
                 <div style="font-size: 12px; color: var(--text-dim); font-family: var(--mono);">${unit.machine_id}</div>
               </div>
             </div>
@@ -3066,7 +3814,7 @@
           <div class="match-card" style="border-left: 4px solid ${hasStock ? 'var(--green)' : 'var(--border-subtle)'};">
             <div class="match-header">
               <div>
-                <h4 style="font-size: 14px; color: #fff;">Buyer: ${escapeHtml(m.buyer_name)} (<span class="phone-link">${m.buyer_phone}</span>)</h4>
+                <h4 style="font-size: 14px; color: #0f172a;">Buyer: ${escapeHtml(m.buyer_name)} (<span class="phone-link">${m.buyer_phone}</span>)</h4>
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                   Requested: <strong>${escapeHtml(m.requested_machine || '20-Ton Excavator')}</strong> • Budget: <strong>₹${((m.budget_max_inr || 0) / 100000).toFixed(1)}L</strong>
                 </div>
@@ -3079,7 +3827,7 @@
               <div class="stock-unit-chip">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div>
-                    <strong style="color: #fff;">${escapeHtml(units[0].brand)} ${escapeHtml(units[0].model)} (${units[0].manufacturing_year})</strong>
+                    <strong style="color: #0f172a;">${escapeHtml(units[0].brand)} ${escapeHtml(units[0].model)} (${units[0].manufacturing_year})</strong>
                     <div style="font-size: 11px; color: var(--text-muted);">${units[0].current_location} • ${units[0].hour_meter_reading.toLocaleString()} hrs</div>
                   </div>
                   <div style="text-align: right;">
@@ -3121,7 +3869,7 @@
         <div class="drawer-card" style="margin-bottom: 8px; cursor: pointer;" onclick="openDrawer('${item.lead_id || item.primary_phone || item.id}')">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
             <div>
-              <strong style="color: #fff; font-size: 13px;">${escapeHtml(item.customer_name)}</strong>
+              <strong style="color: #0f172a; font-size: 13px;">${escapeHtml(item.customer_name)}</strong>
               <div class="phone-link">${item.primary_phone}</div>
             </div>
             <span class="badge ${item.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${(item.customer_type || 'lead').toUpperCase()}</span>

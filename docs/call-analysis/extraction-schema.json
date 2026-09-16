@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VaaniHumanSalesExtractionSchema",
+  "type": "object",
+  "required": [
+    "customer_type",
+    "customer_name",
+    "phone",
+    "machine_requirement",
+    "brand",
+    "model",
+    "tonnage",
+    "manufacturing_year",
+    "running_hours",
+    "application",
+    "location",
+    "budget",
+    "asking_price",
+    "interest_level",
+    "customer_intent",
+    "objections",
+    "outcome",
+    "next_action",
+    "follow_up_required",
+    "follow_up_reason",
+    "whatsapp_required",
+    "photos_required",
+    "documents_required"
+  ],
+  "properties": {
+    "customer_type": {
+      "type": "string",
+      "enum": [
+        "BUYER",
+        "SELLER",
+        "BROKER_DEALER",
+        "UNKNOWN"
+      ]
+    },
+    "customer_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "phone": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Masked phone number"
+    },
+    "machine_requirement": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "brand": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "JCB",
+        "Tata Hitachi",
+        "Komatsu",
+        "Sany",
+        "Kobelco",
+        "Caterpillar",
+        "Hyundai",
+        null
+      ]
+    },
+    "model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tonnage": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "manufacturing_year": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "running_hours": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "application": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "location": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "budget": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "asking_price": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "interest_level": {
+      "type": "string",
+      "enum": [
+        "HIGH",
+        "MODERATE",
+        "LOW",
+        "NONE"
+      ]
+    },
+    "customer_intent": {
+      "type": "string",
+      "enum": [
+        "BUY",
+        "SELL",
+        "INQUIRE_PRICE",
+        "BROKERAGE",
+        "NOT_INTERESTED"
+      ]
+    },
+    "objections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "outcome": {
+      "type": "string"
+    },
+    "next_action": {
+      "type": "string"
+    },
+    "follow_up_required": {
+      "type": "boolean"
+    },
+    "follow_up_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "whatsapp_required": {
+      "type": "boolean"
+    },
+    "photos_required": {
+      "type": "boolean"
+    },
+    "documents_required": {
+      "type": "boolean"
+    }
+  }
+}

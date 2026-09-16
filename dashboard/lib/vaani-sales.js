@@ -14,6 +14,9 @@
 const fs = require('fs');
 const path = require('path');
 const { execFile, spawn } = require('child_process');
+const vaaniExtractor = require('./vaani-extractor');
+const vaaniTasks = require('./vaani-tasks');
+const vaaniWhatsapp = require('./vaani-whatsapp');
 
 const FIXTURE_PATH = path.join(__dirname, '..', 'data', 'fixtures', 'demo-sales-data.json');
 
@@ -140,6 +143,9 @@ function queryPostgres(sql, params = []) {
       '-i',
       'dograh-local-postgres-1',
       'psql',
+      '-q',
+      '-v',
+      'ON_ERROR_STOP=1',
       '-U',
       'postgres',
       '-d',
@@ -157,9 +163,17 @@ function queryPostgres(sql, params = []) {
         const trimmed = stdout.trim();
         if (!trimmed) return resolve(null);
         try {
-          resolve(JSON.parse(trimmed));
+          return resolve(JSON.parse(trimmed));
         } catch (_) {
-          resolve(trimmed);
+          const lines = trimmed.split('\n').map((l) => l.trim()).filter(Boolean);
+          for (const line of lines) {
+            if ((line.startsWith('{') && line.endsWith('}')) || (line.startsWith('[') && line.endsWith(']'))) {
+              try {
+                return resolve(JSON.parse(line));
+              } catch (_) {}
+            }
+          }
+          return resolve(trimmed);
         }
       } catch (parseErr) {
         resolve(stdout.trim());
@@ -445,6 +459,45 @@ async function getMachines(isDemo = false, organizationId = null) {
   };
 }
 
+async function getInternalMachines(filters = {}) {
+  try {
+    const conditions = [];
+    const params = [];
+    let paramIndex = 1;
+
+    if (filters.brand) {
+      conditions.push(`brand ILIKE $${paramIndex++}`);
+      params.push(`%${filters.brand}%`);
+    }
+    if (filters.model) {
+      conditions.push(`model ILIKE $${paramIndex++}`);
+      params.push(`%${filters.model}%`);
+    }
+    if (filters.status) {
+      conditions.push(`status = $${paramIndex++}`);
+      params.push(filters.status);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    
+    // Explicitly excluding sourcing_cost_inr and target_resale_inr
+    const sql = `
+      SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+        SELECT machine_id, brand, model, manufacturing_year, status, current_location
+        FROM vaani_machines
+        ${whereClause}
+        ORDER BY created_at DESC
+        LIMIT 50
+      ) t;
+    `;
+    const result = await queryPostgres(sql, params, false);
+    return Array.isArray(result) ? result : [];
+  } catch (err) {
+    console.error('[VAANI SALES] Error querying internal machines:', err.message);
+    throw err;
+  }
+}
+
 async function getDemand(isDemo = false, organizationId = null) {
   if (isDemo) {
     const demo = loadDemoData();
@@ -547,6 +600,25 @@ async function getFollowUps(isDemo = false, organizationId = null) {
       return { overdue: [], due_today: [], upcoming: [] };
     }
     try {
+      const persistentTasks = await vaaniTasks.getTasksForOrganization(orgInt);
+      const totalTasks = (persistentTasks.overdue || []).length + (persistentTasks.due_today || []).length + (persistentTasks.upcoming || []).length;
+      if (totalTasks > 0) {
+        const allTasks = [
+          ...(persistentTasks.overdue || []),
+          ...(persistentTasks.due_today || []),
+          ...(persistentTasks.upcoming || [])
+        ];
+        return {
+          ...persistentTasks,
+          tasks: allTasks,
+          total: allTasks.length
+        };
+      }
+    } catch (tErr) {
+      console.warn('[VAANI SALES] Notice checking persistent tasks:', tErr.message);
+    }
+
+    try {
       const sql = `
         SELECT COALESCE(json_agg(t), '[]'::json) FROM (
           SELECT run_id AS id, caller_name AS customer_name, customer_type,
@@ -590,10 +662,23 @@ async function getFollowUps(isDemo = false, organizationId = null) {
     };
   });
 
+  const overdueList = enriched.filter((i) => i.category === 'overdue');
+  const todayList = enriched.filter((i) => i.category === 'due_today');
+  const upcomingList = enriched.filter((i) => i.category === 'upcoming');
+  const allTasks = [...overdueList, ...todayList, ...upcomingList];
+
   return {
-    overdue: enriched.filter((i) => i.category === 'overdue'),
-    due_today: enriched.filter((i) => i.category === 'due_today'),
-    upcoming: enriched.filter((i) => i.category === 'upcoming')
+    overdue: overdueList,
+    due_today: todayList,
+    upcoming: upcomingList,
+    tasks: allTasks,
+    total: allTasks.length,
+    stats: {
+      total: allTasks.length,
+      overdue: overdueList.length,
+      today: todayList.length,
+      upcoming: upcomingList.length
+    }
   };
 }
 
@@ -779,7 +864,42 @@ async function searchLeads(query, isDemo = false, organizationId = null) {
 }
 
 async function updateFollowUpStatus(followUpId, status, organizationId = null) {
-  if (!['pending', 'completed', 'cancelled', 'scheduled'].includes(status)) {
+  const upperStatus = String(status || '').toUpperCase();
+  const lowerStatus = String(status || '').toLowerCase();
+
+  // If organizationId is provided and task exists in public.vaani_follow_up_tasks
+  if (organizationId) {
+    const orgInt = parseInt(organizationId, 10);
+    try {
+      const taskCheck = await queryPostgres(
+        `SELECT row_to_json(t) FROM (SELECT task_id FROM public.vaani_follow_up_tasks WHERE task_id = $1 AND organization_id = $2 LIMIT 1) t;`,
+        [String(followUpId), orgInt]
+      ).catch(() => null);
+
+      if (taskCheck && taskCheck.task_id) {
+        const updated = await vaaniTasks.transitionTaskStatus(
+          taskCheck.task_id,
+          upperStatus,
+          orgInt,
+          'Sales Operator'
+        );
+        return {
+          success: true,
+          id: followUpId,
+          status: updated.status,
+          updated_at: updated.updated_at || new Date().toISOString(),
+          task: updated
+        };
+      }
+    } catch (taskErr) {
+      if (String(followUpId).startsWith('task_') || taskErr.code === 'invalid_transition' || taskErr.code === 'not_found') {
+        throw taskErr;
+      }
+    }
+  }
+
+  // Legacy fallback for previous unit tests & demo mode
+  if (!['pending', 'completed', 'cancelled', 'scheduled', 'skipped', 'in_progress'].includes(lowerStatus)) {
     throw new Error('Invalid follow-up status');
   }
 
@@ -800,9 +920,10 @@ async function updateFollowUpStatus(followUpId, status, organizationId = null) {
     }
   }
 
-  localFollowUpOverrides.set(String(followUpId), status);
-  return { success: true, id: followUpId, status, updated_at: new Date().toISOString() };
+  localFollowUpOverrides.set(String(followUpId), lowerStatus);
+  return { success: true, id: followUpId, status: lowerStatus, updated_at: new Date().toISOString() };
 }
+
 
 // -------------------------------------------------------------
 // Lead 360 & Activity Journey Helpers
@@ -1252,6 +1373,23 @@ async function getLead360(leadId, isDemo = false, organizationId = null) {
       sales_journey: journey,
       evidence_checklist: evidence,
       evidence_integration_note: found.evidence_integration_note || 'WhatsApp action pending integration — Evidence manually received and indexed',
+      whatsapp: {
+        status: 'DELIVERED',
+        last_message: 'Photos and meter requested via WhatsApp',
+        last_inbound: null,
+        pending_requests: 0,
+        history: [],
+        is_dry_run: true,
+        indicator: 'WHATSAPP: DRY RUN'
+      },
+      evidence_readiness: {
+        required: ['BOOM_PHOTOS', 'UNDERCARRIAGE_PHOTOS', 'CABIN_GAUGES_PHOTO', 'COUNTERWEIGHT_PHOTO', 'HOUR_METER_PHOTO', 'RUNNING_VIDEO', 'RC_DOCUMENT'],
+        received: ['CABIN_GAUGES_PHOTO', 'HOUR_METER_PHOTO'],
+        verified: [],
+        missing: ['BOOM_PHOTOS', 'UNDERCARRIAGE_PHOTOS', 'COUNTERWEIGHT_PHOTO', 'RUNNING_VIDEO', 'RC_DOCUMENT'],
+        completion_percent: 28,
+        status: 'PARTIAL'
+      },
       linked_calls: linkedCalls,
       timeline
     };
@@ -1263,12 +1401,13 @@ async function getLead360(leadId, isDemo = false, organizationId = null) {
 
   // Real DB mode: query PostgreSQL workflow_runs and sales views scoped by organization
   try {
-    const isNum = /^\d+$/.test(targetId);
-    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $2`;
+    const strippedId = targetId.startsWith('lead_') ? targetId.slice(5) : targetId;
+    const isNum = /^\d+$/.test(strippedId);
+    let whereClause = `((r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'lead_id' = $2)`;
     let queryParams = [orgInt, String(targetId)];
     if (isNum) {
-      whereClause = `(r.id = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $3)`;
-      queryParams = [orgInt, parseInt(targetId, 10), String(targetId)];
+      whereClause = `(r.id = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $3 OR (r.gathered_context -> 'extracted_variables') ->> 'lead_id' = $3)`;
+      queryParams = [orgInt, parseInt(strippedId, 10), String(targetId)];
     }
 
     const sql = `
@@ -1366,9 +1505,17 @@ async function getLead360(leadId, isDemo = false, organizationId = null) {
       });
     }
 
-    const timeline = await getLeadTimeline(targetId, false);
+    const timeline = await getLeadTimeline(targetId, false, orgInt);
     const isDnc = !!latest.dnc_requested || latest.customer_type === 'dnc';
     const dueTime = latest.follow_up_datetime || 'Tomorrow, 11:00 AM';
+
+    const whatsappHistory = await vaaniWhatsapp.getLeadWhatsAppHistory(targetId, orgInt).catch(() => []);
+    const fullEvidence = await vaaniWhatsapp.getLeadEvidence(targetId, orgInt).catch(() => []);
+    const readiness = vaaniWhatsapp.calculateEvidenceReadiness(fullEvidence.length > 0 ? fullEvidence : (evidenceRows || []));
+
+    const lastOutbound = (whatsappHistory || []).filter((m) => m.direction === 'OUTBOUND').slice(-1)[0] || null;
+    const lastInbound = (whatsappHistory || []).filter((m) => m.direction === 'INBOUND').slice(-1)[0] || null;
+    const pendingRequests = (whatsappHistory || []).filter((m) => ['QUEUED', 'SENDING', 'SENT'].includes(m.status)).length;
 
     return {
       is_demo: false,
@@ -1396,9 +1543,19 @@ async function getLead360(leadId, isDemo = false, organizationId = null) {
       journey_progression: Array.isArray(journey?.stages) ? journey.stages : (journey || []),
       sales_journey: journey,
       evidence_checklist: evidence,
+      evidence_readiness: readiness,
+      whatsapp: {
+        status: lastOutbound ? lastOutbound.status : 'IDLE',
+        last_message: lastOutbound ? (lastOutbound.body || lastOutbound.template_key) : null,
+        last_inbound: lastInbound ? (lastInbound.body || lastInbound.message_type) : null,
+        pending_requests: pendingRequests,
+        history: whatsappHistory || [],
+        is_dry_run: true,
+        indicator: 'WHATSAPP: DRY RUN'
+      },
       relational_machine: machineRow || null,
-      relational_evidence: Array.isArray(evidenceRows) ? evidenceRows : [],
-      evidence_integration_note: 'WhatsApp action pending integration — Evidence status logged from voice responses',
+      relational_evidence: fullEvidence.length > 0 ? fullEvidence : (Array.isArray(evidenceRows) ? evidenceRows : []),
+      evidence_integration_note: 'WhatsApp evidence engine active (DRY RUN) — Inspection media classified and indexed',
       linked_calls: runs.map((r) => ({
         run_id: r.run_id,
         created_at: r.created_at,
@@ -1551,22 +1708,25 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
   if (isNaN(orgInt) || orgInt <= 0) return [];
 
   try {
-    const isNum = /^\d+$/.test(targetId);
-    let whereClause = `(r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $2`;
+    const strippedId = targetId.startsWith('lead_') ? targetId.slice(5) : targetId;
+    const isNum = /^\d+$/.test(strippedId);
+    let whereClause = `((r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'lead_id' = $2)`;
     let queryParams = [orgInt, String(targetId)];
     if (isNum) {
-      whereClause = `(r.id = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $3)`;
-      queryParams = [orgInt, parseInt(targetId, 10), String(targetId)];
+      whereClause = `(r.id = $2 OR (r.gathered_context -> 'extracted_variables') ->> 'callback_number' = $3 OR (r.gathered_context -> 'extracted_variables') ->> 'lead_id' = $3)`;
+      queryParams = [orgInt, parseInt(strippedId, 10), String(targetId)];
     }
 
     const sql = `
-      SELECT r.id, r.created_at,
-             to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
-             (r.gathered_context -> 'extracted_variables') as vars
-      FROM workflow_runs r
-      JOIN workflows w ON r.workflow_id = w.id
-      WHERE w.organization_id = $1 AND ${whereClause}
-      ORDER BY r.id ASC;
+      SELECT json_agg(t) FROM (
+        SELECT r.id, r.created_at,
+               to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
+               (r.gathered_context -> 'extracted_variables') as vars
+        FROM workflow_runs r
+        JOIN workflows w ON r.workflow_id = w.id
+        WHERE w.organization_id = $1 AND ${whereClause}
+        ORDER BY r.id ASC
+      ) t;
     `;
 
     const runs = await queryPostgres(sql, queryParams);
@@ -1576,12 +1736,14 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
     runs.forEach((run, idx) => {
       const vars = run.vars || {};
       const dayLabel = `Day ${idx + 1}`;
+      const baseTime = new Date(run.created_at).getTime();
 
+      // 1. Call Started
       events.push({
         id: `run_${run.id}_start`,
         day: `DAY ${idx + 1}`,
         day_label: dayLabel,
-        timestamp: run.created_at,
+        timestamp: new Date(baseTime).toISOString(),
         formatted_time: run.formatted_time,
         activity_type: 'CALL_STARTED',
         actor: 'vaani',
@@ -1590,41 +1752,60 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
         description: `Connected with ${vars.caller_name || 'caller'} from ${vars.callback_number || 'line'}.`
       });
 
+      // 2. Call Connected
       events.push({
-        id: `run_${run.id}_done`,
+        id: `run_${run.id}_connected`,
         day: `DAY ${idx + 1}`,
         day_label: dayLabel,
-        timestamp: run.created_at,
+        timestamp: new Date(baseTime + 10000).toISOString(),
         formatted_time: run.formatted_time,
-        activity_type: 'CALL_COMPLETED',
+        activity_type: 'CALL_CONNECTED',
         actor: 'vaani',
         actor_label: '🤖 VAANI',
-        title: `Call #${run.id} Completed`,
-        description: `Outcome: ${vars.conversation_outcome || 'inquiry'}. Customer type: ${vars.customer_type || 'unknown'}.`,
-        customer_quote: vars.call_notes || null
+        title: `Audio Stream Connected`,
+        description: `Caller audio active on line ${vars.callback_number || 'line'}. Conversational flow active.`
       });
 
+      // 3. Information Extracted
       if (vars.machine_brand || vars.machine_model || vars.required_tonnage_class) {
         events.push({
           id: `run_${run.id}_extracted`,
           day: `DAY ${idx + 1}`,
           day_label: dayLabel,
-          timestamp: run.created_at,
+          timestamp: new Date(baseTime + 30000).toISOString(),
           formatted_time: run.formatted_time,
           activity_type: 'INFORMATION_EXTRACTED',
           actor: 'vaani',
           actor_label: '🤖 VAANI',
           title: 'Machine Data Extracted',
-          description: `Brand: ${vars.machine_brand || 'N/A'} | Model: ${vars.machine_model || vars.required_tonnage_class || 'N/A'} | Price: ${vars.price_or_budget_raw || vars.expected_selling_price_inr || 'N/A'}`
+          description: `Brand: ${vars.machine_brand || 'N/A'} | Model: ${vars.machine_model || vars.required_tonnage_class || 'N/A'}`
         });
       }
 
+      // 4. Commercial / Price Captured
+      if (vars.expected_selling_price_inr || vars.buyer_budget_max_inr || vars.price_raw || (vars.commercial_terms && (vars.commercial_terms.expected_price_inr || vars.commercial_terms.budget_max_inr))) {
+        const priceDisplay = vars.price_raw || (vars.commercial_terms && vars.commercial_terms.price_or_budget_raw) || vars.expected_selling_price_inr || vars.buyer_budget_max_inr || 'Disclosed';
+        events.push({
+          id: `run_${run.id}_price`,
+          day: `DAY ${idx + 1}`,
+          day_label: dayLabel,
+          timestamp: new Date(baseTime + 45000).toISOString(),
+          formatted_time: run.formatted_time,
+          activity_type: 'PRICE_CAPTURED',
+          actor: 'vaani',
+          actor_label: '🤖 VAANI',
+          title: 'Commercial Terms Captured',
+          description: `Price/Budget expectations captured: ${priceDisplay}.`
+        });
+      }
+
+      // 5. Lead Qualified
       if (vars.qualification_state) {
         events.push({
           id: `run_${run.id}_qual`,
           day: `DAY ${idx + 1}`,
           day_label: dayLabel,
-          timestamp: run.created_at,
+          timestamp: new Date(baseTime + 60000).toISOString(),
           formatted_time: run.formatted_time,
           activity_type: 'LEAD_QUALIFIED',
           actor: 'vaani',
@@ -1634,12 +1815,60 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
         });
       }
 
+      // 6. Temperature Scored / Changed
+      if (vars.lead_temperature && vars.lead_temperature !== 'COLD') {
+        events.push({
+          id: `run_${run.id}_temp`,
+          day: `DAY ${idx + 1}`,
+          day_label: dayLabel,
+          timestamp: new Date(baseTime + 75000).toISOString(),
+          formatted_time: run.formatted_time,
+          activity_type: 'TEMPERATURE_CHANGED',
+          actor: 'vaani',
+          actor_label: '🤖 VAANI',
+          title: `Lead Priority: ${vars.lead_temperature}`,
+          description: `Commercial priority assessed as ${vars.lead_temperature}.`
+        });
+      }
+
+      // 7. Follow-up Scheduled
+      if (vars.follow_up_required) {
+        events.push({
+          id: `run_${run.id}_followup`,
+          day: `DAY ${idx + 1}`,
+          day_label: dayLabel,
+          timestamp: new Date(baseTime + 90000).toISOString(),
+          formatted_time: run.formatted_time,
+          activity_type: 'FOLLOW_UP_CREATED',
+          actor: 'system',
+          actor_label: '⚙️ SYSTEM',
+          title: 'Follow-up Task Scheduled',
+          description: `Action: ${vars.next_action || 'Follow up with lead'}. Scheduled for ${vars.follow_up_datetime || 'Tomorrow, 11:00 AM'}.`
+        });
+      }
+
+      // 8. Call Completed
+      events.push({
+        id: `run_${run.id}_done`,
+        day: `DAY ${idx + 1}`,
+        day_label: dayLabel,
+        timestamp: new Date(baseTime + 120000).toISOString(),
+        formatted_time: run.formatted_time,
+        activity_type: 'CALL_COMPLETED',
+        actor: 'vaani',
+        actor_label: '🤖 VAANI',
+        title: `Call #${run.id} Completed`,
+        description: `Outcome: ${vars.conversation_outcome || 'inquiry'}. Customer type: ${vars.customer_type || 'unknown'}.`,
+        customer_quote: vars.call_notes || null
+      });
+
+      // 9. DNC Opt-Out (if requested)
       if (vars.dnc_requested) {
         events.push({
           id: `run_${run.id}_dnc`,
           day: `DAY ${idx + 1}`,
           day_label: dayLabel,
-          timestamp: run.created_at,
+          timestamp: new Date(baseTime + 130000).toISOString(),
           formatted_time: run.formatted_time,
           activity_type: 'DNC_REGISTERED',
           actor: 'vaani',
@@ -1649,6 +1878,218 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
         });
       }
     });
+
+    // Append persistent follow-up tasks from vaani_follow_up_tasks
+    try {
+      const taskSql = `
+        SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT task_id, task_type, title, description, priority, status, assigned_to, due_at,
+                 created_at, completed_at, completed_by, reason,
+                 to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_created,
+                 to_char(completed_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_completed
+          FROM public.vaani_follow_up_tasks
+          WHERE organization_id = $1 AND (lead_id = $2 OR lead_id = ('lead_' || $2) OR source_call_id = $3)
+          ORDER BY created_at ASC
+        ) t;
+      `;
+      const callIdParam = isNum ? parseInt(targetId, 10) : -1;
+      const tasks = await queryPostgres(taskSql, [orgInt, String(targetId), callIdParam]);
+      if (Array.isArray(tasks)) {
+        tasks.forEach((t) => {
+          events.push({
+            id: `timeline_${t.task_id}_created`,
+            day: 'FOLLOW-UP',
+            day_label: 'Follow-up',
+            timestamp: t.created_at,
+            formatted_time: t.formatted_created,
+            activity_type: 'FOLLOW_UP_CREATED',
+            actor: 'system',
+            actor_label: '⚙️ TASK ENGINE',
+            title: `Task Created: ${t.title}`,
+            description: `Type: ${t.task_type} | Priority: ${t.priority} | Assigned: ${t.assigned_to || 'Sales Operator'}`
+          });
+          if (t.status === 'IN_PROGRESS') {
+            events.push({
+              id: `timeline_${t.task_id}_progress`,
+              day: 'FOLLOW-UP',
+              day_label: 'Follow-up',
+              timestamp: new Date(new Date(t.created_at).getTime() + 60000).toISOString(),
+              formatted_time: t.formatted_created,
+              activity_type: 'FOLLOW_UP_STARTED',
+              actor: 'operator',
+              actor_label: '👤 SALES OPERATOR',
+              title: `Task Started: ${t.title}`,
+              description: `Operator initiated action on ${t.task_type}.`
+            });
+          } else if (t.status === 'COMPLETED') {
+            events.push({
+              id: `timeline_${t.task_id}_done`,
+              day: 'FOLLOW-UP',
+              day_label: 'Follow-up',
+              timestamp: t.completed_at || t.created_at,
+              formatted_time: t.formatted_completed || t.formatted_created,
+              activity_type: 'FOLLOW_UP_COMPLETED',
+              actor: 'operator',
+              actor_label: '👤 ' + (t.completed_by || 'SALES OPERATOR'),
+              title: `Task Completed: ${t.title}`,
+              description: `Completed by ${t.completed_by || 'Sales Operator'}.`
+            });
+          } else if (t.status === 'SKIPPED') {
+            events.push({
+              id: `timeline_${t.task_id}_skipped`,
+              day: 'FOLLOW-UP',
+              day_label: 'Follow-up',
+              timestamp: t.completed_at || t.created_at,
+              formatted_time: t.formatted_completed || t.formatted_created,
+              activity_type: 'FOLLOW_UP_SKIPPED',
+              actor: 'operator',
+              actor_label: '👤 ' + (t.completed_by || 'SALES OPERATOR'),
+              title: `Task Skipped: ${t.title}`,
+              description: `Marked skipped by ${t.completed_by || 'Sales Operator'}.`
+            });
+          } else if (t.status === 'CANCELLED') {
+            events.push({
+              id: `timeline_${t.task_id}_cancelled`,
+              day: 'FOLLOW-UP',
+              day_label: 'Follow-up',
+              timestamp: t.completed_at || t.created_at,
+              formatted_time: t.formatted_completed || t.formatted_created,
+              activity_type: 'FOLLOW_UP_CANCELLED',
+              actor: 'system',
+              actor_label: '⚙️ SYSTEM',
+              title: `Task Cancelled: ${t.title}`,
+              description: `Cancelled.`
+            });
+          }
+        });
+      }
+    } catch (taskTimelineErr) {
+      console.warn('[VAANI SALES] Notice loading task timeline:', taskTimelineErr.message);
+    }
+
+    // Append WhatsApp messages from vaani_whatsapp_messages
+    try {
+      const waSql = `
+        SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT message_id, COALESCE(direction, 'OUTBOUND') as direction, message_type, template_key, body, status, provider,
+                 provider_message_id, created_at, sent_at, delivered_at, read_at, failed_at, error_message,
+                 to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_created
+          FROM public.vaani_whatsapp_messages
+          WHERE organization_id = $1 AND (lead_id = $2 OR lead_id = ('lead_' || $2) OR phone_number = $2)
+          ORDER BY created_at ASC
+        ) t;
+      `;
+      const waMessages = await queryPostgres(waSql, [orgInt, String(targetId)]);
+      if (Array.isArray(waMessages)) {
+        waMessages.forEach((m) => {
+          const isOut = m.direction !== 'INBOUND';
+          let actType = 'WHATSAPP_MESSAGE_QUEUED';
+          let title = `WhatsApp: ${m.template_key || m.message_type}`;
+          let actor = isOut ? 'vaani' : 'customer';
+          let actorLabel = isOut ? '🤖 VAANI' : '📞 CUSTOMER';
+          let timeVal = m.created_at;
+
+          if (m.status === 'SENT') {
+            actType = 'WHATSAPP_MESSAGE_SENT';
+            timeVal = m.sent_at || m.created_at;
+          } else if (m.status === 'DELIVERED') {
+            actType = 'WHATSAPP_MESSAGE_DELIVERED';
+            timeVal = m.delivered_at || m.sent_at || m.created_at;
+          } else if (m.status === 'READ') {
+            actType = 'WHATSAPP_MESSAGE_READ';
+            timeVal = m.read_at || m.delivered_at || m.created_at;
+          } else if (m.status === 'FAILED') {
+            actType = 'WHATSAPP_MESSAGE_FAILED';
+            actor = 'system';
+            actorLabel = '⚙️ SYSTEM';
+            timeVal = m.failed_at || m.created_at;
+          }
+
+          events.push({
+            id: `timeline_wa_${m.message_id}`,
+            day: 'WHATSAPP',
+            day_label: 'WhatsApp',
+            timestamp: timeVal,
+            formatted_time: m.formatted_created,
+            activity_type: actType,
+            actor: actor,
+            actor_label: actorLabel,
+            title: title,
+            description: m.body || `WhatsApp message [${m.status}]`,
+            error_message: m.error_message || null,
+            provider_message_id: m.provider_message_id || null
+          });
+        });
+      }
+    } catch (waTimelineErr) {
+      console.warn('[VAANI SALES] Notice loading WhatsApp timeline:', waTimelineErr.message);
+    }
+
+    // Append Digital Evidence events
+    try {
+      const callIdParam = isNum ? parseInt(targetId, 10) : -1;
+      const evSql = `
+        SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT evidence_id, evidence_type, status, source, provider_message_id,
+                 media_url, evaluator_verdict, evaluator_notes, received_at, verified_at, verified_by, metadata,
+                 to_char(received_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_received,
+                 to_char(verified_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_verified
+          FROM public.vaani_digital_evidence
+          WHERE organization_id = $1 AND (lead_id = $2 OR lead_id = ('lead_' || $2) OR run_id = $3)
+          ORDER BY received_at ASC
+        ) t;
+      `;
+      const evItems = await queryPostgres(evSql, [orgInt, String(targetId), callIdParam]);
+      if (Array.isArray(evItems)) {
+        evItems.forEach((ev) => {
+          if (ev.status === 'RECEIVED') {
+            events.push({
+              id: `timeline_ev_${ev.evidence_id}_recv`,
+              day: 'EVIDENCE',
+              day_label: 'Evidence',
+              timestamp: ev.received_at,
+              formatted_time: ev.formatted_received,
+              activity_type: 'EVIDENCE_RECEIVED',
+              actor: 'customer',
+              actor_label: '📞 CUSTOMER',
+              title: `Evidence Received: ${ev.evidence_type}`,
+              description: `Media received via ${ev.source || 'WhatsApp'}. URL/Ref: ${ev.media_url || 'N/A'}`
+            });
+            if (ev.metadata && ev.metadata.classified) {
+              events.push({
+                id: `timeline_ev_${ev.evidence_id}_class`,
+                day: 'EVIDENCE',
+                day_label: 'Evidence',
+                timestamp: new Date(new Date(ev.received_at).getTime() + 1000).toISOString(),
+                formatted_time: ev.formatted_received,
+                activity_type: 'EVIDENCE_CLASSIFIED',
+                actor: 'system',
+                actor_label: '⚙️ EVIDENCE ENGINE',
+                title: `Evidence Classified: ${ev.evidence_type}`,
+                description: `Media classified as ${ev.evidence_type} (Confidence: ${ev.metadata.confidence || 0.95})`
+              });
+            }
+          } else if (ev.status === 'VERIFIED') {
+            events.push({
+              id: `timeline_ev_${ev.evidence_id}_verif`,
+              day: 'EVIDENCE',
+              day_label: 'Evidence',
+              timestamp: ev.verified_at || ev.received_at,
+              formatted_time: ev.formatted_verified || ev.formatted_received,
+              activity_type: 'EVIDENCE_VERIFIED',
+              actor: 'operator',
+              actor_label: '👤 ' + (ev.verified_by || 'SALES OPERATOR'),
+              title: `Evidence Verified: ${ev.evidence_type}`,
+              description: `Verified by ${ev.verified_by || 'Sales Operator'}. Notes: ${ev.evaluator_notes || 'All checks passed'}`
+            });
+          }
+        });
+      }
+    } catch (evTimelineErr) {
+      console.warn('[VAANI SALES] Notice loading evidence timeline:', evTimelineErr.message);
+    }
+
+    events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     return events;
   } catch (err) {
@@ -1690,7 +2131,7 @@ async function getRecentActivities(limit = 15, isDemo = false, organizationId = 
       ) t;
     `;
 
-    const runs = await queryPostgres(sql);
+    const runs = await queryPostgres(sql, [orgInt, limitInt]);
     if (!Array.isArray(runs) || runs.length === 0) return [];
 
     return runs.map((r, idx) => {
@@ -1729,15 +2170,241 @@ async function getRecentActivities(limit = 15, isDemo = false, organizationId = 
   }
 }
 
+/* ============================================================================
+ * Phase F: Production Call Lifecycle Engine, Qualification, and Idempotency
+ * ============================================================================ */
+
+const CALL_STATUSES = Object.freeze({
+  INITIATED: 'INITIATED',
+  CONNECTED: 'CONNECTED',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  CANCELLED: 'CANCELLED'
+});
+
 /**
- * Ingest completed call payload from Vaani voice pipeline
- * Complies strictly with docs/dashboard/VAANI-SALES-DATA-CONTRACT.md
+ * 3-Dimension Deterministic Qualification Gate:
+ * Dimension 1: Target specification (Brand & Model for seller, Tonnage/Brand for buyer)
+ * Dimension 2: Commercial parameter (Expected price for seller, Budget max for buyer)
+ * Dimension 3: Geographic parameter (City/State identified)
+ */
+function evaluateQualification(customerType, machDetails = {}, commTerms = {}, city = null, dncRequested = false) {
+  if (dncRequested) return 'DISQUALIFIED';
+
+  let hasSpec = false;
+  let hasComm = false;
+  let hasGeo = Boolean(city && typeof city === 'string' && city.trim() && city.toLowerCase() !== 'unknown');
+
+  if (customerType === 'seller') {
+    hasSpec = Boolean(machDetails.brand && machDetails.model);
+    hasComm = Boolean(
+      (typeof commTerms.expected_price_inr === 'number' && commTerms.expected_price_inr > 0) ||
+      (commTerms.price_or_budget_raw && String(commTerms.price_or_budget_raw).trim())
+    );
+  } else if (customerType === 'buyer') {
+    hasSpec = Boolean(
+      machDetails.brand ||
+      (machDetails.tonnage_class && machDetails.tonnage_class !== 'unknown' && machDetails.tonnage_class !== 'any') ||
+      machDetails.model
+    );
+    hasComm = Boolean(
+      (typeof commTerms.budget_max_inr === 'number' && commTerms.budget_max_inr > 0) ||
+      (commTerms.price_or_budget_raw && String(commTerms.price_or_budget_raw).trim())
+    );
+  } else {
+    return 'UNQUALIFIED';
+  }
+
+  const dimensionsCount = (hasSpec ? 1 : 0) + (hasComm ? 1 : 0) + (hasGeo ? 1 : 0);
+  if (dimensionsCount === 3) return 'QUALIFIED';
+  if (dimensionsCount >= 1) return 'PARTIALLY_QUALIFIED';
+  return 'UNQUALIFIED';
+}
+
+/**
+ * Deterministic Lead Temperature Engine grounded in SELLER-BUYER-SCHEMAS.md
+ */
+function evaluateLeadTemperature(customerType, qualState, machDetails = {}, commTerms = {}, evReadiness = {}, dncRequested = false) {
+  if (dncRequested) return 'COLD';
+  if (qualState === 'DISQUALIFIED' || qualState === 'UNQUALIFIED') return 'COLD';
+
+  if (customerType === 'seller') {
+    const isCleanApp = !machDetails.application_history || machDetails.application_history === 'soil_earthwork';
+    const hasMedia = Boolean(evReadiness.photos_agreed || evReadiness.running_video_agreed);
+    const price = commTerms.expected_price_inr;
+    const year = machDetails.model_year;
+
+    let priceRealistic = true;
+    if (typeof price === 'number' && typeof year === 'number') {
+      if (year <= 2017 && price > 2500000) priceRealistic = false;
+      else if (year <= 2020 && price > 3000000) priceRealistic = false;
+    }
+
+    if (qualState === 'QUALIFIED' && isCleanApp && hasMedia && priceRealistic) {
+      return 'HOT';
+    }
+    if (qualState === 'QUALIFIED' || (qualState === 'PARTIALLY_QUALIFIED' && hasMedia)) {
+      return 'WARM';
+    }
+    return 'COLD';
+  }
+
+  if (customerType === 'buyer') {
+    if (qualState !== 'QUALIFIED') return 'COLD';
+
+    const timeline = commTerms.purchase_timeline;
+    const urgentTimeline = timeline === 'immediate_within_7_days' || timeline === 'immediate' || timeline === 'urgent' || timeline === 'within_15_30_days';
+    const yardVisit = Boolean(commTerms.yard_visit_agreed);
+
+    if (urgentTimeline || yardVisit) {
+      return 'HOT';
+    }
+    return 'WARM';
+  }
+
+  return 'COLD';
+}
+
+/**
+ * Next Action Engine producing explicit operational tasks grounded in conversation context
+ */
+function evaluateNextAction(customerType, qualState, temp, commTerms = {}, evReadiness = {}, dncRequested = false, existingAction = null) {
+  if (dncRequested) return 'DNC_SUPPRESS';
+
+  if (customerType === 'seller') {
+    if (evReadiness.photos_agreed === false) return 'WAITING_FOR_MACHINE_PHOTOS';
+    if (evReadiness.running_video_agreed === false) return 'WAITING_FOR_RUNNING_VIDEO';
+    if (evReadiness.rc_copy_agreed === false) return 'WAITING_FOR_RC_NOC';
+    if (temp === 'WARM') return 'NEGOTIATION_FOLLOW_UP';
+    if (qualState === 'QUALIFIED') return 'FOLLOW_UP_WITH_SELLER';
+    return existingAction || 'NO_ACTION_REQUIRED';
+  }
+
+  if (customerType === 'buyer') {
+    if (commTerms.yard_visit_agreed) return 'SCHEDULE_YARD_VISIT';
+    if (qualState === 'QUALIFIED') return 'MATCH_BUYER';
+    if (qualState === 'PARTIALLY_QUALIFIED') return 'SEND_MACHINE_OPTIONS';
+    return existingAction || 'NO_ACTION_REQUIRED';
+  }
+
+  return existingAction || 'NO_ACTION_REQUIRED';
+}
+
+/**
+ * Follow-up Task & Handoff Scheduler
+ */
+function evaluateFollowUp(extractedVariables, payload = {}) {
+  const isDnc = Boolean(extractedVariables.dnc_requested);
+  if (isDnc) {
+    return {
+      follow_up_required: false,
+      follow_up_datetime: null,
+      follow_up_reason: 'DNC requested — suppression active',
+      assigned_to: 'Compliance'
+    };
+  }
+
+  const explicitRequired = payload.follow_up_required ?? extractedVariables.follow_up_required;
+  const outcome = extractedVariables.conversation_outcome;
+  const qual = extractedVariables.qualification_state;
+  const nextAct = extractedVariables.next_action;
+
+  const requiresFollowUp = Boolean(
+    explicitRequired ||
+    outcome === 'callback_requested' ||
+    outcome === 'appointment_requested' ||
+    outcome === 'lead_qualified' ||
+    qual === 'QUALIFIED' ||
+    (nextAct && !['NO_ACTION_REQUIRED', 'DNC_SUPPRESS'].includes(nextAct))
+  );
+
+  let due = payload.follow_up_datetime || extractedVariables.follow_up_datetime;
+  if (requiresFollowUp && !due) {
+    const nextDate = new Date(Date.now() + 86400000);
+    nextDate.setHours(11, 0, 0, 0);
+    due = nextDate.toISOString();
+  }
+
+  let reason = 'Review and progress lead';
+  if (outcome === 'callback_requested') reason = 'Customer requested callback';
+  else if (nextAct === 'WAITING_FOR_MACHINE_PHOTOS') reason = 'Verify machine photos on WhatsApp';
+  else if (nextAct === 'WAITING_FOR_RUNNING_VIDEO') reason = 'Verify 30s operational running video';
+  else if (nextAct === 'SCHEDULE_YARD_VISIT') reason = 'Coordinate Jaipur yard physical inspection';
+  else if (nextAct === 'NEGOTIATION_FOLLOW_UP') reason = 'Commercial terms and price negotiation';
+  else if (nextAct === 'MATCH_BUYER') reason = 'Match buyer requirement with available yard stock';
+
+  return {
+    follow_up_required: requiresFollowUp,
+    follow_up_datetime: due,
+    follow_up_reason: reason,
+    assigned_to: 'Vaani / Sales Operator'
+  };
+}
+
+/**
+ * Clean Call Session Model Builder
+ */
+function createCallSession({
+  runId,
+  leadId,
+  orgId,
+  workflowId = 3,
+  phone,
+  customerType,
+  direction = 'inbound',
+  startedAt,
+  connectedAt,
+  endedAt,
+  duration = 0,
+  transcript = null,
+  extractedVariables,
+  qualificationState,
+  leadTemperature,
+  outcome,
+  nextAction,
+  followUp,
+  status = CALL_STATUSES.COMPLETED,
+  errorCode = null,
+  errorMessage = null
+}) {
+  return {
+    call_session_id: `sess_run_${runId}`,
+    lead_id: leadId,
+    organization_id: orgId,
+    workflow_id: workflowId,
+    customer_id: phone,
+    direction: direction || 'inbound',
+    seller_or_buyer: customerType,
+    started_at: startedAt || new Date().toISOString(),
+    connected_at: connectedAt || startedAt || new Date().toISOString(),
+    ended_at: endedAt || new Date().toISOString(),
+    duration: typeof duration === 'number' ? duration : 0,
+    transcript: transcript || null,
+    extracted_variables: extractedVariables,
+    qualification_state: qualificationState,
+    lead_temperature: leadTemperature,
+    outcome: outcome || 'inquiry',
+    next_action: nextAction,
+    follow_up_datetime: followUp.follow_up_datetime,
+    follow_up_reason: followUp.follow_up_reason,
+    assigned_to: followUp.assigned_to,
+    status: status || CALL_STATUSES.COMPLETED,
+    error_code: errorCode,
+    error_message: errorMessage
+  };
+}
+
+/**
+ * Ingest completed call payload from Vaani voice pipeline with full ACID transaction,
+ * idempotent deduplication, deterministic lifecycle state transitions, and strict tenant security.
  */
 async function ingestCallComplete(payload) {
   if (!payload || typeof payload !== 'object') {
     const err = new Error('Payload must be a valid JSON object');
     err.statusCode = 400;
     err.code = 'invalid_payload';
+    err.errorCode = 'INVALID_PAYLOAD';
     throw err;
   }
 
@@ -1746,22 +2413,25 @@ async function ingestCallComplete(payload) {
     const err = new Error('Missing or invalid primary_phone (+91XXXXXXXXXX)');
     err.statusCode = 400;
     err.code = 'missing_primary_phone';
+    err.errorCode = 'INVALID_PAYLOAD';
     throw err;
   }
 
   const callMeta = payload.call_metadata || {};
-  const runId = callMeta.run_id ?? payload.run_id;
+  const runId = callMeta.run_id ?? payload.run_id ?? payload.call_session_id;
   if (runId === undefined || runId === null || isNaN(Number(runId))) {
     const err = new Error('Missing or invalid call_metadata.run_id (integer required)');
     err.statusCode = 400;
     err.code = 'missing_run_id';
+    err.errorCode = 'INVALID_PAYLOAD';
     throw err;
   }
 
   const numericRunId = parseInt(runId, 10);
+  const wfId = parseInt(callMeta.workflow_id || payload.workflow_id || 3, 10);
+
   let orgId = callMeta.org_id ? parseInt(callMeta.org_id, 10) : null;
   if (!orgId) {
-    const wfId = parseInt(callMeta.workflow_id || 3, 10);
     const wfRow = await queryPostgres(`SELECT row_to_json(w) FROM (SELECT organization_id FROM workflows WHERE id = ${sqlEscapeInt(wfId)}) w;`);
     orgId = wfRow && wfRow.organization_id ? parseInt(wfRow.organization_id, 10) : null;
   }
@@ -1769,16 +2439,88 @@ async function ingestCallComplete(payload) {
     const err = new Error('Cannot determine organization_id for call ingestion');
     err.statusCode = 400;
     err.code = 'missing_organization_id';
+    err.errorCode = 'MISSING_TENANT';
     throw err;
   }
+
+  // Idempotency check: verify if run already exists in database
+  const existingRun = await queryPostgres(
+    `SELECT row_to_json(r) FROM (SELECT id, is_completed, state FROM workflow_runs WHERE id = ${sqlEscapeInt(numericRunId)}) r;`
+  ).catch(() => null);
+
+  const isDuplicate = Boolean(existingRun && (existingRun.is_completed || existingRun.state === 'completed'));
+
   const leadId = payload.lead_id || `lead_${numericRunId}`;
-  const customerType = ['seller', 'buyer', 'other', 'unknown'].includes(payload.customer_type)
+  let customerType = ['seller', 'buyer', 'other', 'unknown'].includes(payload.customer_type)
     ? payload.customer_type
     : 'unknown';
 
-  const machDetails = payload.machine_details || {};
+  const machDetails = { ...(payload.machine_details || {}) };
+  if (!machDetails.brand && payload.machine_brand) machDetails.brand = payload.machine_brand;
+  if (!machDetails.model && payload.machine_model) machDetails.model = payload.machine_model;
+  if (machDetails.model_year === undefined && payload.model_year !== undefined) machDetails.model_year = payload.model_year;
+  if (machDetails.running_hours === undefined && payload.running_hours !== undefined) machDetails.running_hours = payload.running_hours;
+
+  // Normalize machine model early using canonical taxonomy
+  const rawMachineQuery = [machDetails.brand, machDetails.model].filter(Boolean).join(' ');
+  if (rawMachineQuery) {
+    const match = vaaniExtractor.matchMachineModel(rawMachineQuery);
+    if (match) {
+      if (match.brand) machDetails.brand = match.brand;
+      if (match.model) machDetails.model = match.model;
+      if (match.tonnage_class && match.tonnage_class !== 'unknown') machDetails.tonnage_class = match.tonnage_class;
+    }
+  }
+
+  if (customerType === 'unknown' && (machDetails.brand || machDetails.model)) {
+    customerType = 'seller';
+  }
+
   const commTerms = payload.commercial_terms || {};
   const evReadiness = payload.evidence_readiness || {};
+
+  // Phase F Step 2: Auto-extract from conversation if transcript is present
+  let extractionAudit = null;
+  if (payload.transcript || payload.conversation) {
+    const extractionResult = vaaniExtractor.extractFromConversation(payload.transcript || payload.conversation);
+    extractionAudit = {
+      provenance: extractionResult.provenance,
+      missing_info: extractionResult.missing_info,
+      correction_history: extractionResult.correction_history,
+      follow_up_question: extractionResult.follow_up_question
+    };
+
+    if (customerType === 'unknown' && extractionResult.extracted.customer_type !== 'unknown') {
+      customerType = extractionResult.extracted.customer_type;
+    }
+
+    const extMach = extractionResult.extracted.machine_details;
+    if (!machDetails.brand && extMach.brand) machDetails.brand = extMach.brand;
+    if (!machDetails.model && extMach.model) machDetails.model = extMach.model;
+    if (machDetails.model_year === undefined && extMach.model_year) machDetails.model_year = extMach.model_year;
+    if (machDetails.running_hours === undefined && extMach.running_hours) machDetails.running_hours = extMach.running_hours;
+    if ((!machDetails.tonnage_class || machDetails.tonnage_class === 'unknown') && extMach.tonnage_class !== 'unknown') machDetails.tonnage_class = extMach.tonnage_class;
+    if ((!machDetails.application_history || machDetails.application_history === 'unknown') && extMach.application_history !== 'unknown') machDetails.application_history = extMach.application_history;
+    if (!machDetails.location_city && extMach.location_city) machDetails.location_city = extMach.location_city;
+    if (!machDetails.location_state && extMach.location_state) machDetails.location_state = extMach.location_state;
+    if ((!machDetails.document_status || machDetails.document_status === 'unknown') && extMach.document_status !== 'unknown') machDetails.document_status = extMach.document_status;
+
+    const extComm = extractionResult.extracted.commercial_terms;
+    if (commTerms.expected_price_inr === undefined && extComm.expected_price_inr) commTerms.expected_price_inr = extComm.expected_price_inr;
+    if (commTerms.budget_max_inr === undefined && extComm.budget_max_inr) commTerms.budget_max_inr = extComm.budget_max_inr;
+    if (!commTerms.price_or_budget_raw && extComm.price_or_budget_raw) commTerms.price_or_budget_raw = extComm.price_or_budget_raw;
+    if ((!commTerms.purchase_timeline || commTerms.purchase_timeline === 'not_applicable') && extComm.purchase_timeline !== 'not_applicable') commTerms.purchase_timeline = extComm.purchase_timeline;
+    if (commTerms.yard_visit_agreed === undefined && extComm.yard_visit_agreed) commTerms.yard_visit_agreed = extComm.yard_visit_agreed;
+
+    const extEv = extractionResult.extracted.evidence_readiness;
+    if (evReadiness.photos_agreed === undefined && extEv.photos_agreed) evReadiness.photos_agreed = extEv.photos_agreed;
+    if (evReadiness.running_video_agreed === undefined && extEv.running_video_agreed) evReadiness.running_video_agreed = extEv.running_video_agreed;
+    if (evReadiness.rc_copy_agreed === undefined && extEv.rc_copy_agreed) evReadiness.rc_copy_agreed = extEv.rc_copy_agreed;
+
+    if (extractionResult.extracted.dnc_requested) {
+      payload.dnc_requested = true;
+    }
+  }
 
   const modelYear = (typeof machDetails.model_year === 'number' && machDetails.model_year >= 2005 && machDetails.model_year <= 2026)
     ? machDetails.model_year
@@ -1791,6 +2533,35 @@ async function ingestCallComplete(payload) {
 
   const expectedPrice = typeof commTerms.expected_price_inr === 'number' ? commTerms.expected_price_inr : null;
   const budgetMax = typeof commTerms.budget_max_inr === 'number' ? commTerms.budget_max_inr : null;
+  const city = machDetails.location_city || null;
+  const isDnc = Boolean(payload.dnc_requested);
+
+  // Deterministic Engines evaluation
+  let qualState = (payload.qualification_state && ['QUALIFIED', 'PARTIALLY_QUALIFIED', 'UNQUALIFIED', 'DISQUALIFIED'].includes(payload.qualification_state))
+    ? payload.qualification_state
+    : null;
+  if (!qualState) {
+    if (payload.conversation_outcome === 'lead_qualified') {
+      qualState = 'QUALIFIED';
+    } else {
+      qualState = evaluateQualification(customerType, machDetails, commTerms, city, isDnc);
+    }
+  }
+
+  let leadTemp = (payload.lead_temperature && ['HOT', 'WARM', 'COLD'].includes(payload.lead_temperature))
+    ? payload.lead_temperature
+    : null;
+  if (!leadTemp) {
+    if (payload.conversation_outcome === 'lead_qualified') {
+      leadTemp = 'HOT';
+    } else {
+      leadTemp = evaluateLeadTemperature(customerType, qualState, machDetails, commTerms, evReadiness, isDnc);
+    }
+  }
+
+  const nextAction = (payload.next_action && typeof payload.next_action === 'string' && payload.next_action.trim())
+    ? payload.next_action.trim()
+    : evaluateNextAction(customerType, qualState, leadTemp, commTerms, evReadiness, isDnc);
 
   const extractedVariables = {
     caller_name: payload.customer_name || payload.caller_name || null,
@@ -1806,7 +2577,7 @@ async function ingestCallComplete(payload) {
       tonnage_class: machDetails.tonnage_class || 'unknown',
       application_history: appHistory,
       machine_condition_summary: machDetails.machine_condition_summary || null,
-      location_city: machDetails.location_city || null,
+      location_city: city,
       location_state: machDetails.location_state || null,
       document_status: machDetails.document_status || 'unknown'
     },
@@ -1815,73 +2586,118 @@ async function ingestCallComplete(payload) {
       budget_max_inr: budgetMax,
       price_or_budget_raw: commTerms.price_or_budget_raw || null,
       purchase_timeline: commTerms.purchase_timeline || 'not_applicable',
-      yard_visit_agreed: !!commTerms.yard_visit_agreed,
+      yard_visit_agreed: Boolean(commTerms.yard_visit_agreed),
       yard_visit_schedule: commTerms.yard_visit_schedule || null
     },
     evidence_readiness: {
-      photos_agreed: !!evReadiness.photos_agreed,
-      running_video_agreed: !!evReadiness.running_video_agreed,
-      rc_copy_agreed: !!evReadiness.rc_copy_agreed,
+      photos_agreed: Boolean(evReadiness.photos_agreed),
+      running_video_agreed: Boolean(evReadiness.running_video_agreed),
+      rc_copy_agreed: Boolean(evReadiness.rc_copy_agreed),
       evidence_status: evReadiness.evidence_status || 'promised'
     },
-    lead_temperature: ['HOT', 'WARM', 'COLD'].includes(payload.lead_temperature) ? payload.lead_temperature : 'COLD',
-    qualification_state: ['QUALIFIED', 'PARTIALLY_QUALIFIED', 'UNQUALIFIED', 'DISQUALIFIED'].includes(payload.qualification_state)
-      ? payload.qualification_state
-      : 'UNQUALIFIED',
+    lead_temperature: leadTemp,
+    qualification_state: qualState,
     conversation_outcome: payload.conversation_outcome || 'inquiry',
-    next_action: payload.next_action || 'Initial inquiry',
-    follow_up_required: !!payload.follow_up_required,
+    next_action: nextAction,
+    follow_up_required: Boolean(payload.follow_up_required),
     follow_up_datetime: payload.follow_up_datetime || null,
     call_notes: payload.call_notes || '',
-    dnc_requested: !!payload.dnc_requested
+    dnc_requested: isDnc
   };
 
-  // 1. Persist into workflow_runs.gathered_context
-  const wfSql = `
+  const followUp = evaluateFollowUp(extractedVariables, payload);
+  extractedVariables.follow_up_required = followUp.follow_up_required;
+  extractedVariables.follow_up_datetime = followUp.follow_up_datetime;
+
+  const durationSec = typeof callMeta.duration_seconds === 'number' ? callMeta.duration_seconds : (payload.duration || 0);
+  const direction = (callMeta.direction || payload.direction || 'inbound').toLowerCase();
+
+  const callSession = createCallSession({
+    runId: numericRunId,
+    leadId,
+    orgId,
+    workflowId: wfId,
+    phone,
+    customerType,
+    direction,
+    startedAt: callMeta.started_at || payload.started_at,
+    connectedAt: callMeta.connected_at || payload.connected_at,
+    endedAt: callMeta.ended_at || payload.ended_at,
+    duration: durationSec,
+    transcript: payload.transcript || null,
+    extractedVariables,
+    qualificationState: qualState,
+    leadTemperature: leadTemp,
+    outcome: payload.conversation_outcome || 'inquiry',
+    nextAction,
+    followUp,
+    status: CALL_STATUSES.COMPLETED
+  });
+
+  // Machine ID deterministically generated for idempotent upsert
+  const brand = extractedVariables.machine_details.brand;
+  const model = extractedVariables.machine_details.model;
+  let machineId = null;
+  if (customerType === 'seller' && brand && model) {
+    machineId = `mach_run_${numericRunId}`;
+  }
+
+  // Build ACID PostgreSQL Transaction SQL
+  const txStatements = ['BEGIN;'];
+
+  // 1. workflow_runs record
+  txStatements.push(`
     INSERT INTO workflow_runs (
       id, name, workflow_id, mode, created_at, is_completed, usage_info, cost_info,
       initial_context, gathered_context, annotations, logs, storage_backend, state, call_type, extra
     ) VALUES (
       ${sqlEscapeInt(numericRunId)},
       ${sqlEscapeString('vaani-call-' + numericRunId)},
-      3,
+      ${sqlEscapeInt(wfId)},
       'smallwebrtc',
       CURRENT_TIMESTAMP,
       true,
       '{}'::json,
       '{}'::json,
       '{}'::json,
-      json_build_object('extracted_variables', ${sqlEscapeJson(extractedVariables)})::json,
+      json_build_object(
+        'extracted_variables', ${sqlEscapeJson(extractedVariables)},
+        'call_session', ${sqlEscapeJson(callSession)},
+        'extraction_audit', ${sqlEscapeJson(extractionAudit || {})}
+      )::json,
       '{}'::json,
       '{}'::json,
       's3',
       'completed',
-      'outbound',
+      ${sqlEscapeString(direction)},
       '{}'::json
     )
     ON CONFLICT (id) DO UPDATE SET
       gathered_context = jsonb_set(
-        COALESCE(workflow_runs.gathered_context::jsonb, '{}'::jsonb),
-        '{extracted_variables}',
-        ${sqlEscapeJson(extractedVariables)},
+        jsonb_set(
+          jsonb_set(
+            COALESCE(workflow_runs.gathered_context::jsonb, '{}'::jsonb),
+            '{extracted_variables}',
+            ${sqlEscapeJson(extractedVariables)},
+            true
+          ),
+          '{call_session}',
+          ${sqlEscapeJson(callSession)},
+          true
+        ),
+        '{extraction_audit}',
+        ${sqlEscapeJson(extractionAudit || {})},
         true
       )::json,
       is_completed = true,
       state = 'completed';
-  `;
-  await queryPostgres(wfSql);
+  `);
 
-  // 2. For seller calls with valid machine info, create/update vaani_machines
-  const brand = extractedVariables.machine_details.brand;
-  const model = extractedVariables.machine_details.model;
-  let machineId = null;
-
-  if (customerType === 'seller' && brand && model) {
-    machineId = `mach_run_${numericRunId}`;
+  // 2. vaani_machines record (if seller with brand & model)
+  if (machineId) {
     const hmr = extractedVariables.machine_details.running_hours;
-    const city = extractedVariables.machine_details.location_city || 'Jaipur Yard (Loha Mandi / VKI Area)';
-
-    const machSql = `
+    const loc = extractedVariables.machine_details.location_city || 'Jaipur Yard (Loha Mandi / VKI Area)';
+    txStatements.push(`
       INSERT INTO vaani_machines (
         organization_id, machine_id, source_lead_run_id, brand, model, manufacturing_year,
         hour_meter_reading, application_history, sourcing_cost_inr, status, current_location, updated_at
@@ -1896,7 +2712,7 @@ async function ingestCallComplete(payload) {
         ${sqlEscapeString(appHistory)},
         ${sqlEscapeInt(expectedPrice)},
         'in_sourcing_pipeline',
-        ${sqlEscapeString(city)},
+        ${sqlEscapeString(loc)},
         CURRENT_TIMESTAMP
       )
       ON CONFLICT (machine_id) DO UPDATE SET
@@ -1909,49 +2725,43 @@ async function ingestCallComplete(payload) {
         sourcing_cost_inr = EXCLUDED.sourcing_cost_inr,
         current_location = EXCLUDED.current_location,
         updated_at = CURRENT_TIMESTAMP;
-    `;
-    await queryPostgres(machSql);
+    `);
   }
 
-  // 3. For evidence promised/received, create tracking records in vaani_digital_evidence
-  const evidenceQueries = [];
+  // 3. vaani_digital_evidence records (deterministic evidence IDs prevent duplicates)
   if (extractedVariables.evidence_readiness.photos_agreed) {
     const photoTypes = ['photo_exterior', 'photo_boom', 'photo_undercarriage', 'photo_meter'];
     for (const mType of photoTypes) {
       const evId = `ev_${numericRunId}_${mType}`;
-      evidenceQueries.push(
-        `INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
-         VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, ${sqlEscapeString(mType)}, 'whatsapp://pending/${mType}', 'Promised by seller on WhatsApp')
-         ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;`
-      );
+      txStatements.push(`
+        INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
+        VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, ${sqlEscapeString(mType)}, 'whatsapp://pending/${mType}', 'Promised by seller on WhatsApp')
+        ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;
+      `);
     }
   }
 
   if (extractedVariables.evidence_readiness.running_video_agreed) {
     const evId = `ev_${numericRunId}_video_running_30s`;
-    evidenceQueries.push(
-      `INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
-       VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, 'video_running_30s', 'whatsapp://pending/video_running_30s', 'Promised 30s operational running video')
-       ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;`
-    );
+    txStatements.push(`
+      INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
+      VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, 'video_running_30s', 'whatsapp://pending/video_running_30s', 'Promised 30s operational running video')
+      ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;
+    `);
   }
 
   if (extractedVariables.evidence_readiness.rc_copy_agreed) {
     const evId = `ev_${numericRunId}_doc_rc`;
-    evidenceQueries.push(
-      `INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
-       VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, 'doc_rc', 'whatsapp://pending/doc_rc', 'Promised RC/NOC document')
-       ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;`
-    );
+    txStatements.push(`
+      INSERT INTO vaani_digital_evidence (organization_id, evidence_id, machine_id, run_id, media_type, media_url, evaluator_notes)
+      VALUES (${sqlEscapeInt(orgId)}, ${sqlEscapeString(evId)}, ${sqlEscapeString(machineId)}, ${sqlEscapeInt(numericRunId)}, 'doc_rc', 'whatsapp://pending/doc_rc', 'Promised RC/NOC document')
+      ON CONFLICT (evidence_id) DO UPDATE SET received_at = CURRENT_TIMESTAMP;
+    `);
   }
 
-  if (evidenceQueries.length > 0) {
-    await queryPostgres(evidenceQueries.join('\n'));
-  }
-
-  // 4. If dnc_requested === true, write to vaani_dnc_registry
-  if (extractedVariables.dnc_requested && phone) {
-    const dncSql = `
+  // 4. vaani_dnc_registry record (if dnc_requested)
+  if (isDnc && phone) {
+    txStatements.push(`
       INSERT INTO vaani_dnc_registry (organization_id, phone_number, run_id, reason, opted_out_at, is_active)
       VALUES (
         ${sqlEscapeInt(orgId)},
@@ -1966,19 +2776,110 @@ async function ingestCallComplete(payload) {
         reason = EXCLUDED.reason,
         opted_out_at = CURRENT_TIMESTAMP,
         is_active = true;
-    `;
-    await queryPostgres(dncSql);
+    `);
+  }
+
+  txStatements.push('COMMIT;');
+
+  try {
+    await queryPostgres(txStatements.join('\n'));
+  } catch (dbErr) {
+    const err = new Error(`Database transaction failed: ${dbErr.message}`);
+    err.statusCode = 500;
+    err.code = 'database_error';
+    err.errorCode = 'DATABASE_ERROR';
+    throw err;
+  }
+
+  // Phase F Step 3: Trigger deduplicated follow-up tasks creation
+  let tasksCreated = [];
+  try {
+    tasksCreated = await vaaniTasks.processCallFollowUpTasks({
+      organization_id: orgId,
+      run_id: numericRunId,
+      lead_id: leadId,
+      customer_id: phone,
+      customer_type: customerType,
+      caller_name: extractedVariables.caller_name,
+      primary_phone: phone,
+      qual_state: qualState,
+      lead_temp: leadTemp,
+      next_action: nextAction,
+      dnc_requested: isDnc,
+      mach_details: extractedVariables.machine_details,
+      comm_terms: extractedVariables.commercial_terms,
+      ev_readiness: extractedVariables.evidence_readiness,
+      follow_up_datetime: followUp.follow_up_datetime
+    });
+  } catch (taskErr) {
+    console.warn('[VAANI SALES] Notice processing follow-up tasks:', taskErr.message);
   }
 
   return {
     success: true,
     lead_id: leadId,
-    run_id: numericRunId
+    run_id: numericRunId,
+    call_session_id: callSession.call_session_id,
+    status: callSession.status,
+    is_duplicate: isDuplicate,
+    qualification_state: callSession.qualification_state,
+    lead_temperature: callSession.lead_temperature,
+    next_action: callSession.next_action,
+    follow_up: {
+      required: followUp.follow_up_required,
+      datetime: followUp.follow_up_datetime,
+      reason: followUp.follow_up_reason,
+      assigned_to: followUp.assigned_to
+    },
+    tasks_created: tasksCreated
   };
+}
+
+async function getLeadEvidence(leadId, isDemo = false, organizationId = null) {
+  if (isDemo) {
+    const l360 = await getLead360(leadId, true);
+    return l360?.evidence_checklist || [];
+  }
+  if (!organizationId) return [];
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) return [];
+  return vaaniWhatsapp.getLeadEvidence(leadId, orgInt);
+}
+
+async function getLeadWhatsAppHistory(leadId, isDemo = false, organizationId = null) {
+  if (isDemo) {
+    return [];
+  }
+  if (!organizationId) return [];
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) return [];
+  return vaaniWhatsapp.getLeadWhatsAppHistory(leadId, orgInt);
+}
+
+async function requestLeadEvidence(leadId, evidenceType, organizationId, options = {}) {
+  if (!organizationId) {
+    throw new Error('organization_id is required for evidence request');
+  }
+  const orgInt = parseInt(organizationId, 10);
+  if (isNaN(orgInt) || orgInt <= 0) {
+    throw new Error('invalid organization_id');
+  }
+  return vaaniWhatsapp.queueAndSendEvidenceRequest({
+    organization_id: orgInt,
+    lead_id: leadId,
+    evidence_type: evidenceType,
+    ...options
+  });
 }
 
 module.exports = {
   MACHINE_MASTER_TAXONOMY,
+  CALL_STATUSES,
+  evaluateQualification,
+  evaluateLeadTemperature,
+  evaluateNextAction,
+  evaluateFollowUp,
+  createCallSession,
   getOverview,
   getSellers,
   getBuyers,
@@ -1992,11 +2893,36 @@ module.exports = {
   updateFollowUpStatus,
   getLead360,
   getLeadTimeline,
+  getLeadEvidence,
+  getLeadWhatsAppHistory,
+  requestLeadEvidence,
   getRecentActivities,
   buildExtractedVsMissing,
   buildJourneyProgression,
   buildDefaultEvidenceChecklist,
   ingestCallComplete,
   queryPostgres,
-  localFollowUpOverrides
+  localFollowUpOverrides,
+  extractFromConversation: vaaniExtractor.extractFromConversation,
+  VaaniConversationExtractor: vaaniExtractor.VaaniConversationExtractor,
+  matchMachineModel: vaaniExtractor.matchMachineModel,
+  parseSpokenPrice: vaaniExtractor.parseSpokenPrice,
+  parseModelYear: vaaniExtractor.parseModelYear,
+  parseOperatingHours: vaaniExtractor.parseOperatingHours,
+  vaaniTasks,
+  TASK_STATUSES: vaaniTasks.TASK_STATUSES,
+  TASK_PRIORITIES: vaaniTasks.TASK_PRIORITIES,
+  TASK_TYPES: vaaniTasks.TASK_TYPES,
+  transitionTaskStatus: vaaniTasks.transitionTaskStatus,
+  markEvidenceReceived: vaaniTasks.markEvidenceReceived,
+  vaaniWhatsapp,
+  EVIDENCE_TYPES: vaaniWhatsapp.EVIDENCE_TYPES,
+  MESSAGE_STATUSES: vaaniWhatsapp.MESSAGE_STATUSES,
+  buildEvidenceRequest: vaaniWhatsapp.buildEvidenceRequest,
+  MockWhatsAppProvider: vaaniWhatsapp.MockWhatsAppProvider,
+  queueAndSendEvidenceRequest: vaaniWhatsapp.queueAndSendEvidenceRequest,
+  processInboundWebhook: vaaniWhatsapp.processInboundWebhook,
+  calculateEvidenceReadiness: vaaniWhatsapp.calculateEvidenceReadiness,
+  getInternalMachines,
+  classifyMediaEvidence: vaaniWhatsapp.classifyMediaEvidence
 };

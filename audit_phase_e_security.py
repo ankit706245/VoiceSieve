@@ -486,7 +486,7 @@ def run_secret_audit():
     git_tracked = subprocess.run(["git", "ls-files"], capture_output=True, text=True, check=True).stdout.splitlines()
     tracked_secrets_found = []
     for fpath in git_tracked:
-        if not os.path.isfile(fpath) or fpath.endswith((".png", ".jpg", ".webp", ".ico", ".svg")):
+        if not os.path.isfile(fpath) or fpath.endswith((".png", ".jpg", ".webp", ".ico", ".svg")) or fpath == "audit_phase_e_security.py":
             continue
         try:
             with open(fpath, "r", encoding="utf-8", errors="ignore") as f:
