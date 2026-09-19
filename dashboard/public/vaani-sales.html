@@ -2077,6 +2077,7 @@
     <div class="drawer-tabs">
       <button class="drawer-tab active" data-dtab="overview">🧭 Overview & Journey</button>
       <button class="drawer-tab" data-dtab="learned">🧠 What Vaani Learned</button>
+      <button class="drawer-tab" id="tabMatchesBtn" data-dtab="matches" style="display:none;">🎯 Matches</button>
       <button class="drawer-tab" data-dtab="evidence">📋 Evidence (8-Point)</button>
       <button class="drawer-tab" data-dtab="timeline">⏳ Activity Timeline</button>
       <button class="drawer-tab" data-dtab="calls">🎙️ Calls & Transcript</button>
@@ -2175,6 +2176,15 @@
       </div>
 
       <!-- Tab 3: 8-Point Physical Evidence Checklist -->
+            <div class="drawer-tab-pane" id="pane-matches">
+        <div style="font-weight: 500; font-size: 13px; color: var(--text-main); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+           <span>Matched Inventory</span>
+           <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="forceRunMatching()">Run Engine</button>
+        </div>
+        <div id="drawerMatchesContainer">
+          <div style="font-size: 11px; color: var(--text-dim);">No matches evaluated yet.</div>
+        </div>
+      </div>
       <div class="drawer-tab-pane" id="pane-evidence">
         <!-- WhatsApp Dry Run Indicator & Readiness Status Banner -->
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding:10px 14px; background:rgba(30,58,138,0.25); border:1px solid rgba(59,130,246,0.35); border-radius:6px;">
