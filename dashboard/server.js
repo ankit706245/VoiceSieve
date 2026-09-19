@@ -444,7 +444,7 @@ function queryVaaniLeads(orgId) {
         ),
         'interactions', COALESCE(
           (SELECT json_agg(t) FROM (
-            SELECT 
+            SELECT
               r.id AS run_id,
               r.created_at,
               to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') AS formatted_time,
@@ -493,7 +493,7 @@ async function apiVaaniInternalMachines(req, res) {
   try {
     const internalSecret = process.env.VAANI_INTERNAL_API_SECRET;
     const clientSecret = req.headers['x-vaani-internal-secret'];
-    
+
     if (!internalSecret || internalSecret !== clientSecret) {
       return core.sendJson(res, 403, { error: 'forbidden', code: 'forbidden' });
     }
@@ -677,9 +677,9 @@ async function apiVaaniBuyerMatchesPost(req, res, buyerRunId, body) {
   try {
     let reqBody = body;
     if (!reqBody || Object.keys(reqBody).length === 0) {
-      const bsql = `SELECT machine_brand, machine_model, required_tonnage_class, buyer_budget_max_inr, 
-                           model_year_min, model_year_max, running_hours_max, application_history 
-                    FROM vaani_excavator_sales_leads 
+      const bsql = `SELECT machine_brand, machine_model, required_tonnage_class, buyer_budget_max_inr,
+                           model_year_min, model_year_max, running_hours_max, application_history
+                    FROM vaani_excavator_sales_leads
                     WHERE organization_id = $1 AND run_id = $2`;
       const leads = await getVaaniSales().queryPostgres(bsql, [orgId, parseInt(buyerRunId, 10)]);
       if (leads && leads.length > 0) {
@@ -714,11 +714,11 @@ async function apiVaaniCallDetail(req, res, ctx) {
     if (err) return core.sendJson(res, 500, { error: err.message });
     if (!stdout.trim()) return core.sendJson(res, 404, { error: 'Not found' });
     const callData = JSON.parse(stdout.trim());
-    
+
     // Fetch transcripts
     execFile('docker', ['exec', 'dograh-local-postgres-1', 'psql', '-U', 'postgres', '-d', 'postgres', '-t', '-c', `SELECT row_to_json(t) FROM (SELECT * FROM vaani_transcripts WHERE call_id = ${parseInt(id)} ORDER BY timestamp ASC) t;`], { timeout: 5000 }, (err2, stdout2) => {
       callData.transcripts = stdout2 ? stdout2.trim().split('\n').filter(Boolean).map(l => JSON.parse(l)) : [];
-      
+
       // Fetch summary
       execFile('docker', ['exec', 'dograh-local-postgres-1', 'psql', '-U', 'postgres', '-d', 'postgres', '-t', '-c', `SELECT row_to_json(s) FROM vaani_call_summaries s WHERE call_id = ${parseInt(id)};`], { timeout: 5000 }, (err3, stdout3) => {
         callData.summary = stdout3 && stdout3.trim() ? JSON.parse(stdout3.trim()) : null;
@@ -936,6 +936,56 @@ async function _runDemoBuyerCall(customerId, customerName, phone, buyerContext, 
   }
 }
 
+async function _runDemoSellerCall(customerId, customerName, phone, sellerContext, callId, orgId) {
+  // Build a realistic demo transcript based on seller context
+  const req = sellerContext.machine_requirement || 'excavator';
+  const price = sellerContext.price ? ` Expected Price: ${sellerContext.price}.` : '';
+  const city = sellerContext.city ? ` Location: ${sellerContext.city}.` : '';
+  const demoTranscript = [
+    { role: 'agent',  text: `Namaste ${customerName} ji, Om Shyam Earthmovers se Vaani bol rahi hoon. Aapne ${req} bechne ke liye enquiry ki thi.` },
+    { role: 'user',   text: `Haan ji, main ${req} bechna chahta hoon.${city}` },
+    { role: 'agent',  text: 'Ji, bilkul. Kaunsa model year hai aur condition kaisi hai?' },
+    { role: 'user',   text: `2018 model hai, condition theek hai.${price}` },
+    { role: 'agent',  text: 'Main abhi inspection team ko arrange karti hoon.' },
+    { role: 'agent',  text: 'Hum WhatsApp par photos aur 30-sec running video maangenge. Number yahi hai na?' },
+    { role: 'user',   text: `Haan, ${phone} par bhej dunga.` },
+    { role: 'agent',  text: 'Bilkul. Hamari team aapse jaldi sampark karegi. Dhanyawad.' },
+  ];
+  const runId = 900000 + callId; // safe simulation range
+  try {
+    const ingestPayload = {
+      primary_phone: phone,
+      customer_name: customerName,
+      customer_type: 'seller',
+      lead_id: `lead_vc_${customerId}_${callId}`,
+      call_metadata: { run_id: runId, workflow_id: 3, org_id: orgId, call_duration_seconds: 95, caller_number: phone, created_at: new Date().toISOString() },
+      transcript: demoTranscript,
+      machine_details: {
+        brand: sellerContext.brand || null,
+        model: sellerContext.model || null,
+        location_city: sellerContext.city || null,
+        document_status: 'all_clear_noc_ready'
+      },
+      evidence_readiness: {
+        photos_agreed: true,
+        running_video_agreed: false,
+        rc_copy_agreed: true
+      },
+      commercial_terms: {
+        price_or_budget_raw: sellerContext.price || null,
+        expected_price_inr: sellerContext.price ? parseInt(sellerContext.price.replace(/\\D/g, ''), 10) : null
+      },
+      call_notes: `Demo call from vaani_customers id=${customerId}. Req: ${req}.`,
+      follow_up_required: true,
+      conversation_outcome: 'lead_qualified',
+    };
+    await vaaniSales.ingestCallComplete(ingestPayload);
+    console.log(`[SELLER CALL DEMO] ingestCallComplete OK for call_id=${callId}`);
+  } catch (e) {
+    console.error(`[SELLER CALL DEMO] ingestCallComplete failed (non-fatal): ${e.message}`);
+  }
+}
+
 async function apiVaaniOutboundBuyer(req, res, ctx) {
   try {
     const orgId = 1;
@@ -1087,6 +1137,136 @@ async function apiVaaniOutboundBuyer(req, res, ctx) {
     }
   } catch (err) {
     console.error('[BUYER CALL] Internal error:', err);
+    return core.sendJson(res, 500, { error: err.message, code: 'internal_error' });
+  }
+}
+
+async function apiVaaniOutboundSeller(req, res, ctx) {
+  try {
+    const orgId = 1;
+    const b = ctx.body || {};
+
+    // ---- Validation -----------------------------------------------------------
+    const name   = (b.name || '').trim();
+    const phone  = (b.phone || '').trim();
+    const req_   = (b.machine_requirement || '').trim();
+    if (!name || !phone) {
+      return core.sendJson(res, 422, { error: 'name and phone are required', code: 'bad_request' });
+    }
+    if (phone.length < 8) {
+      return core.sendJson(res, 422, { error: 'phone must be a valid number (min 8 digits)', code: 'invalid_phone' });
+    }
+
+    // ---- Resolve or create customer ------------------------------------------
+    let customerId = b.customer_id ? parseInt(b.customer_id, 10) : null;
+    if (customerId) {
+      const existing = await vaaniSales.queryPostgres(
+        'SELECT row_to_json(c) FROM (SELECT id, name, phone FROM vaani_customers WHERE id = $1) c;',
+        [customerId]
+      ).catch(() => null);
+      if (!existing || !existing.id) {
+        return core.sendJson(res, 404, { error: `Customer id=${customerId} not found`, code: 'not_found' });
+      }
+    } else {
+      const created = await vaaniSales.queryPostgres(
+        `WITH r AS (INSERT INTO vaani_customers (name, phone, machine_requirement) VALUES ($1, $2, $3) RETURNING id) SELECT row_to_json(r) FROM r;`,
+        [name, phone, req_]
+      ).catch(() => null);
+      const createdId = created && (created.id || (typeof created === 'number' ? created : parseInt(created, 10)));
+      if (!createdId || isNaN(createdId)) {
+        return core.sendJson(res, 500, { error: 'Failed to create customer record', code: 'db_error' });
+      }
+      customerId = createdId;
+    }
+
+    // ---- Persist call record with status=queued ------------------------------
+    const callRow = await vaaniSales.queryPostgres(
+      `WITH r AS (INSERT INTO vaani_calls (customer_id, direction, status, mode, started_at)
+       VALUES ($1, 'outbound', 'queued', 'live', CURRENT_TIMESTAMP) RETURNING id) SELECT row_to_json(r) FROM r;`,
+      [customerId]
+    ).catch(() => null);
+    const callId = callRow && (callRow.id || (typeof callRow === 'number' ? callRow : parseInt(callRow, 10)));
+    if (!callId || isNaN(callId)) {
+      return core.sendJson(res, 500, { error: 'Failed to create call record', code: 'db_error' });
+    }
+
+    // ---- Build seller context for Dograh / demo --------------------------------
+    const sellerContext = {
+      customer_name:       name,
+      machine_requirement: req_,
+      brand:               (b.brand  || '').trim() || undefined,
+      model:               (b.model  || '').trim() || undefined,
+      price:               (b.price || '').trim() || undefined,
+      city:                (b.city   || '').trim() || undefined,
+      notes:               (b.notes  || '').trim() || undefined,
+      vaani_call_id:       callId,
+    };
+    Object.keys(sellerContext).forEach(k => sellerContext[k] === undefined && delete sellerContext[k]);
+
+    // ---- Attempt Dograh dispatch ---------------------------------------------
+    const dispatch = await _dispatchDograhCall(phone, sellerContext, callId);
+
+    if (dispatch.dispatched) {
+      await vaaniSales.queryPostgres(
+        `UPDATE vaani_calls SET status = 'dispatched', dograh_call_id = $1 WHERE id = $2;`,
+        [String(dispatch.dograh_response?.run_id || dispatch.dograh_response?.call_id || ''), callId]
+      ).catch(() => {});
+
+      return core.sendJson(res, 200, {
+        success: true,
+        call_status: 'DISPATCHED',
+        call_id: callId,
+        customer_id: customerId,
+        message: 'Call dispatched to Dograh. Transcript will be available after call completes.',
+        dograh_response: dispatch.dograh_response,
+      });
+    } else {
+      // ---- DEMO MODE --------------------------------------------------------
+      console.log(`[SELLER CALL] Dograh unavailable (${dispatch.reason}). Running DEMO mode for call_id=${callId}`);
+      await vaaniSales.queryPostgres(
+        `UPDATE vaani_calls SET status = 'demo', mode = 'demo', ended_at = CURRENT_TIMESTAMP WHERE id = $1;`,
+        [callId]
+      ).catch(() => {});
+
+      _runDemoSellerCall(customerId, name, phone, sellerContext, callId, orgId).catch(() => {});
+
+      const req2 = sellerContext.machine_requirement || 'excavator';
+      const demoTranscriptRows = [
+        { speaker: 'Vaani',    message: `Namaste ${name} ji, Om Shyam Earthmovers se Vaani bol rahi hoon. Aapne ${req2} bechne ke liye enquiry ki thi.` },
+        { speaker: 'Customer', message: `Haan ji, main ${req2} bechna chahta hoon.` },
+        { speaker: 'Vaani',    message: 'Kaunsa model year hai aur condition kaisi hai?' },
+        { speaker: 'Customer', message: `2018 model hai, condition theek hai.${sellerContext.price ? ' Price ' + sellerContext.price + ' hai.' : ''}` },
+        { speaker: 'Vaani',    message: 'Hum WhatsApp par photos aur 30-sec running video maangenge.' },
+      ];
+
+      let sf = { customer_requirement: req2, interest_level: 'Warm', price: sellerContext.price || 'Not stated', customer_intent: 'Sell', outcome: `Demo seller call for ${req2}.`, next_action: 'Send WhatsApp message requesting photos.' };
+
+      await vaaniSales.queryPostgres(
+        `INSERT INTO vaani_call_summaries (call_id, customer_requirement, interest_level, budget, customer_intent, outcome, next_action)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (call_id) DO UPDATE SET
+           customer_requirement = EXCLUDED.customer_requirement,
+           interest_level = EXCLUDED.interest_level,
+           budget = EXCLUDED.budget,
+           customer_intent = EXCLUDED.customer_intent,
+           outcome = EXCLUDED.outcome,
+           next_action = EXCLUDED.next_action;`,
+        [callId, sf.customer_requirement, sf.interest_level, sf.price, sf.customer_intent, sf.outcome, sf.next_action]
+      ).catch(() => {});
+
+      return core.sendJson(res, 200, {
+        success: true,
+        call_status: 'DEMO',
+        call_id: callId,
+        customer_id: customerId,
+        telephony_boundary: 'DEMO — No real call made. Dograh telephony not configured.',
+        telephony_missing: dispatch.reason,
+        message: 'Demo seller call pipeline executed. Transcript and AI analysis persisted.',
+        summary: sf,
+      });
+    }
+  } catch (err) {
+    console.error('[SELLER CALL] Internal error:', err);
     return core.sendJson(res, 500, { error: err.message, code: 'internal_error' });
   }
 }
@@ -1537,27 +1717,27 @@ async function apiVaaniCleanupSimulations(req, res, ctx) {
       DECLARE
         target_org INT := ${parseInt(orgId, 10)};
       BEGIN
-        DELETE FROM public.vaani_whatsapp_inbound_events 
-          WHERE organization_id = target_org 
+        DELETE FROM public.vaani_whatsapp_inbound_events
+          WHERE organization_id = target_org
             AND (event_id LIKE 'sim_wa_%' OR raw_metadata->>'simulated' = 'true');
 
-        DELETE FROM public.vaani_digital_evidence 
-          WHERE organization_id = target_org 
+        DELETE FROM public.vaani_digital_evidence
+          WHERE organization_id = target_org
             AND (run_id >= 900000 OR media_url LIKE 'whatsapp://simulated/%' OR metadata->>'simulated' = 'true');
 
-        DELETE FROM public.vaani_whatsapp_messages 
-          WHERE organization_id = target_org 
+        DELETE FROM public.vaani_whatsapp_messages
+          WHERE organization_id = target_org
             AND (phone_number LIKE '+9198765%' OR phone_number LIKE '+9198111%');
 
-        DELETE FROM public.vaani_follow_up_tasks 
-          WHERE organization_id = target_org 
+        DELETE FROM public.vaani_follow_up_tasks
+          WHERE organization_id = target_org
             AND (source_call_id >= 900000 OR lead_id LIKE 'lead_9%');
 
-        DELETE FROM public.vaani_machines 
-          WHERE organization_id = target_org 
+        DELETE FROM public.vaani_machines
+          WHERE organization_id = target_org
             AND source_lead_run_id >= 900000;
 
-        DELETE FROM public.workflow_runs 
+        DELETE FROM public.workflow_runs
           WHERE id >= 900000;
       END $$;
     `;
@@ -2895,6 +3075,7 @@ const server = http.createServer(async (req, res) => {
       if (route === '/api/vaani/demo/calls/complete') return core.requireAuth(req, res, apiVaaniDemoCallComplete, body);
       // Phase 2: Buyer call initiation — requireAuth + accept existing customer_id OR new buyer fields
       if (route === '/api/vaani/sales/outbound/buyer') return core.requireAuth(req, res, apiVaaniOutboundBuyer, body);
+      if (route === '/api/vaani/sales/outbound/seller') return core.requireAuth(req, res, apiVaaniOutboundSeller, body);
       if (route.match(/^\/api\/vaani\/buyers\/\d+\/call$/)) {
         // POST /api/vaani/buyers/:id/call — initiate call for existing buyer by id
         const custId = parseInt(route.split('/')[4], 10);

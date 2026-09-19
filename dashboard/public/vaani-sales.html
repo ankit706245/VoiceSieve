@@ -2108,6 +2108,17 @@
           </button>
         </div>
 
+        <!-- Phase 7: Call Seller CTA (shown for seller-type leads) -->
+        <div class="drawer-call-cta" id="drawerCallSellerCta" style="display:none; background-color: rgba(46, 204, 113, 0.1); border-left: 3px solid var(--accent-success);">
+          <div class="drawer-call-cta-info">
+            <strong>📞 Initiate Vaani Seller Call</strong><br>
+            <span id="drawerCallSellerStatus">No active call for this seller yet.</span>
+          </div>
+          <button class="btn-call-buyer" id="drawerCallSellerBtn" onclick="callSellerFromDrawer()" style="background: var(--accent-success); color: white;">
+            📞 Call Seller (Demo)
+          </button>
+        </div>
+
         <!-- Commercial & Status Summary -->
         <div class="drawer-card">
           <div class="drawer-card-title">Commercials & Technical Overview</div>
@@ -2712,7 +2723,7 @@
       document.getElementById('drawerCustomerName').textContent = item.customer_name || item.caller_name || 'Customer';
       document.getElementById('drawerLeadIdBadge').textContent = `ID: ${item.lead_id || item.run_id || '—'}`;
       document.getElementById('drawerPhone').textContent = item.primary_phone || item.callback_number || 'N/A';
-      
+
       const roleBadge = document.getElementById('drawerRoleBadge');
       roleBadge.textContent = (item.customer_type || 'Customer').toUpperCase();
       roleBadge.className = `badge ${item.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}`;
@@ -2744,14 +2755,29 @@
       // Phase 2: Show Call Buyer CTA for buyer leads
       const callCta = document.getElementById('drawerCallBuyerCta');
       const callStatusEl = document.getElementById('drawerCallBuyerStatus');
+      const callSellerCta = document.getElementById('drawerCallSellerCta');
+      const callSellerStatusEl = document.getElementById('drawerCallSellerStatus');
+
+      const isBuyer = (l360.customer_type === 'buyer') || (l360.raw_lead && l360.raw_lead.customer_type === 'buyer');
+      const isSeller = (l360.customer_type === 'seller') || (l360.raw_lead && l360.raw_lead.customer_type === 'seller');
+
       if (callCta) {
-        const isBuyer = (l360.customer_type === 'buyer') || (l360.raw_lead && l360.raw_lead.customer_type === 'buyer');
         callCta.style.display = isBuyer ? 'flex' : 'none';
         if (isBuyer && callStatusEl) {
           const callCount = l360.call_count || 0;
           callStatusEl.textContent = callCount > 0
             ? `${callCount} call${callCount > 1 ? 's' : ''} logged. Click to initiate another AI call.`
             : 'No active call for this buyer yet. Click to initiate Vaani AI call.';
+        }
+      }
+
+      if (callSellerCta) {
+        callSellerCta.style.display = isSeller ? 'flex' : 'none';
+        if (isSeller && callSellerStatusEl) {
+          const callCount = l360.call_count || 0;
+          callSellerStatusEl.textContent = callCount > 0
+            ? `${callCount} call${callCount > 1 ? 's' : ''} logged. Click to initiate another AI call.`
+            : 'No active call for this seller yet. Click to initiate Vaani AI call.';
         }
       }
 
@@ -3138,6 +3164,36 @@
       }
     }
 
+    // Drawer: Call Seller from Lead 360
+    async function callSellerFromDrawer() {
+      const activeLead = state.activeLead360;
+      if (!activeLead) { showToast('⚠️ No active lead selected'); return; }
+      const phone = activeLead.primary_phone || (activeLead.raw_lead && activeLead.raw_lead.callback_number) || '';
+      const name = activeLead.customer_name || (activeLead.raw_lead && activeLead.raw_lead.caller_name) || 'Customer';
+      const req = (activeLead.raw_lead && (activeLead.raw_lead.machine_brand || activeLead.raw_lead.machine_model)) || 'excavator';
+      if (!phone) { showToast('⚠️ No phone number available for this lead'); return; }
+      const btn = document.getElementById('drawerCallSellerBtn');
+      if (btn) { btn.disabled = true; btn.textContent = '⏳ Calling...'; }
+      showToast(`📞 Initiating Vaani Seller Call for ${name}...`);
+      try {
+        const res = await apiFetch('/api/vaani/sales/outbound/seller', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, machine_requirement: req })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Call failed');
+        const status = data.call_status || 'DEMO';
+        showToast(`✅ ${status} seller call executed for ${name}. call_id=${data.call_id}`);
+        const statusEl = document.getElementById('drawerCallSellerStatus');
+        if (statusEl) statusEl.textContent = `Call ${status} — ID: ${data.call_id}`;
+        if (btn) { btn.disabled = false; btn.textContent = '📞 Call Again'; }
+      } catch (err) {
+        showToast(`❌ Call failed: ${err.message}`);
+        if (btn) { btn.disabled = false; btn.textContent = '📞 Call Seller (Demo)'; }
+      }
+    }
+
     // Auto-load buyer CRM when Buyers tab is activated
     const _origNavClick = document.querySelector('[data-view="buyers"]');
 
@@ -3147,6 +3203,7 @@
     window.loadBuyerCrm = loadBuyerCrm;
     window.callBuyerFromCrm = callBuyerFromCrm;
     window.callBuyerFromDrawer = callBuyerFromDrawer;
+    window.callSellerFromDrawer = callSellerFromDrawer;
 
     function updateSimControllerStatus(data) {
       if (data.leadId) {
@@ -3444,7 +3501,7 @@
       document.getElementById('buyerTabCount').textContent = state.buyers.length;
       const stockUnits = (state.machines.actual_stock || []).length;
       document.getElementById('machineTabCount').textContent = `${stockUnits} in Yard`;
-      
+
       const totalFollowups = (state.followups.overdue || []).length + (state.followups.due_today || []).length + (state.followups.upcoming || []).length;
       document.getElementById('followupTabCount').textContent = totalFollowups;
       document.getElementById('callsTabCount').textContent = state.calls.length;
@@ -3526,7 +3583,7 @@
       // Recent leads table
       const recentTbody = document.querySelector('#recentLeadsTable tbody');
       const recent = ov.recent_leads || state.sellers.concat(state.buyers).slice(0, 8);
-      
+
       if (!recent || recent.length === 0) {
         recentTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 30px;">No inbound leads recorded yet.</td></tr>';
       } else {
@@ -3627,7 +3684,7 @@
       tbody.innerHTML = list.map(s => {
         const tempBadge = `<span class="badge badge-${(s.lead_temperature || 'warm').toLowerCase()}">${s.lead_temperature || 'WARM'}</span>`;
         const roleBadge = `<span class="badge ${s.caller_role === 'broker' ? 'badge-broker' : 'badge-owner'}">${(s.caller_role || 'owner').toUpperCase()}</span>`;
-        
+
         let price = 'N/A';
         if (s.expected_price_inr) price = `₹${(s.expected_price_inr / 100000).toFixed(1)}L`;
         else if (s.price_raw) price = s.price_raw;
