@@ -247,10 +247,12 @@ async function runIntelligentMatching(organizationId, buyerRunId, buyerRequireme
   let stock = [];
   try {
       const sql = `
-        SELECT machine_id, brand, model, manufacturing_year, hour_meter_reading,
-               application_history, target_resale_inr, status, current_location, organization_id
-        FROM vaani_machines
-        WHERE organization_id = $1 AND status IN ('in_sourcing_pipeline', 'certified_ready_in_yard')
+        SELECT COALESCE(json_agg(t), '[]'::json) FROM (
+          SELECT machine_id, brand, model, manufacturing_year, hour_meter_reading,
+                 application_history, target_resale_inr, status, current_location, organization_id
+          FROM vaani_machines
+          WHERE organization_id = $1 AND status IN ('in_sourcing_pipeline', 'certified_ready_in_yard')
+        ) t
       `;
       stock = await queryPostgres(sql, [orgInt]) || [];
   } catch (err) {

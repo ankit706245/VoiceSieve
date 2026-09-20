@@ -3,6 +3,7 @@ import urllib.request
 import urllib.error
 import json
 import subprocess
+import time
 
 BASE_URL = "http://localhost:8787"
 
@@ -42,7 +43,10 @@ class TestPhaseGBuyerMatching(unittest.TestCase):
 
         cls.ORG1_TOKEN = cls.get_token(1)
         cls.ORG2_TOKEN = cls.get_token(2)
-        
+
+        cls.server_proc = subprocess.Popen(["node", "dashboard/server.js"])
+        time.sleep(1.5)
+
         # Clear specific machines and matches
         sql = """
         DELETE FROM vaani_buyer_machine_matches WHERE buyer_run_id IN (9000, 9001);
@@ -70,6 +74,10 @@ class TestPhaseGBuyerMatching(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        if hasattr(cls, 'server_proc'):
+            cls.server_proc.terminate()
+            cls.server_proc.wait()
+
         sql = """
         DELETE FROM vaani_buyer_machine_matches WHERE buyer_run_id IN (9000, 9001);
         DELETE FROM vaani_machines WHERE machine_id LIKE 'test_mach_%';
