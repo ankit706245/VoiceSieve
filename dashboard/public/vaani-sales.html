@@ -2081,6 +2081,7 @@
       <button class="drawer-tab" data-dtab="evidence">📋 Evidence (8-Point)</button>
       <button class="drawer-tab" data-dtab="timeline">⏳ Activity Timeline</button>
       <button class="drawer-tab" data-dtab="calls">🎙️ Calls & Transcript</button>
+      <button class="drawer-tab" data-dtab="whatsapp">💬 WhatsApp Demo</button>
     </div>
 
     <div class="drawer-body">
@@ -2190,7 +2191,7 @@
             <div class="drawer-tab-pane" id="pane-matches">
         <div style="font-weight: 500; font-size: 13px; color: var(--text-main); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
            <span>Matched Inventory</span>
-           <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="forceRunMatching()">Run Engine</button>
+           <button class="btn btn-outline" style="padding: 4px 8px; font-size: 11px;" onclick="forceRunMatching()">Find Matching Inventory</button>
         </div>
         <div id="drawerMatchesContainer">
           <div style="font-size: 11px; color: var(--text-dim);">No matches evaluated yet.</div>
@@ -2234,10 +2235,10 @@
             <div style="font-size:12px; font-weight:600; text-transform:uppercase; color:#34d399; letter-spacing:0.5px;">
               📱 Simulate Customer Sending Photo (WhatsApp Inbound)
             </div>
-            <span class="badge" style="font-size:10px; background:rgba(16, 185, 129, 0.15); color:#34d399;">Webhook Simulation</span>
+            <span class="badge" style="font-size:10px; background:rgba(16, 185, 129, 0.15); color:#34d399;">Customer App Simulation</span>
           </div>
           <div style="font-size:11px; color:var(--text-muted); margin-bottom:10px;">
-            Trigger synthetic inbound media into the existing WhatsApp webhook pipeline. Checklist item will update to <strong>RECEIVED</strong> and matching F3 task will complete automatically.
+            Simulate a customer sending documents directly via WhatsApp. Checklist item will update to <strong>RECEIVED</strong> and matching F3 task will complete automatically.
           </div>
           <div style="display:flex; flex-wrap:wrap; gap:8px;">
             <button class="btn btn-secondary btn-sm" style="border-color:rgba(16, 185, 129, 0.4); color:#6ee7b7;" onclick="simulateCustomerSendingPhoto('BOOM_PHOTOS')">
@@ -2312,6 +2313,36 @@
           <div class="drawer-card-title">Voice Dialogue Transcript</div>
           <div class="transcript-box" id="drawerTranscript">
             <!-- Rendered dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 6: WhatsApp Demo -->
+      <div class="drawer-tab-pane" id="pane-whatsapp">
+        <div class="drawer-card">
+          <div class="drawer-card-title">WhatsApp Simulated Conversation (Internal Demo)</div>
+
+          <div style="background:#0b141a; border-radius:8px; padding:16px; min-height:300px; max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;" id="drawerWaChat">
+            <!-- Messages go here -->
+          </div>
+
+          <div style="margin-top:16px; border-top:1px solid #333; padding-top:16px;">
+            <div style="font-size:11px; color:#888; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Simulate Sent (Vaani -> Customer)</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaSend(['BOOM_PHOTOS'])">Req Photos</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaSend(['RUNNING_VIDEO'])">Req Video</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaSend(['RC_DOCUMENT', 'BANK_NOC_DOCUMENT'])">Req Docs</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaSend([])">Follow-up Text</button>
+            </div>
+
+            <div style="font-size:11px; color:#888; margin-top:16px; margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Simulate Reply (Customer -> Vaani)</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaReply('TEXT', 'Ji, main kal bhej dunga.', null)">Text Reply</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaReply('IMAGE', 'Boom photo', 'BOOM_PHOTOS')">Boom Photo</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaReply('IMAGE', 'Meter reading', 'HOUR_METER_PHOTO')">Hour Meter</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaReply('VIDEO', 'Running video', 'RUNNING_VIDEO')">Running Video</button>
+              <button class="btn-secondary" style="font-size:12px; padding:4px 8px;" onclick="simulateWaReply('DOCUMENT', 'RC document', 'RC_DOCUMENT')">RC Document</button>
+            </div>
           </div>
         </div>
       </div>
@@ -2985,6 +3016,34 @@
       const primaryCall = calls[0] || raw;
       renderAudioPlayer(primaryCall);
       renderTranscript(primaryCall.transcript || raw.transcript || []);
+
+      // Tab 6: WhatsApp Demo Chat
+      const waChat = document.getElementById('drawerWaChat');
+      const waMessages = waInfo.messages || [];
+      if (waMessages.length === 0) {
+        waChat.innerHTML = '<div style="text-align: center; color: var(--text-dim); margin-top: 20px;">No WhatsApp messages logged for this lead.</div>';
+      } else {
+        waChat.innerHTML = waMessages.map(m => {
+          const isVaani = m.direction === 'OUTBOUND';
+          const align = isVaani ? 'self-end' : 'self-start';
+          const bg = isVaani ? '#005c4b' : '#202c33';
+
+          let mediaHtml = '';
+          if (m.media_url) {
+            mediaHtml = `<div style="font-size:10px; color:#aaa; margin-bottom:4px; padding:2px 4px; background:rgba(255,255,255,0.1); border-radius:4px; display:inline-block;">📎 ${escapeHtml(m.message_type)}</div><br>`;
+          }
+
+          return `
+            <div style="background:${bg}; color:#e9edef; padding:8px 12px; border-radius:8px; max-width:80%; align-self:${align}; box-shadow:0 1px 0.5px rgba(11,20,26,0.13);">
+              ${mediaHtml}
+              <div style="font-size:13px; white-space:pre-wrap;">${escapeHtml(m.text || '')}</div>
+              <div style="font-size:10px; color:rgba(255,255,255,0.5); text-align:right; margin-top:4px;">${m.timestamp ? new Date(m.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) : ''} ${isVaani ? (m.status==='DELIVERED'?'✓✓':(m.status==='SENT'?'✓':'')) : ''}</div>
+            </div>
+          `;
+        }).join('');
+        // Scroll to bottom
+        setTimeout(() => { waChat.scrollTop = waChat.scrollHeight; }, 100);
+      }
     }
 
     function renderLead360Fallback(item) {
@@ -3011,6 +3070,72 @@
 
       renderAudioPlayer(item);
       renderTranscript(item.transcript || []);
+    }
+
+    // ----------------------------------------------------
+    // WhatsApp Demo API Calls
+    // ----------------------------------------------------
+    async function simulateWaSend(evidenceTypes) {
+      if (!state.activeDrawerItem) return;
+      const leadId = state.activeDrawerItem.lead_id || state.activeDrawerItem.run_id;
+      const phone = state.activeDrawerItem.whatsapp_number || state.activeDrawerItem.callback_number || state.activeDrawerItem.primary_phone;
+
+      const payload = {
+        lead_id: leadId,
+        phone_number: phone,
+        evidence_types: evidenceTypes,
+        custom_notes: evidenceTypes.length === 0 ? 'General follow up request.' : null
+      };
+
+      try {
+        const res = await apiFetch('/api/vaani/sales/whatsapp/demo-send', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('Sent simulated WhatsApp request', 'success');
+          openDrawer(state.activeDrawerItem); // refresh
+        } else {
+          const err = await res.json();
+          showToast(err.error || 'Failed to simulate send', 'error');
+        }
+      } catch (err) {
+        showToast('API Error', 'error');
+      }
+    }
+
+    async function simulateWaReply(msgType, text, evidenceType) {
+      if (!state.activeDrawerItem) return;
+      const leadId = state.activeDrawerItem.lead_id || state.activeDrawerItem.run_id;
+
+      const payload = {
+        lead_id: leadId,
+        message_type: msgType,
+        text: text,
+        raw_metadata: evidenceType ? { evidence_type: evidenceType } : {}
+      };
+
+      if (msgType !== 'TEXT') {
+        payload.media_url = `whatsapp://simulated/${evidenceType}/${Date.now()}`;
+        payload.mime_type = msgType === 'IMAGE' ? 'image/jpeg' : (msgType === 'VIDEO' ? 'video/mp4' : 'application/pdf');
+        payload.filename = 'simulated_' + (evidenceType || 'media').toLowerCase();
+      }
+
+      try {
+        const res = await apiFetch('/api/vaani/sales/whatsapp/demo-reply', {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+          showToast('Received simulated WhatsApp reply', 'success');
+          openDrawer(state.activeDrawerItem); // refresh
+        } else {
+          const err = await res.json();
+          showToast(err.error || 'Failed to simulate reply', 'error');
+        }
+      } catch (err) {
+        showToast('API Error', 'error');
+      }
     }
 
     async function triggerEvidenceRequest(evidenceType) {

@@ -2,7 +2,7 @@
  * Vaani WhatsApp Evidence Engine
  * ==============================
  * Production-ready WhatsApp evidence request and inbound webhook processing engine.
- * 
+ *
  * Complies with:
  * - SHYAM EARTHMOVER — Vaani (वाणी) AI Sales Command Center
  * - Strict multi-tenant isolation (organization_id mandatory)
@@ -767,7 +767,7 @@ async function processInboundWebhook(payload) {
   // 7. Resolve Matching F3 Follow-Up Task
   let resolvedTask = null;
   let targetTaskType = null;
-  if (classification.evidence_type === EVIDENCE_TYPES.BOOM_PHOTOS || 
+  if (classification.evidence_type === EVIDENCE_TYPES.BOOM_PHOTOS ||
       classification.evidence_type === EVIDENCE_TYPES.UNDERCARRIAGE_PHOTOS ||
       classification.evidence_type === EVIDENCE_TYPES.CABIN_GAUGES_PHOTO ||
       classification.evidence_type === EVIDENCE_TYPES.COUNTERWEIGHT_PHOTO) {
@@ -864,7 +864,7 @@ async function processInboundWebhook(payload) {
 
 function calculateEvidenceReadiness(evidenceRows = []) {
   const rows = Array.isArray(evidenceRows) ? evidenceRows : [];
-  
+
   const receivedTypes = new Set();
   const verifiedTypes = new Set();
 
@@ -937,15 +937,21 @@ async function getLeadWhatsAppHistory(leadId, organizationId) {
   const runIdParam = /^\d+$/.test(leadId) ? parseInt(leadId, 10) : -1;
   const sql = `
     SELECT COALESCE(json_agg(t), '[]'::json) FROM (
-      SELECT message_id, lead_id, customer_id, phone_number, message_type,
-             template_key, body, status, provider, provider_message_id,
-             created_at, sent_at, delivered_at, failed_at, error_code, error_message, metadata
+      SELECT message_id as id, 'OUTBOUND' as direction, message_type, body as text, media_reference as media_url, NULL as mime_type, status, created_at as timestamp, metadata
       FROM public.vaani_whatsapp_messages
       WHERE organization_id = $1 AND (lead_id = $2 OR lead_id = ('lead_' || $2))
-      ORDER BY created_at ASC
+
+      UNION ALL
+
+      SELECT e.event_id as id, 'INBOUND' as direction, e.message_type, e.text, e.media_url, e.mime_type, 'DELIVERED' as status, e.processed_at as timestamp, e.raw_metadata as metadata
+      FROM public.vaani_whatsapp_inbound_events e
+      JOIN public.vaani_excavator_sales_leads l ON l.organization_id = e.organization_id AND (e.from_phone = l.callback_number OR e.from_phone = l.whatsapp_number)
+      WHERE e.organization_id = $1 AND (l.run_id = $3 OR ('lead_' || l.run_id) = $2)
+
+      ORDER BY timestamp ASC
     ) t;
   `;
-  const rows = await getVaaniSales().queryPostgres(sql, [orgInt, String(leadId)]).catch(() => []);
+  const rows = await getVaaniSales().queryPostgres(sql, [orgInt, String(leadId), runIdParam]).catch(() => []);
   return Array.isArray(rows) ? rows : [];
 }
 

@@ -43,8 +43,17 @@ class TestPhase7SellerCalling(unittest.TestCase):
         cls.ORG1_TOKEN = cls.get_token(1)
         cls.ORG2_TOKEN = cls.get_token(2)
 
+        cls.server_proc = subprocess.Popen(["node", "dashboard/server.js"])
+        time.sleep(1.5)
+
         sql = "DELETE FROM vaani_follow_up_tasks WHERE source_call_id IN (SELECT id + 900000 FROM vaani_calls WHERE customer_id IN (SELECT id FROM vaani_customers WHERE name = 'Phase 7 Test Seller v2')); DELETE FROM vaani_call_summaries WHERE call_id IN (SELECT id FROM vaani_calls WHERE customer_id IN (SELECT id FROM vaani_customers WHERE name = 'Phase 7 Test Seller v2')); DELETE FROM vaani_calls WHERE customer_id IN (SELECT id FROM vaani_customers WHERE name = 'Phase 7 Test Seller v2'); DELETE FROM vaani_customers WHERE name = 'Phase 7 Test Seller v2';"
         subprocess.run(["docker", "exec", "-i", "dograh-local-postgres-1", "psql", "-U", "postgres", "-d", "postgres", "-c", sql])
+
+    @classmethod
+    def tearDownClass(cls):
+        if hasattr(cls, 'server_proc'):
+            cls.server_proc.terminate()
+            cls.server_proc.wait()
 
     def api_post(self, path, payload, token=None):
         headers = {'Content-Type': 'application/json'}

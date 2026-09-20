@@ -3,6 +3,7 @@ import urllib.request
 import urllib.error
 import json
 import subprocess
+import time
 
 BASE_URL = "http://localhost:8787"
 
@@ -42,13 +43,19 @@ class TestPhase6FollowUp(unittest.TestCase):
 
         cls.ORG1_TOKEN = cls.get_token(1)
         cls.ORG2_TOKEN = cls.get_token(2)
-        
+
+        cls.server_proc = subprocess.Popen(["node", "dashboard/server.js"])
+        time.sleep(1.5)
+
         # Clear tasks
         sql = "DELETE FROM vaani_follow_up_tasks WHERE source_call_id IN (99991, 99992, 99995, 99998, 99999);"
         subprocess.run(["docker", "exec", "-i", "dograh-local-postgres-1", "psql", "-U", "postgres", "-d", "postgres", "-c", sql])
-        
+
     @classmethod
     def tearDownClass(cls):
+        if hasattr(cls, 'server_proc'):
+            cls.server_proc.terminate()
+            cls.server_proc.wait()
         sql = "DELETE FROM vaani_follow_up_tasks WHERE source_call_id IN (99991, 99992, 99995, 99998, 99999);"
         subprocess.run(["docker", "exec", "-i", "dograh-local-postgres-1", "psql", "-U", "postgres", "-d", "postgres", "-c", sql])
 
@@ -95,7 +102,7 @@ class TestPhase6FollowUp(unittest.TestCase):
         self.assertTrue(len(tasks) > 0)
         self.assertEqual(tasks[0]['task_type'], 'REQUEST_PHOTOS')
         self.assertEqual(tasks[0]['priority'], 'HIGH')
-        
+
     def test_02_no_follow_up_disqualified(self):
         node_script = """
         const vaaniTasks = require('./dashboard/lib/vaani-tasks');
@@ -143,7 +150,7 @@ class TestPhase6FollowUp(unittest.TestCase):
         """
         proc = subprocess.run(["node", "-e", node_script], capture_output=True, text=True)
         task_id = proc.stdout.strip()
-        
+
         status, data = self.api_post('/api/vaani/sales/tasks/transition', {
             "task_id": task_id,
             "status": "COMPLETED",

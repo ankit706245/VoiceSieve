@@ -1712,6 +1712,69 @@ async function apiVaaniSimulateInboundMedia(req, res, ctx) {
   }
 }
 
+async function apiVaaniWhatsAppDemoSend(req, res, ctx) {
+  try {
+    const orgId = resolveOrganizationId(ctx);
+    if (!orgId) return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
+    const b = ctx.body || {};
+
+    const result = await vaaniSales.queueAndSendEvidenceRequest({
+      organization_id: orgId,
+      ...b,
+      metadata: { simulated: true, source: 'demo_ui' }
+    });
+
+    return core.sendJson(res, 200, result);
+  } catch (err) {
+    const status = err.statusCode || 400;
+    return core.sendJson(res, status, { error: err.message, code: err.code || 'whatsapp_demo_send_error' });
+  }
+}
+
+async function apiVaaniWhatsAppDemoReply(req, res, ctx) {
+  try {
+    const orgId = resolveOrganizationId(ctx);
+    if (!orgId) return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
+    const b = ctx.body || {};
+
+    const leadId = (b.lead_id || '').trim();
+    if (!leadId) return core.sendJson(res, 422, { error: 'lead_id is required', code: 'missing_lead_id' });
+
+    const leadNumId = isNaN(parseInt(leadId.replace('lead_', ''), 10)) ? -1 : parseInt(leadId.replace('lead_', ''), 10);
+    const leadRow = await vaaniSales.queryPostgres(`
+      SELECT row_to_json(t) FROM (
+        SELECT run_id, caller_name, callback_number, whatsapp_number
+        FROM public.vaani_excavator_sales_leads
+        WHERE organization_id = $1 AND (run_id = $2 OR callback_number = $3 OR whatsapp_number = $3)
+        LIMIT 1
+      ) t;
+    `, [orgId, leadNumId, leadId]).catch(() => null);
+
+    if (!leadRow || (!leadRow.callback_number && !leadRow.whatsapp_number)) {
+      return core.sendJson(res, 404, { error: 'Lead phone not found for this tenant', code: 'lead_not_found' });
+    }
+    const fromPhone = leadRow.whatsapp_number || leadRow.callback_number;
+
+    const result = await vaaniSales.processInboundWebhook({
+      organization_id: orgId,
+      event_id: `sim_wa_reply_${Date.now()}_${Math.floor(1000 + Math.random() * 9000)}`,
+      from_phone: fromPhone,
+      to_phone: '+918000000000',
+      message_type: b.message_type || 'TEXT',
+      text: b.text || '',
+      media_url: b.media_url || '',
+      mime_type: b.mime_type || '',
+      filename: b.filename || '',
+      raw_metadata: { simulated: true, source: 'demo_ui_reply', ...b.raw_metadata }
+    }, orgId);
+
+    return core.sendJson(res, 200, result);
+  } catch (err) {
+    const status = err.statusCode || 400;
+    return core.sendJson(res, status, { error: err.message, code: err.code || 'whatsapp_demo_reply_error' });
+  }
+}
+
 async function apiVaaniCleanupSimulations(req, res, ctx) {
   try {
     const orgId = resolveOrganizationId(ctx);
@@ -3103,6 +3166,8 @@ const server = http.createServer(async (req, res) => {
       if (route === '/api/vaani/sales/evidence/received') return core.requireAuth(req, res, apiVaaniEvidenceReceived, body);
       if (route === '/api/vaani/sales/simulate-call') return core.requireAuth(req, res, apiVaaniSimulateCall, body);
       if (route === '/api/vaani/sales/simulate-inbound-media') return core.requireAuth(req, res, apiVaaniSimulateInboundMedia, body);
+      if (route === '/api/vaani/sales/whatsapp/demo-send') return core.requireAuth(req, res, apiVaaniWhatsAppDemoSend, body);
+      if (route === '/api/vaani/sales/whatsapp/demo-reply') return core.requireAuth(req, res, apiVaaniWhatsAppDemoReply, body);
       if (route === '/api/vaani/sales/cleanup-simulations') return core.requireAuth(req, res, apiVaaniCleanupSimulations, body);
       if (route === '/api/agents') return core.requireAuth(req, res, apiAgentsCreate, body);
       if (route === '/api/agents/update') return core.requireAuth(req, res, apiAgentsUpdate, body);
