@@ -197,6 +197,12 @@ async function boot() {
   try {
     const me = await api('/api/me', { allow401: true });
     State.me = me;
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get('redirect');
+    if (redirect && redirect.startsWith('/') && !redirect.startsWith('//')) {
+      window.location.href = redirect;
+      return;
+    }
     renderShell();
   } catch (e) {
     if (e.status === 401) renderAuth();
