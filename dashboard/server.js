@@ -517,14 +517,19 @@ async function apiVaaniInternalMachines(req, res) {
 
 async function apiVaaniSalesGet(req, res, ctx) {
   try {
-    const orgId = resolveOrganizationId(ctx);
-    if (!orgId) {
-      return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
-    }
-
     const route = (req.url || '').split('?')[0];
     const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const isDemo = urlObj.searchParams.get('demo') === '1' || req.headers['x-vaani-demo'] === 'true';
+
+    const orgId = resolveOrganizationId(ctx);
+
+    if (isDemo) {
+      if (!ctx || !ctx.user || ctx.user.email !== 'demo@rapidx.ai') {
+        return core.sendJson(res, 403, { error: 'demo access denied', code: 'forbidden' });
+      }
+    } else if (!orgId) {
+      return core.sendJson(res, 403, { error: 'organization not linked', code: 'forbidden' });
+    }
 
     // Sanitize query parameters - explicitly delete any tenant injection attempts
     const filters = Object.fromEntries(urlObj.searchParams.entries());
