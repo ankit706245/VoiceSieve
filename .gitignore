@@ -13,3 +13,21 @@ node_modules/
 # overlay source in rumik-overlay-local/ remains intentionally trackable.
 dograh-official/
 local-dograh/
+
+# Local-only secrets and generated artifacts
+.envy
+cookies.txt
+current_diff.patch
+__pycache__/
+*.pyc
+.pytest_cache/
+.dashboard.pid
+*.bak_phase1
+.opencode/
+/dashboard/package-lock.json
+
+# The local Dograh checkout is a separate repository with its own history.
+/dograh/
+
+# Public CA certificate used by the Supabase pooler (not a private key).
+!dashboard/certs/supabase-pooler-ca.pem
