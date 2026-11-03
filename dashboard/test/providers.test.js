@@ -144,6 +144,106 @@ test('Groq adapter sends selected model and normalizes its response with mocked 
   assert.equal(output.model, 'openai/gpt-oss-20b');
 });
 
+test('Groq adapter retries on HTTP 429 and succeeds on second attempt', async () => {
+  resetEnv({ GROQ_API_KEY: 'groq-test', LLM_PROVIDER: 'groq' });
+  let attempts = 0;
+  const providers = loadProviders(async (host, path, headers, body) => {
+    attempts++;
+    if (attempts === 1) {
+      return {
+        status: 429,
+        headers: { 'retry-after': '1' },
+        buffer: Buffer.from(JSON.stringify({ error: { message: 'rate limit exceeded' } })),
+      };
+    }
+    return {
+      status: 200,
+      headers: {},
+      buffer: Buffer.from(JSON.stringify({ choices: [{ message: { content: 'Hello.' }, finish_reason: 'stop' }] })),
+    };
+  });
+  const output = await providers.llm.chat({
+    model: 'openai/gpt-oss-20b', messages: [{ role: 'user', text: 'Hi' }],
+  });
+  assert.equal(attempts, 2, 'should retry once on 429');
+  assert.equal(output.text, 'Hello.');
+  assert.equal(output.provider, 'groq');
+});
+
+test('Groq adapter exhausts bounded retries on repeated HTTP 429', async () => {
+  resetEnv({ GROQ_API_KEY: 'groq-test', LLM_PROVIDER: 'groq' });
+  let attempts = 0;
+  const providers = loadProviders(async (host, path, headers, body) => {
+    attempts++;
+    return {
+      status: 429,
+      headers: { 'retry-after': '1' },
+      buffer: Buffer.from(JSON.stringify({ error: { message: 'rate limit exceeded' } })),
+    };
+  });
+  await assert.rejects(
+    providers.llm.chat({ model: 'openai/gpt-oss-20b', messages: [{ role: 'user', text: 'Hi' }] }),
+    (error) => error.status === 429 && error.code === 'upstream',
+  );
+  assert.equal(attempts, 3, 'should attempt exactly 3 times then stop');
+});
+
+test('Groq adapter does not retry HTTP 401/403 client errors', async () => {
+  resetEnv({ GROQ_API_KEY: 'groq-test', LLM_PROVIDER: 'groq' });
+  let attempts = 0;
+  const providers = loadProviders(async (host, path, headers, body) => {
+    attempts++;
+    return {
+      status: 401,
+      headers: {},
+      buffer: Buffer.from(JSON.stringify({ error: { message: 'invalid API key' } })),
+    };
+  });
+  await assert.rejects(
+    providers.llm.chat({ model: 'openai/gpt-oss-20b', messages: [{ role: 'user', text: 'Hi' }] }),
+    (error) => error.status === 401 && error.code === 'upstream',
+  );
+  assert.equal(attempts, 1, 'should not retry on 401');
+});
+
+test('Groq adapter uses exponential backoff when Retry-After is absent', async () => {
+  resetEnv({ GROQ_API_KEY: 'groq-test', LLM_PROVIDER: 'groq' });
+  let attempts = 0;
+  const delays = [];
+  const providers = loadProviders(async (host, path, headers, body) => {
+    attempts++;
+    if (attempts < 3) {
+      return {
+        status: 429,
+        headers: {},
+        buffer: Buffer.from(JSON.stringify({ error: { message: 'rate limit exceeded' } })),
+      };
+    }
+    return {
+      status: 200,
+      headers: {},
+      buffer: Buffer.from(JSON.stringify({ choices: [{ message: { content: 'Hello.' }, finish_reason: 'stop' }] })),
+    };
+  });
+  // Patch setTimeout to capture delays without actually waiting
+  const originalSetTimeout = global.setTimeout;
+  const capturedDelays = [];
+  global.setTimeout = (cb, delay) => { capturedDelays.push(delay); return originalSetTimeout(cb, 0); };
+  try {
+    const output = await providers.llm.chat({
+      model: 'openai/gpt-oss-20b', messages: [{ role: 'user', text: 'Hi' }],
+    });
+    assert.equal(attempts, 3, 'should attempt 3 times');
+    assert.equal(output.text, 'Hello.');
+    assert.ok(capturedDelays.length === 2, 'should have 2 backoff delays, got ' + capturedDelays.length);
+    // First delay ~1000ms, second ~2000ms (exponential)
+    assert.ok(capturedDelays[0] >= 1000 && capturedDelays[0] < 2000, 'first delay should be ~1s');
+    assert.ok(capturedDelays[1] >= 2000 && capturedDelays[1] < 3000, 'second delay should be ~2s');
+  } finally {
+    global.setTimeout = originalSetTimeout;
+  }
+});
+
 test('environment dispatches the same LLM contract to the fully wired Gemini adapter', async () => {
   resetEnv({ GEMINI_API_KEY: 'gemini-test', LLM_PROVIDER: 'gemini' });
   let pathSeen = '';

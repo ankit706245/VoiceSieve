@@ -60,7 +60,7 @@ print(json.dumps({
       "stt": {"provider":"deepgram","api_key":os.environ["DEEPGRAM_API_KEY"],
               "model":"nova-3-general","language":"multi"},
       "llm": {"provider":"groq","api_key":os.environ["GROQ_API_KEY"],
-              "model":os.environ.get("GROQ_MODEL","llama-3.3-70b-versatile")},
+              "model":os.environ.get("GROQ_MODEL",os.environ.get("GROQ_MODEL", "qwen/qwen3.8-27b"))},
       "tts": {"provider":"rumik","api_key":os.environ["RUMIK_API_KEY"],
               "model":os.environ.get("RUMIK_MODEL","mulberry"),
               "voice":os.environ.get("RUMIK_VOICE","ira"),

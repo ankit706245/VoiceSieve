@@ -174,7 +174,7 @@ main{max-width:1180px;margin:0 auto;padding:0 28px 60px;width:100%}
   .cta-bar{flex-direction:column;gap:8px}
 }
 
-/* RapidXAI branding + CTAs */
+/* Vaani branding + CTAs */
 .cta-bar{max-width:1180px;margin:0 auto;padding:14px 28px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;
   border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
 .cta-built{font-size:13px;color:var(--mut);font-family:var(--fm)}

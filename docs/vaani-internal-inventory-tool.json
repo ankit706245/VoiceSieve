@@ -1,0 +1,60 @@
+{
+  "tool_spec_version": 1,
+  "lifecycle": {
+    "status": "draft",
+    "attached_to_workflow_3": false,
+    "live_credential_created": false,
+    "notes": [
+      "Review-only configuration. No tool row has been created in any database.",
+      "No credential has been created. credential_uuid is null by design.",
+      "No Workflow 3 node references this tool. Attaching requires separate approval.",
+      "End-to-end integration is NOT complete and is NOT claimed."
+    ]
+  },
+  "name": "vaani_internal_inventory_lookup",
+  "description": "Buyer-scoped available-inventory lookup for Vaani voice calls. Reads GET /api/vaani/internal/machines with a server-templated buyer_run_id. Takes no caller-chosen arguments.",
+  "category": "http_api",
+  "organization_scope": "Create one tool row per organization (ToolModel rows are org-scoped). Pair each row with that org's own credential (see credential_instructions).",
+  "definition": {
+    "schema_version": 1,
+    "type": "http_api",
+    "config": {
+      "method": "GET",
+      "url": "<DASHBOARD_BASE_URL>/api/vaani/internal/machines?buyer_run_id={{buyer_run_id}}",
+      "url_instructions": [
+        "Replace <DASHBOARD_BASE_URL> at install time. Local Docker-to-host example: http://host.docker.internal:8787.",
+        "Never commit a rendered URL. This file must keep the placeholder.",
+        "buyer_run_id comes ONLY from the preset below. Do not add it as an LLM parameter."
+      ],
+      "headers": {},
+      "headers_instructions": "Keep empty. The x-vaani-internal-secret header must arrive via credential_uuid (server-side), never as a static header or prompt text.",
+      "credential_uuid": null,
+      "credential_instructions": [
+        "Create a Dograh organization-scoped credential of type custom_header (api_key type also works).",
+        "Header name: x-vaani-internal-secret. Value: that org's VAANI_INTERNAL_API_SECRET.",
+        "Prefer a distinct secret value per org so a leak cannot be replayed across orgs.",
+        "Set credential_uuid here only when creating the real tool row. Never store the secret value in this file."
+      ],
+      "parameters": [],
+      "parameters_instructions": "Keep empty. The LLM must receive zero arguments for this tool so it cannot override buyer_run_id (URL context spreads LLM arguments last).",
+      "preset_parameters": [
+        {
+          "name": "buyer_run_id",
+          "value_template": "{{initial_context.workflow_run_id}}",
+          "required": true,
+          "type": "string",
+          "why": "workflow_run_id is stamped into engine call context by run_pipeline (actual run id, stale values overwritten) and reaches URL templates via call_context_vars. The namespaced path cannot be shadowed by LLM arguments. Required presets fail closed on empty values."
+        }
+      ],
+      "timeout_ms": 5000,
+      "expected_responses": {
+        "200": "{ machines: [...PRD section 8 fields, no prices...], count: N }",
+        "400": "missing/invalid buyer_run_id, or preset failed to resolve: no inventory",
+        "403": "bad secret: no inventory",
+        "404": "unknown or non-buyer run: no inventory (mid-call before buyer classification: use the check-and-WhatsApp fallback, do not retry blindly)",
+        "500": "generic internal error: no inventory"
+      },
+      "buyer_available_status_default": "Without ?status=, only in_sourcing_pipeline and certified_ready_in_yard rows are returned. An explicit status filter stays organization-scoped."
+    }
+  }
+}

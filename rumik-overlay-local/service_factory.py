@@ -3,8 +3,15 @@ from typing import TYPE_CHECKING
 from urllib.parse import urlencode, urlparse, urlunparse
 
 import aiohttp
+import asyncio
+import httpx
+import random
+import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from fastapi import HTTPException
 from loguru import logger
+from openai import APIStatusError, APITimeoutError, AsyncOpenAI, DefaultAsyncHttpxClient
 
 from api.constants import MPS_API_URL
 from api.errors.failure import (
@@ -14,15 +21,23 @@ from api.errors.failure import (
     log_failure,
 )
 from api.services.configuration.options import (
+    DEEPGRAM_DEFAULT_BASE_URL,
     DEEPGRAM_FLUX_MODELS,
-    DEEPGRAM_FLUX_MULTILINGUAL_LANGUAGE_OPTIONS,
+    GOOGLE_VERTEX_DEFAULT_LOCATION,
 )
 from api.services.configuration.registry import ServiceProviders
 from api.services.pipecat.gemini_json_schema_adapter import (
     DograhGeminiJSONSchemaAdapter,
 )
-from api.services.pipecat.minimax_tts import MiniMaxOwnedSessionTTSService
+from api.services.pipecat.minimax_tts import (
+    MiniMaxCachingTTSService,
+    MiniMaxOwnedSessionTTSService,
+)
+from api.services.pipecat.tts_cache.runtime import get_speech_cache
+from api.services.workflow.hindi_speech_normalizer import HindiNumberSpeechFilter
+from api.services.workflow.reasoning_output_guard import ReasoningOutputTextFilter
 from api.utils.url_security import validate_user_configured_service_url
+from pipecat_rumik import RumikTTSService, RumikTTSSettings
 from pipecat.services.assemblyai.stt import AssemblyAISTTService, AssemblyAISTTSettings
 from pipecat.services.aws.llm import AWSBedrockLLMService, AWSBedrockLLMSettings
 from pipecat.services.azure.llm import AzureLLMService, AzureLLMSettings
@@ -69,7 +84,6 @@ from pipecat.services.huggingface.stt import (
     HuggingFaceSTTSettings,
 )
 from pipecat.services.inworld.tts import InworldTTSService, InworldTTSSettings
-from pipecat.services.lmnt.tts import LmntTTSService, LmntTTSSettings
 from pipecat.services.minimax.llm import MiniMaxLLMService
 from pipecat.services.minimax.tts import MiniMaxTTSSettings
 from pipecat.services.openai._constants import OPENAI_SAMPLE_RATE
@@ -82,12 +96,16 @@ from pipecat.services.openai.stt import (
 from pipecat.services.openai.tts import OpenAITTSService, OpenAITTSSettings
 from pipecat.services.openrouter.llm import OpenRouterLLMService, OpenRouterLLMSettings
 from pipecat.services.rime.tts import RimeTTSService, RimeTTSSettings
-from pipecat_rumik import RumikTTSService, RumikTTSSettings
 from pipecat.services.sarvam.llm import SarvamLLMService, SarvamLLMSettings
 from pipecat.services.sarvam.stt import SarvamSTTService, SarvamSTTSettings
 from pipecat.services.sarvam.tts import SarvamTTSService, SarvamTTSSettings
 from pipecat.services.smallest.stt import SmallestSTTService, SmallestSTTSettings
 from pipecat.services.smallest.tts import SmallestTTSService, SmallestTTSSettings
+from pipecat.services.soniox.stt import (
+    SonioxContextObject,
+    SonioxSTTService,
+    SonioxSTTSettings,
+)
 from pipecat.services.speaches.llm import SpeachesLLMService, SpeachesLLMSettings
 from pipecat.services.speaches.stt import SpeachesSTTService, SpeachesSTTSettings
 from pipecat.services.speaches.tts import SpeachesTTSService, SpeachesTTSSettings
@@ -169,9 +187,16 @@ DEEPGRAM_FLUX_LANGUAGE_HINTS = {
 }
 
 
+def _resolve_deepgram_flux_language_hint(language: str | None) -> Language | None:
+    """Resolve a supported BCP-47 language or locale to its Flux base language."""
+    base_language = (language or "").split("-", 1)[0].lower()
+    return DEEPGRAM_FLUX_LANGUAGE_HINTS.get(base_language)
+
+
 def dograh_stt_uses_flux_language(language: str | None) -> bool:
-    language = language or "multi"
-    return language in DEEPGRAM_FLUX_MULTILINGUAL_LANGUAGE_OPTIONS
+    if not language or language.lower() == "multi":
+        return True
+    return _resolve_deepgram_flux_language_hint(language) is not None
 
 
 def _resolve_elevenlabs_stt_language(
@@ -248,6 +273,71 @@ def _validate_runtime_service_url(url: str, field_name: str) -> None:
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+def _deepgram_base_url(service_config) -> str:
+    """Resolve the Deepgram endpoint for an STT or TTS config section.
+
+    Deepgram's regional hosts are the only thing that decides which
+    jurisdiction processes the audio, so this is the single place the value is
+    normalised and checked. Everything downstream builds on the result.
+    """
+    base_url = (getattr(service_config, "base_url", None) or "").strip()
+    if not base_url:
+        return DEEPGRAM_DEFAULT_BASE_URL
+    # Deepgram documents the regional switch as "replace api.deepgram.com with
+    # api.eu.deepgram.com", so operators reasonably type a bare host. The URL
+    # validator - and the SaaS SSRF checks behind it - need a scheme, so assume
+    # TLS rather than reject a value that is obviously well intentioned.
+    if "://" not in base_url:
+        base_url = f"https://{base_url}"
+    _validate_runtime_service_url(base_url, "base_url")
+    return base_url.rstrip("/")
+
+
+def _deepgram_websocket_url(base_url: str, path: str = "") -> str:
+    """Rewrite a Deepgram base URL as the WebSocket URL a service expects.
+
+    Each Deepgram service in pipecat wants a different shape of the same host:
+    ``DeepgramSTTService`` takes the base URL and derives both schemes itself,
+    ``DeepgramFluxSTTService`` wants a full ``wss://host/v2/listen``, and
+    ``DeepgramTTSService`` wants ``wss://host`` and appends its own path.
+    Deriving all three from one configured value keeps a single source of truth
+    for where audio goes. Expects the output of :func:`_deepgram_base_url`,
+    which guarantees a scheme.
+    """
+    parsed = urlparse(base_url)
+    scheme = {"http": "ws", "https": "wss"}.get(parsed.scheme, parsed.scheme)
+    return urlunparse(
+        parsed._replace(scheme=scheme, path=parsed.path.rstrip("/") + path)
+    )
+
+
+def _google_vertex_location(location: str | None, service: str) -> str:
+    """Resolve the Vertex location a service will connect to.
+
+    Vertex derives its endpoint from the location, and only the regional and
+    multi-region endpoints keep processing inside a geography - global routes
+    anywhere. Falling back to anything other than the configured default would
+    mean an operator who left the field alone gets a region nobody chose and
+    cannot see, which is the wrong answer for anyone with residency
+    obligations.
+    """
+    resolved = (location or "").strip()
+    if resolved:
+        # The resolved value is reported by the caller, on the same line as the
+        # service being created - one decision, one line.
+        return resolved
+
+    # Unset is the one case where nobody picked the endpoint, and the default
+    # carries no residency commitment, so it gets a line of its own rather than
+    # riding along with the successful cases.
+    logger.warning(
+        f"Google Vertex {service}: no location configured, falling back to "
+        f"{GOOGLE_VERTEX_DEFAULT_LOCATION!r}, which carries no data residency "
+        f"guarantee"
+    )
+    return GOOGLE_VERTEX_DEFAULT_LOCATION
+
+
 @_report_service_factory_failures(ErrorSource.STT, config_section="stt")
 def create_stt_service(
     user_config,
@@ -261,10 +351,21 @@ def create_stt_service(
         user_config: User configuration containing STT settings
         keyterms: Optional list of keyterms for speech recognition boosting (Deepgram only)
     """
+    # Resolved before the line below so that where the audio is processed is
+    # recorded alongside what processes it. The endpoint decides which
+    # jurisdiction transcribes the call, and that is the only record an operator
+    # has that the configured region was the one actually used - but it is one
+    # fact about one service, so it belongs on one line.
+    is_deepgram = user_config.stt.provider == ServiceProviders.DEEPGRAM.value
+    deepgram_base_url = _deepgram_base_url(user_config.stt) if is_deepgram else None
+
     logger.info(
-        f"Creating STT service: provider={user_config.stt.provider}, model={user_config.stt.model}"
+        f"Creating STT service: provider={user_config.stt.provider}, "
+        f"model={user_config.stt.model}"
+        + (f", endpoint={deepgram_base_url}" if deepgram_base_url else "")
     )
-    if user_config.stt.provider == ServiceProviders.DEEPGRAM.value:
+
+    if is_deepgram:
         if user_config.stt.model in DEEPGRAM_FLUX_MODELS:
             settings_kwargs = {
                 "model": user_config.stt.model,
@@ -274,13 +375,24 @@ def create_stt_service(
                 "keyterm": keyterms or [],
             }
             if user_config.stt.model == "flux-general-multi":
-                language = getattr(user_config.stt, "language", None)
-                language_hint = DEEPGRAM_FLUX_LANGUAGE_HINTS.get(language)
-                if language_hint:
-                    settings_kwargs["language_hints"] = [language_hint]
+                codes = [
+                    getattr(user_config.stt, "language", None),
+                    *(getattr(user_config.stt, "language_hints", None) or []),
+                ]
+                language_hints = list(
+                    dict.fromkeys(
+                        hint
+                        for hint in map(_resolve_deepgram_flux_language_hint, codes)
+                        if hint
+                    )
+                )
+                if language_hints:
+                    settings_kwargs["language_hints"] = language_hints
 
             return DeepgramFluxSTTService(
                 api_key=user_config.stt.api_key,
+                # Flux takes a fully-qualified socket URL, not a host.
+                url=_deepgram_websocket_url(deepgram_base_url, "/v2/listen"),
                 settings=DeepgramFluxSTTSettings(**settings_kwargs),
                 should_interrupt=False,  # Let UserAggregator take care of sending InterruptionFrame
                 sample_rate=audio_config.transport_in_sample_rate,
@@ -291,6 +403,8 @@ def create_stt_service(
         language = getattr(user_config.stt, "language", None) or "multi"
         return DeepgramSTTService(
             api_key=user_config.stt.api_key,
+            # Takes the host and derives the wss and https URLs itself.
+            base_url=deepgram_base_url,
             settings=DeepgramSTTSettings(
                 language=language,
                 profanity_filter=False,
@@ -361,7 +475,7 @@ def create_stt_service(
                 "eager_eot_threshold": 0.5,
                 "keyterm": keyterms or [],
             }
-            language_hint = DEEPGRAM_FLUX_LANGUAGE_HINTS.get(language)
+            language_hint = _resolve_deepgram_flux_language_hint(language)
             if language_hint:
                 settings_kwargs["language_hints"] = [language_hint]
             return DograhFluxSTTService(
@@ -472,19 +586,33 @@ def create_stt_service(
             settings=GladiaSTTSettings(**settings_kwargs),
             sample_rate=audio_config.transport_in_sample_rate,
         )
+    elif user_config.stt.provider == ServiceProviders.SONIOX.value:
+        language = getattr(user_config.stt, "language", None) or "multi"
+        settings_kwargs = {"model": user_config.stt.model}
+        if language != "multi":
+            settings_kwargs["language_hints"] = [Language(language)]
+        if keyterms:
+            settings_kwargs["context"] = SonioxContextObject(terms=keyterms)
+        return SonioxSTTService(
+            api_key=user_config.stt.api_key,
+            settings=SonioxSTTSettings(**settings_kwargs),
+            # Local VAD ends the turn and triggers Soniox finalize; Soniox's own
+            # endpoint detection stays off so turn strategies behave as for Nova.
+            vad_force_turn_endpoint=True,
+            sample_rate=audio_config.transport_in_sample_rate,
+        )
     elif user_config.stt.provider == ServiceProviders.SPEECHMATICS.value:
         from pipecat.services.speechmatics.stt import (
             AdditionalVocabEntry,
-            OperatingPoint,
+            Model,
+            TurnDetectionMode,
         )
 
         language = getattr(user_config.stt, "language", None) or "en"
-        # Map model field to operating point (standard or enhanced)
-        operating_point = (
-            OperatingPoint.ENHANCED
-            if user_config.stt.model == "enhanced"
-            else OperatingPoint.STANDARD
-        )
+        # Saved configurations may still use the legacy operating-point names.
+        model = user_config.stt.model
+        if model in ("standard", "enhanced"):
+            model = Model.LINDEN_1.value
         # Convert keyterms to AdditionalVocabEntry objects for Speechmatics
         additional_vocab = []
         if keyterms:
@@ -493,7 +621,8 @@ def create_stt_service(
             api_key=user_config.stt.api_key,
             settings=SpeechmaticsSTTSettings(
                 language=language,
-                operating_point=operating_point,
+                model=model,
+                turn_detection_mode=TurnDetectionMode.EXTERNAL,
                 additional_vocab=additional_vocab,
             ),
             sample_rate=audio_config.transport_in_sample_rate,
@@ -553,19 +682,46 @@ def create_stt_service(
 
 @_report_service_factory_failures(ErrorSource.TTS, config_section="tts")
 def create_tts_service(
-    user_config, audio_config: "AudioConfig", correlation_id: str | None = None
+    user_config,
+    audio_config: "AudioConfig",
+    correlation_id: str | None = None,
+    *,
+    organization_id: int | None = None,
+    tts_cache_enabled: bool = False,
 ):
     """Create and return appropriate TTS service based on user configuration
 
     Args:
         user_config: User configuration containing TTS settings
-        transport_type: Type of transport (e.g., 'twilio', 'webrtc')
+        audio_config: Pipeline and transport audio configuration.
+        correlation_id: Managed model services correlation ID.
+        organization_id: Trusted tenant scope for TTS caching.
+        tts_cache_enabled: Whether the workflow enables caching for supported providers.
     """
+    # Synthesis carries the same residency question as transcription - the text
+    # sent for speaking is drawn from the conversation - so the endpoint is
+    # resolved up front and reported on the creation line.
+    is_deepgram = user_config.tts.provider == ServiceProviders.DEEPGRAM.value
+    deepgram_base_url = _deepgram_base_url(user_config.tts) if is_deepgram else None
+
     logger.info(
-        f"Creating TTS service: provider={user_config.tts.provider}, model={user_config.tts.model}"
+        f"Creating TTS service: provider={user_config.tts.provider}, "
+        f"model={user_config.tts.model}"
+        + (f", endpoint={deepgram_base_url}" if deepgram_base_url else "")
     )
-    # Create function call filter to prevent TTS from speaking function call tags
-    xml_function_tag_filter = XMLFunctionTagFilter()
+
+    # Create function call filter to prevent TTS from speaking function call tags.
+    # The stock filter covers <function=...> only. Live transcripts also showed
+    # prompt-engineered <function_calls>/<invoke> blocks and "[assistant]:" role
+    # prefixes reaching TTS, so cover exactly those observed shapes and nothing
+    # else. Clean conversational text passes through byte-identical.
+    xml_function_tag_filter = XMLFunctionTagFilter(
+        custom_patterns=[
+            r"<function_calls>.*?</function_calls>",
+            r"<invoke\b[^>]*>.*?</invoke>",
+            r"^\s*\[assistant\]:",
+        ]
+    )
     if user_config.tts.provider == ServiceProviders.RUMIK.value:
         return RumikTTSService(
             api_key=user_config.tts.api_key,
@@ -583,12 +739,19 @@ def create_tts_service(
             full_response_aggregation=getattr(
                 user_config.tts, "full_response_aggregation", True
             ),
+            text_filters=[
+                xml_function_tag_filter,
+                ReasoningOutputTextFilter(),
+                HindiNumberSpeechFilter(),
+            ],
         )
-    if user_config.tts.provider == ServiceProviders.DEEPGRAM.value:
+    if is_deepgram:
         return DeepgramTTSService(
             api_key=user_config.tts.api_key,
+            # Wants wss://host with no path; it appends /v1/speak itself.
+            base_url=_deepgram_websocket_url(deepgram_base_url),
             settings=DeepgramTTSSettings(voice=user_config.tts.voice),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -602,7 +765,7 @@ def create_tts_service(
             api_key=user_config.tts.api_key,
             sample_rate=OPENAI_SAMPLE_RATE,
             settings=OpenAITTSSettings(model=user_config.tts.model),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
             **kwargs,
@@ -627,7 +790,7 @@ def create_tts_service(
             credentials=credentials,
             location=location,
             settings=GoogleTTSSettings(**settings_kwargs),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -653,7 +816,7 @@ def create_tts_service(
                 speed=user_config.tts.speed,
                 similarity_boost=0.75,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -681,7 +844,7 @@ def create_tts_service(
                     else {}
                 ),
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -700,7 +863,7 @@ def create_tts_service(
                 speaking_rate=speed,
                 delivery_mode=delivery_mode,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -716,7 +879,7 @@ def create_tts_service(
                 voice=user_config.tts.voice,
                 speed=user_config.tts.speed,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -729,7 +892,7 @@ def create_tts_service(
             api_key=user_config.tts.api_key,
             voice_id=voice_id,
             model=user_config.tts.model,
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
         )
         # Set language directly as BCP-47 code (bypasses Language enum conversion)
@@ -745,7 +908,7 @@ def create_tts_service(
                 voice=user_config.tts.voice,
                 speed=user_config.tts.speed,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -770,7 +933,7 @@ def create_tts_service(
         return RimeTTSService(
             api_key=user_config.tts.api_key,
             settings=RimeTTSSettings(**settings_kwargs),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -806,7 +969,7 @@ def create_tts_service(
         return SarvamTTSService(
             api_key=user_config.tts.api_key,
             settings=SarvamTTSSettings(**settings_kwargs),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -830,18 +993,26 @@ def create_tts_service(
             base_url = f"{base_url}/t2a_v2"
         _validate_runtime_service_url(base_url, "base_url")
 
+        cache = get_speech_cache(organization_id, enabled=tts_cache_enabled)
+        service_type = (
+            MiniMaxCachingTTSService if cache else MiniMaxOwnedSessionTTSService
+        )
+        cache_kwargs = (
+            {"speech_cache": cache, "organization_id": organization_id} if cache else {}
+        )
         session = aiohttp.ClientSession()
-        return MiniMaxOwnedSessionTTSService(
+        return service_type(
             api_key=user_config.tts.api_key,
             group_id=group_id,
             base_url=base_url,
             aiohttp_session=session,
+            **cache_kwargs,
             settings=MiniMaxTTSSettings(
                 model=user_config.tts.model,
                 voice=voice,
                 speed=speed,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -862,7 +1033,7 @@ def create_tts_service(
             api_key=user_config.tts.api_key,
             region=region,
             settings=AzureTTSSettings(**settings_kwargs),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -884,7 +1055,7 @@ def create_tts_service(
         return SmallestTTSService(
             api_key=user_config.tts.api_key,
             settings=settings_kwargs,
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -904,31 +1075,58 @@ def create_tts_service(
                 voice=voice,
                 language=pipecat_language,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
     elif user_config.tts.provider == ServiceProviders.LMNT.value:
-        voice = getattr(user_config.tts, "voice", None) or "lily"
-        model = getattr(user_config.tts, "model", None) or "aurora"
-        language_code = getattr(user_config.tts, "language", None) or "en"
+        raise ValueError(
+            "LMNT is no longer available. Please select another TTS provider."
+        )
+    elif user_config.tts.provider == ServiceProviders.SPEECHIFY.value:
+        # SpeechifyHttpTTSService ships in upstream pipecat; imported lazily so
+        # this module keeps loading on pipecat checkouts that predate it.
         try:
-            pipecat_language = Language(language_code)
+            from api.services.pipecat.speechify_tts import (
+                SpeechifyOwnedSessionTTSService,
+            )
+            from pipecat.services.speechify.tts import SpeechifyTTSSettings
+        except ModuleNotFoundError as e:
+            missing = e.name or ""
+            if missing != "pipecat.services.speechify" and not missing.startswith(
+                "pipecat.services.speechify."
+            ):
+                raise
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Speechify TTS requires a pipecat build that includes "
+                    "pipecat.services.speechify; the installed pipecat does not."
+                ),
+            ) from e
+
+        voice = getattr(user_config.tts, "voice", None) or "beatrice_32"
+        model = getattr(user_config.tts, "model", None) or "simba-3.2"
+        language_code = getattr(user_config.tts, "language", None) or "en"
+        language: Language | str
+        try:
+            language = Language(language_code)
         except ValueError:
-            pipecat_language = Language.EN
-        return LmntTTSService(
+            # The config allows custom language codes; codes the pipecat enum
+            # doesn't model (e.g. "en-ZA") are sent to Speechify verbatim
+            # rather than silently replaced with English.
+            language = language_code
+        session = aiohttp.ClientSession()
+        return SpeechifyOwnedSessionTTSService(
             api_key=user_config.tts.api_key,
+            aiohttp_session=session,
             sample_rate=audio_config.transport_out_sample_rate,
-            # LMNT's streaming `format` field expects "raw" for signed 16-bit PCM
-            # at the requested sample rate, which is what the output transport
-            # consumes; "pcm_s16le" is not a valid LMNT format value.
-            output_format="raw",
-            settings=LmntTTSSettings(
+            settings=SpeechifyTTSSettings(
                 voice=voice,
-                language=pipecat_language,
                 model=model,
+                language=language,
             ),
-            text_filters=[xml_function_tag_filter],
+            text_filters=[xml_function_tag_filter, ReasoningOutputTextFilter()],
             skip_aggregator_types=["recording_router", "recording"],
             silence_time_s=1.0,
         )
@@ -952,13 +1150,249 @@ def _migrate_deprecated_google_model(model: str) -> str:
 
 
 class RobustGroqLLMService(GroqLLMService):
-    """Groq LLM Service ensuring at least one user query is present in messages for models like Qwen."""
+    """Groq LLM Service with bounded retry for transient failures (HTTP 429,
+    5xx, timeouts, connection errors).
+
+    Adds retry logic on top of the base GroqLLMService so that transient
+    Groq errors do not immediately kill a live voice turn. SDK retries are
+    disabled (max_retries=0) to avoid stacking with this wrapper.
+
+    Non-retryable errors (400/401/403) are propagated immediately.
+    """
+
+    def __init__(self, *args, usage_context: str | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._usage_context = usage_context or "conversation"
+        self._llm_send_seq = 0
+        self._llm_requests_this_turn = 0
+
+    def reset_turn_count(self) -> None:
+        """Reset the per-turn Groq request counter."""
+        self._llm_requests_this_turn = 0
+
+    def create_client(self, api_key=None, base_url=None, **kwargs):
+        """Create OpenAI-compatible client with SDK retries disabled."""
+        return AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            max_retries=0,
+            http_client=DefaultAsyncHttpxClient(
+                limits=httpx.Limits(
+                    max_keepalive_connections=100,
+                    max_connections=1000,
+                    keepalive_expiry=None,
+                )
+            ),
+            **kwargs,
+        )
+
     def build_chat_completion_params(self, params_from_context):
         params = super().build_chat_completion_params(params_from_context)
         messages = params.get("messages", [])
+        self._llm_send_seq = getattr(self, "_llm_send_seq", 0) + 1
+        self._llm_requests_this_turn = (
+            getattr(self, "_llm_requests_this_turn", 0) + 1
+        )
+        if self._llm_requests_this_turn > 10:
+            logger.warning(
+                f"voice.llm.send role={self._usage_context} seq={self._llm_send_seq} "
+                f"mono={time.monotonic():.3f} msgs={len(messages)} "
+                f"turn_requests={self._llm_requests_this_turn} WARNING:high_turn_request_count"
+            )
+        else:
+            logger.info(
+                f"voice.llm.send role={self._usage_context} seq={self._llm_send_seq} "
+                f"mono={time.monotonic():.3f} msgs={len(messages)}"
+            )
         if not any(m.get("role") == "user" for m in messages):
             params["messages"] = list(messages) + [{"role": "user", "content": "Hello"}]
         return params
+
+    async def run_inference(self, context, max_tokens=None, system_instruction=None):
+        # Out-of-band inference only (extraction, disposition, summaries,
+        # analysis, classification). The live conversational frame path never
+        # calls this method.
+        self._llm_send_seq = getattr(self, "_llm_send_seq", 0) + 1
+        self._llm_requests_this_turn = (
+            getattr(self, "_llm_requests_this_turn", 0) + 1
+        )
+        logger.info(
+            f"voice.llm.send role=inference seq={self._llm_send_seq} "
+            f"mono={time.monotonic():.3f}"
+        )
+        last_error = None
+        for attempt in range(1, self._MAX_GROQ_ATTEMPTS + 1):
+            try:
+                return await super().run_inference(
+                    context, max_tokens=max_tokens, system_instruction=system_instruction
+                )
+            except Exception as exc:
+                last_error = exc
+                if not self._is_retryable_groq_error(exc):
+                    raise
+                if attempt < self._MAX_GROQ_ATTEMPTS:
+                    wait = self._delay_for_attempt(attempt)
+                    retry_after = self._parse_retry_after(exc)
+                    if retry_after is not None:
+                        if retry_after > self._MAX_RETRY_WAIT_SECONDS:
+                            logger.warning(
+                                f"Groq inference failed (attempt {attempt}/{self._MAX_GROQ_ATTEMPTS}): {exc}; "
+                                f"Retry-After {retry_after:.0f}s exceeds cap {self._MAX_RETRY_WAIT_SECONDS:.0f}s, propagating"
+                            )
+                            raise
+                        wait = retry_after
+                    logger.warning(
+                        f"Groq inference failed (attempt {attempt}/{self._MAX_GROQ_ATTEMPTS}): {exc}; "
+                        f"retrying in {wait:.2f}s"
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                raise
+        raise last_error
+
+    # Total attempts for a live Groq chat completion: 1 initial + 2 retries.
+    # Post-call out-of-band inference (run_inference) is handled by its own
+    # callers; this retry applies only to the live conversational frame path.
+    _MAX_GROQ_ATTEMPTS = 3
+    # Base fallback delay (seconds) when Retry-After header is missing or invalid.
+    # Actual wait is exponential backoff with jitter: base * 2^(attempt-1) + jitter.
+    _GROQ_BASE_DELAY_SECONDS = 1.0
+    # Maximum delay for any single retry (seconds).
+    _GROQ_MAX_DELAY_SECONDS = 10.0
+    # Jitter added to each retry delay (seconds) to prevent thundering herd.
+    _GROQ_JITTER_MAX_SECONDS = 1.0
+    # Explicit cap on how long we will wait for a provider-requested Retry-After.
+    # If Groq asks us to wait longer than this, we do not retry earlier than
+    # requested — we propagate the error instead.
+    _MAX_RETRY_WAIT_SECONDS = 30.0
+
+    def _is_retryable_groq_error(self, exc: Exception) -> bool:
+        """Return True when a Groq request error is transient and safe to retry.
+
+        Retryable: 429 rate limiting, 5xx server errors, timeouts,
+        and transport/connection errors (e.g. ConnectError).
+        Not retryable: 400/401/403 client errors (bad request, auth, forbidden).
+        """
+        if isinstance(exc, (httpx.TimeoutException, APITimeoutError, httpx.ConnectError)):
+            return True
+        if isinstance(exc, APIStatusError):
+            status = getattr(exc, "status_code", None) or getattr(exc, "status", None)
+            if status in (429, 500, 502, 503, 504):
+                return True
+        return False
+
+    def _parse_retry_after(self, exc: Exception) -> float | None:
+        """Parse the Retry-After header from an error response.
+
+        Supports both delta-seconds (e.g. "10") and HTTP-date (e.g.
+        "Wed, 21 Oct 2026 07:28:00 GMT") formats per RFC 7231 / RFC 9110.
+
+        Returns seconds to wait, or None if the header is missing or invalid.
+        """
+        response = getattr(exc, "response", None)
+        if response is None:
+            return None
+        retry_after = response.headers.get("retry-after") or response.headers.get("Retry-After")
+        if not retry_after:
+            return None
+        # Delta-seconds format: a non-negative integer.
+        try:
+            seconds = float(retry_after)
+            if seconds >= 0:
+                return seconds
+        except ValueError:
+            pass
+        # HTTP-date format.
+        try:
+            retry_date = parsedate_to_datetime(retry_after)
+            if retry_date is not None:
+                delta = (retry_date - datetime.now(timezone.utc)).total_seconds()
+                return max(0.0, delta)
+        except (TypeError, ValueError, OverflowError):
+            pass
+        return None
+
+    def _delay_for_attempt(self, attempt: int) -> float:
+        """Compute bounded exponential backoff with jitter for retry attempt N.
+
+        delay = min(base * 2^(attempt-1) + jitter, max)
+        where jitter is uniform [0, jitter_max].
+
+        This prevents thundering herd when multiple concurrent requests all
+        hit HTTP 429 and would otherwise retry in lockstep after a fixed delay.
+        """
+        backoff = self._GROQ_BASE_DELAY_SECONDS * (2 ** (attempt - 1))
+        jitter = random.uniform(0.0, self._GROQ_JITTER_MAX_SECONDS)
+        return min(backoff + jitter, self._GROQ_MAX_DELAY_SECONDS)
+
+    async def get_chat_completions(self, context):
+        """Get streaming chat completions with bounded retry for transient Groq failures.
+
+        Pipecat's BaseOpenAILLMService.get_chat_completions() returns a lazy
+        AsyncStream: the HTTP request is sent when .create() is called, but the
+        response body (and thus a Groq 429/5xx/timeout error) is only surfaced
+        when the stream is first iterated — which happens later, inside
+        _process_context(). To catch those errors here, we eagerly fetch the
+        first chunk within the retry loop. This surfaces connection-level errors
+        (429, 5xx, timeout) at the right place instead of letting them propagate
+        to _process_context, where the CallMonitorProcessor would wait 35s and
+        then end the call with PIPELINE_ERROR.
+
+        Conversation context is preserved across retries — the same messages are
+        resent unchanged. Mid-stream failures (after the first chunk) still
+        propagate to _process_context, which pushes an error frame; retrying a
+        partially-streamed response could duplicate partial output, so we do not
+        attempt it.
+        """
+        last_error = None
+        for attempt in range(1, self._MAX_GROQ_ATTEMPTS + 1):
+            try:
+                stream = await super().get_chat_completions(context)
+                # Eagerly trigger the HTTP request by fetching the first chunk.
+                # If Groq returns 429/5xx or the connection times out, the error
+                # surfaces here, within the retry loop.
+                try:
+                    first_chunk = await stream.__anext__()
+                except StopAsyncIteration:
+                    # Empty stream: nothing to retry, return an empty stream.
+                    async def _empty():
+                        if False:
+                            yield
+                    return _empty()
+                # Chain the first chunk with the rest of the stream so callers
+                # (_process_context) see a seamless, complete response.
+                async def _chained(first=first_chunk, upstream=stream):
+                    yield first
+                    async for chunk in upstream:
+                        yield chunk
+                return _chained()
+            except Exception as exc:
+                last_error = exc
+                if not self._is_retryable_groq_error(exc):
+                    raise
+                if attempt < self._MAX_GROQ_ATTEMPTS:
+                    # Determine wait: Retry-After header takes precedence if set,
+                    # capped at _MAX_RETRY_WAIT_SECONDS. If Groq asks us to wait
+                    # longer than our cap, do not retry earlier than requested —
+                    # propagate the error instead.
+                    wait = self._delay_for_attempt(attempt)
+                    retry_after = self._parse_retry_after(exc)
+                    if retry_after is not None:
+                        if retry_after > self._MAX_RETRY_WAIT_SECONDS:
+                            logger.warning(
+                                f"Groq request failed (attempt {attempt}/{self._MAX_GROQ_ATTEMPTS}): {exc}; "
+                                f"Retry-After {retry_after:.0f}s exceeds cap {self._MAX_RETRY_WAIT_SECONDS:.0f}s, propagating"
+                            )
+                            raise
+                        wait = retry_after
+                    logger.warning(
+                        f"Groq request failed (attempt {attempt}/{self._MAX_GROQ_ATTEMPTS}): {exc}; "
+                        f"retrying in {wait:.2f}s"
+                    )
+                    await asyncio.sleep(wait)
+                    continue
+                raise
+        raise last_error
 
 
 @_report_service_factory_failures(ErrorSource.LLM, provider_argument=0)
@@ -978,6 +1412,7 @@ def create_llm_service_from_provider(
     credentials: str | None = None,
     temperature: float | None = None,
     bill_to: str | None = None,
+    provider_order: list[str] | None = None,
     usage_context: str | None = None,
 ):
     """Create an LLM service from explicit provider/model/api_key.
@@ -989,7 +1424,19 @@ def create_llm_service_from_provider(
             (e.g. "voicemail_detection"). Sent as request metadata by the Dograh
             provider; ignored by other providers.
     """
-    logger.info(f"Creating LLM service: provider={provider}, model={model}")
+    # Vertex builds its endpoint from the location, so it is part of what this
+    # service is, not a separate event. Resolved here to keep it on one line.
+    vertex_location = (
+        _google_vertex_location(location, "LLM")
+        if provider == ServiceProviders.GOOGLE_VERTEX.value
+        else None
+    )
+
+    logger.info(
+        f"Creating LLM service: provider={provider}, model={model}"
+        + (f", location={vertex_location}" if vertex_location else "")
+    )
+
     if provider in (
         ServiceProviders.OPENAI.value,
         ServiceProviders.ATLASCLOUD.value,
@@ -1013,32 +1460,50 @@ def create_llm_service_from_provider(
             **kwargs,
         )
     elif provider == ServiceProviders.GROQ.value:
+        # Plain Hindi turns use ~30-60 tokens; 150 never clips them but stops
+        # runaway deliberation monologues from delaying TTS by tens of seconds.
+        # Uses RobustGroqLLMService for bounded retry on Groq 429/5xx/timeout.
         return RobustGroqLLMService(
             api_key=api_key,
-            settings=GroqLLMSettings(model=model, temperature=0.1),
+            settings=GroqLLMSettings(model=model, temperature=0.1, max_tokens=150),
+            usage_context=usage_context,
         )
     elif provider == ServiceProviders.OPENROUTER.value:
         kwargs = {}
         if base_url:
             _validate_runtime_service_url(base_url, "base_url")
             kwargs["base_url"] = base_url
+        extra = {}
+        if provider_order:
+            # OpenRouter's provider preferences are a request-body field the
+            # OpenAI client does not know, so they travel in extra_body.
+            extra["extra_body"] = {"provider": {"order": provider_order}}
         return OpenRouterLLMService(
             api_key=api_key,
-            settings=OpenRouterLLMSettings(model=model, temperature=0.1),
+            settings=OpenRouterLLMSettings(model=model, temperature=0.1, extra=extra),
             **kwargs,
         )
     elif provider == ServiceProviders.GOOGLE.value:
         model = _migrate_deprecated_google_model(model)
         return DograhGoogleLLMService(
             api_key=api_key,
-            settings=GoogleLLMSettings(model=model, temperature=0.1),
+            settings=GoogleLLMSettings(
+                model=model,
+                temperature=0.1,
+                # Pipecat executes tools; the SDK should return their calls.
+                extra={"automatic_function_calling": {"disable": True}},
+            ),
         )
     elif provider == ServiceProviders.GOOGLE_VERTEX.value:
         return DograhGoogleVertexLLMService(
             credentials=credentials,
             project_id=project_id,
-            location=location or "us-east4",
-            settings=GoogleVertexLLMSettings(model=model, temperature=0.1),
+            location=vertex_location,
+            settings=GoogleVertexLLMSettings(
+                model=model,
+                temperature=0.1,
+                extra={"automatic_function_calling": {"disable": True}},
+            ),
         )
     elif provider == ServiceProviders.AZURE.value:
         if endpoint:
@@ -1117,11 +1582,30 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
     voice = getattr(realtime_config, "voice", None)
     language = getattr(realtime_config, "language", None)
 
-    logger.info(
-        f"Creating realtime LLM service: provider={provider}, model={model}, voice={voice}, language={language}"
+    vertex_location = (
+        _google_vertex_location(getattr(realtime_config, "location", None), "Realtime")
+        if provider == ServiceProviders.GOOGLE_VERTEX_REALTIME.value
+        else None
     )
 
-    if provider == ServiceProviders.OPENAI_REALTIME.value:
+    logger.info(
+        f"Creating realtime LLM service: provider={provider}, model={model}, "
+        f"voice={voice}, language={language}"
+        + (f", location={vertex_location}" if vertex_location else "")
+    )
+
+    if provider == ServiceProviders.OPENAI_REALTIME.value and model == "gpt-live-1":
+        from api.services.pipecat.realtime.openai_live import DograhOpenAILiveLLMService
+
+        return DograhOpenAILiveLLMService(
+            api_key=api_key,
+            backend_model=realtime_config.backend_model,
+            settings=DograhOpenAILiveLLMService.Settings(
+                model=model,
+                voice=voice or "marin",
+            ),
+        )
+    elif provider == ServiceProviders.OPENAI_REALTIME.value:
         from api.services.pipecat.realtime.openai_realtime import (
             DograhOpenAIRealtimeLLMService,
         )
@@ -1205,6 +1689,30 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
                 output_medium="voice",
             ),
         )
+    elif provider == ServiceProviders.AWS_NOVA_SONIC.value:
+        from api.services.pipecat.realtime.aws_nova_sonic import (
+            DograhAWSNovaSonicLLMService,
+        )
+        from pipecat.services.aws.nova_sonic.llm import AudioConfig as NovaAudioConfig
+
+        return DograhAWSNovaSonicLLMService(
+            secret_access_key=realtime_config.aws_secret_key,
+            access_key_id=realtime_config.aws_access_key,
+            session_token=realtime_config.aws_session_token or None,
+            region=realtime_config.aws_region,
+            audio_config=NovaAudioConfig(
+                input_sample_rate=audio_config.transport_in_sample_rate,
+                output_sample_rate=audio_config.transport_out_sample_rate,
+            ),
+            settings=DograhAWSNovaSonicLLMService.Settings(
+                model=model,
+                voice=voice or "matthew",
+                endpointing_sensitivity=realtime_config.endpointing_sensitivity,
+                temperature=realtime_config.temperature,
+                max_tokens=realtime_config.max_tokens,
+                top_p=realtime_config.top_p,
+            ),
+        )
     elif provider == ServiceProviders.GOOGLE_REALTIME.value:
         from api.services.pipecat.realtime.gemini_live import (
             DograhGeminiLiveLLMService,
@@ -1218,9 +1726,6 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         }
         if language:
             settings_kwargs["language"] = language
-        temperature = getattr(realtime_config, "temperature", None)
-        if temperature is not None:
-            settings_kwargs["temperature"] = temperature
         return DograhGeminiLiveLLMService(
             api_key=api_key,
             settings=DograhGeminiLiveLLMService.Settings(**settings_kwargs),
@@ -1231,7 +1736,6 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         )
 
         project_id = getattr(realtime_config, "project_id", None)
-        location = getattr(realtime_config, "location", None) or "us-east4"
         credentials = getattr(realtime_config, "credentials", None)
 
         settings_kwargs = {
@@ -1240,13 +1744,10 @@ def create_realtime_llm_service(user_config, audio_config: "AudioConfig"):
         }
         if language:
             settings_kwargs["language"] = language
-        temperature = getattr(realtime_config, "temperature", None)
-        if temperature is not None:
-            settings_kwargs["temperature"] = temperature
         return DograhGeminiLiveVertexLLMService(
             credentials=credentials,
             project_id=project_id,
-            location=location,
+            location=vertex_location,
             settings=DograhGeminiLiveVertexLLMService.Settings(**settings_kwargs),
         )
     elif provider == ServiceProviders.AZURE_REALTIME.value:
@@ -1331,6 +1832,7 @@ def create_llm_service(
         kwargs["base_url"] = user_config.llm.base_url
     elif provider == ServiceProviders.OPENROUTER.value:
         kwargs["base_url"] = user_config.llm.base_url
+        kwargs["provider_order"] = getattr(user_config.llm, "provider_order", None)
     elif provider == ServiceProviders.AZURE.value:
         kwargs["endpoint"] = user_config.llm.endpoint
     elif provider == ServiceProviders.SPEACHES.value:

@@ -311,25 +311,45 @@ const llmGroq = {
       max_completion_tokens: 400,
       stream: false,
     }));
-    const started = Date.now();
-    const up = await httpsPost(GROQ_HOST, '/openai/v1/chat/completions', {
+    const headers = {
       'Authorization': `Bearer ${key}`,
       'Content-Type': 'application/json',
       'Content-Length': payload.length,
-    }, payload);
-    let data = {}; try { data = JSON.parse(up.buffer.toString('utf8')); } catch {}
-    if (up.status !== 200) {
-      throw new ProviderError('groq response failed', up.status, 'upstream',
-        (((data.error || {}).message) || up.buffer.toString('utf8')).slice(0, 300));
-    }
-    const choice = (data.choices || [])[0] || {};
-    return {
-      text: String(((choice.message || {}).content) || '').trim() || 'Sorry, I did not catch that.',
-      finish: choice.finish_reason || null,
-      provider: 'groq',
-      model,
-      latency_ms: Date.now() - started,
     };
+    const started = Date.now();
+    const MAX_ATTEMPTS = 3;
+    const BASE_DELAY_MS = 1000;
+    const MAX_DELAY_MS = 8000;
+    let lastError = null;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const up = await httpsPost(GROQ_HOST, '/openai/v1/chat/completions', headers, payload);
+      let data = {}; try { data = JSON.parse(up.buffer.toString('utf8')); } catch {}
+      if (up.status === 200) {
+        const choice = (data.choices || [])[0] || {};
+        return {
+          text: String(((choice.message || {}).content) || '').trim() || 'Sorry, I did not catch that.',
+          finish: choice.finish_reason || null,
+          provider: 'groq',
+          model,
+          latency_ms: Date.now() - started,
+        };
+      }
+      lastError = new ProviderError('groq response failed', up.status, 'upstream',
+        (((data.error || {}).message) || up.buffer.toString('utf8')).slice(0, 300));
+      // Retry only on rate limiting (429). Client errors (400/401/403) are not retryable.
+      if (up.status !== 429 || attempt === MAX_ATTEMPTS) throw lastError;
+      // Honor Retry-After header when present; otherwise exponential backoff with jitter.
+      const retryAfter = up.headers['retry-after'] || up.headers['Retry-After'];
+      let waitMs;
+      if (retryAfter) {
+        const parsed = Number(retryAfter);
+        waitMs = Number.isFinite(parsed) && parsed > 0 ? parsed * 1000 : BASE_DELAY_MS;
+      } else {
+        waitMs = Math.min(BASE_DELAY_MS * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 1000), MAX_DELAY_MS);
+      }
+      await new Promise((r) => setTimeout(r, waitMs));
+    }
+    throw lastError;
   },
 };
 

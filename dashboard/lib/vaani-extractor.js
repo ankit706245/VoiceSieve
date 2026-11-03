@@ -127,6 +127,34 @@ const KNOWN_CITIES_STATES = {
   'noida': { city: 'Noida', state: 'Uttar Pradesh' }
 };
 
+// Hindi + transliterated number words (1-99) to digits. Used ONLY as a
+// fallback when no ASCII/Devanagari digits are present, so English words
+// like "do" in "do excavator" can never corrupt digit-based parsing.
+const HINDI_NUMBER_WORDS = {
+  'ek': 1, 'do': 2, 'teen': 3, 'tin': 3, 'chaar': 4, 'char': 4,
+  'paanch': 5, 'paanchh': 5, 'cheh': 6, 'chhah': 6, 'saat': 7, 'sath': 7,
+  'aanth': 8, 'aath': 8, 'nau': 9, 'nau': 9, 'das': 10, 'dus': 10,
+  'gyarah': 11, 'baarah': 12, 'barah': 12, 'terah': 13, 'chaudah': 14,
+  'pandrah': 15, 'pandraah': 15, 'solah': 16, 'satrah': 17, 'sattrah': 17, 'sathrah': 17,
+  'athaarah': 18, 'attharah': 18, 'atharah': 18, 'athrah': 18, 'unnees': 19, 'unnis': 19,
+  'bees': 20, 'bis': 20, 'vees': 20, 'ikkees': 21, 'ikkis': 21,
+  'bais': 22, 'baees': 22, 'teis': 23, 'tayees': 23, 'chaubees': 24,
+  'pachees': 25, 'pachchees': 25, 'pachchis': 25, 'pachis': 25, 'chhabbees': 26, 'sattaees': 27,
+  'atthaees': 28, 'untees': 29, 'untis': 29, 'tees': 30, 'paintees': 35,
+  'chaalis': 40, 'pachaas': 50, 'saath': 60, 'sattar': 70, 'assi': 80,
+  'nabbe': 90,
+  'एक': 1, 'दो': 2, 'तीन': 3, 'चार': 4, 'पाँच': 5, 'पांच': 5,
+  'छह': 6, 'छै': 6, 'सात': 7, 'आठ': 8, 'नौ': 9, 'दस': 10,
+  'ग्यारह': 11, 'बारह': 12, 'तेरह': 13, 'चौदह': 14, 'पंद्रह': 15,
+  'पन्द्रह': 15, 'सोलह': 16, 'सत्रह': 17, 'अठारह': 18, 'उन्नीस': 19,
+  'बीस': 20, 'इक्कीस': 21, 'बाइस': 22, 'बाईस': 22, 'तेईस': 23,
+  'चौबीस': 24, 'पच्चीस': 25, 'पचीस': 25, 'छब्बीस': 26, 'सत्ताईस': 27,
+  'अट्ठाईस': 28, 'उन्तीस': 29, 'तीस': 30, 'चालीस': 40, 'पचास': 50,
+  'साठ': 60, 'सत्तर': 70, 'अस्सी': 80, 'नब्बे': 90,
+  'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+  'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+};
+
 // Hindi Devanagari digits to ASCII digits
 function normalizeHindiNumerals(text) {
   if (!text) return '';
@@ -146,12 +174,155 @@ function normalizeHindiNumerals(text) {
  * Normalizes Indian prices in Lakh, Lac, L, Thousand, Crore into integer INR.
  * Strictly avoids guessing numbers without units.
  */
+function wordsToDigitsForBudget(text) {
+  // Replace number words ONLY adjacent to a budget unit, so unrelated words
+  // ("do excavator", "ek minute") are never touched.
+  return String(text).replace(
+    new RegExp('([\\w\u0900-\u097F]+)\\s*(lakh|lac|lacs|lakhs|l|\u0932\u093E\u0916|\u0939\u091C\u093E\u0930|thousand|crore|cr)\\b', 'gi'),
+    (m, w, u) => {
+      const key = String(w).toLowerCase();
+      if (Object.prototype.hasOwnProperty.call(HINDI_NUMBER_WORDS, key)) return HINDI_NUMBER_WORDS[key] + ' ' + u;
+      if (/^\d+(\.\d+)?$/.test(key)) return m;
+      return m;
+    }
+  );
+}
+
+function parseWordBudget(rawText) {
+  // Word-form budgets ("bees se bais lakh") without any digits. Tried only
+  // when digit parsing finds nothing.
+  const lowered = normalizeHindiNumerals(rawText).toLowerCase();
+  const unitRe = '(lakh|lac|lacs|lakhs|l|\u0932\u093E\u0916|\u0939\u091C\u093E\u0930|thousand|crore|cr)';
+  const words = Object.keys(HINDI_NUMBER_WORDS).sort((a, b) => b.length - a.length)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+  const edge = '(?:^|(?<=[^\\w\u0900-\u097F]))';
+  const tail = '(?=$|[^\\w\u0900-\u097F])';
+  const rangeRe = new RegExp(edge + '(' + words + ')\\s*(?:-|se|to|\u0938\u0947)\\s*(' + words + ')\\s*' + unitRe + tail, 'i');
+  const rm = lowered.match(rangeRe);
+  const mult = (u) => (/\u0939\u091C\u093E\u0930|thousand/i.test(u) ? 1000 : (/crore|^cr$/i.test(u) ? 10000000 : 100000));
+  if (rm) {
+    const a = HINDI_NUMBER_WORDS[rm[1].toLowerCase()];
+    const b = HINDI_NUMBER_WORDS[rm[2].toLowerCase()];
+    if (a !== undefined && b !== undefined) {
+      const m = mult(rm[3]);
+      return { min_inr: Math.round(a * m), max_inr: Math.round(b * m), exact_inr: Math.round(b * m), raw: rm[0], qualifier: 'range' };
+    }
+  }
+  const singleRe = new RegExp(edge + '(' + words + ')\\s*' + unitRe + tail, 'i');
+  const sm = lowered.match(singleRe);
+  if (sm) {
+    const a = HINDI_NUMBER_WORDS[sm[1].toLowerCase()];
+    if (a !== undefined) {
+      const inr = Math.round(a * mult(sm[2]));
+      return { min_inr: inr, max_inr: inr, exact_inr: inr, raw: sm[0], qualifier: 'exact' };
+    }
+  }
+  return null;
+}
+
+const QUANTITY_WORDS = { ek: 1, do: 2, teen: 3, tin: 3, chaar: 4, char: 4, paanch: 5, cheh: 6, saat: 7, aath: 8, nau: 9, das: 10, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
+
+function parseSpokenQuantity(rawText) {
+  // Quantity only when a machine noun or a want-verb is adjacent, so bare
+  // counts ("ek minute", "do baar") never match.
+  if (!rawText) return null;
+  const text = normalizeHindiNumerals(rawText).toLowerCase();
+  const numAlt = '(\\d+|ek|do|teen|tin|chaar|char|paanch|cheh|saat|aath|nau|das|one|two|three|four|five|six|seven|eight|nine|ten)';
+  const nounRe = new RegExp('\\b' + numAlt + '\\s*(machine|machines|excavator|excavators|jcb|loader|dozer|poclain|hydra|crane)[s]?\\b', 'i');
+  const m = text.match(nounRe);
+  if (m) {
+    const n = /^\d+$/.test(m[1]) ? parseInt(m[1], 10) : QUANTITY_WORDS[m[1]];
+    if (n >= 1 && n <= 20) return { quantity: n, raw: m[0] };
+    return null;
+  }
+  const verbRe = new RegExp('\\b' + numAlt + '\\s*\\w{0,12}\\s*(chahiye|chahiyen|chahida|lena|leni|lene|hai)\\b', 'i');
+  const v = text.match(verbRe);
+  if (v && /chahiye|chahiyen|chahida|lena|leni|lene/i.test(v[0])) {
+    const n = /^\d+$/.test(v[1]) ? parseInt(v[1], 10) : QUANTITY_WORDS[v[1]];
+    if (n >= 1 && n <= 20) return { quantity: n, raw: v[0] };
+  }
+  return null;
+}
+
+function parseFinanceRequirement(rawText) {
+  // Buyer-side finance need only. Seller mentions of existing loans
+  // ("loan chal raha hai") are handled as document status elsewhere.
+  if (!rawText) return null;
+  const text = String(rawText).toLowerCase();
+  if (/(?:finance|loan|emi|emat|kist|qist|credit)(?:\s*\w{0,10})?\s*(karwana|karana|len[ai]|lena|chahiye|par|per|pe|hoga|hogi)/.test(text)
+    || /(?:financ|loan)\s*(?:chahiye|karwana)/.test(text)) {
+    if (/\b(?:nahi|na|mat|without)\b/.test(text)) return null;
+    return true;
+  }
+  if (/(?:cash|nakad|nagad|nakat)(?:\s*\w{0,10})?\s*(mein|me|lenga|lunga|lungi|dena|dunga|payment)/.test(text)
+    || /full\s*payment|ek\s*saath\s*(paisa|payment)|poora\s*paisa/.test(text)) {
+    return false;
+  }
+  return null;
+}
+
+function parseWhatsappRequest(rawText) {
+  // Buyer asking Vaani to SEND details ("bhej do / de dijiye").
+  // Promises to send ("bhej dunga/dungi") belong to evidence_readiness.
+  if (!rawText) return false;
+  const text = String(rawText).toLowerCase();
+  if (/(?:bhej\s*dunga|bhej\s*dungi|send\s*kar\s*dunga|bhej\s*deta)/.test(text)) return false;
+  return /(?:whatsapp\s*(?:par|pe|parr)?\s*(?:bhej|bhejo|send|share|kar\s*do|de\s*dijiye|details?)|details?\s*(?:whatsapp|wa)?\s*(?:par|pe)?\s*(?:bhej|send|kar\s*do|de\s*dijiye)|machine\s*(?:ki\s*)?details?\s*(?:whatsapp\s*(?:par|pe)?\s*)?(?:bhej|send))/.test(text);
+}
+
+function parseApplicationHistory(rawText) {
+  // Single implementation backing both the class section and any caller:
+  // returns rock_breaker/quarry_rock/soil_earthwork/mixed or null.
+  if (!rawText) return null;
+  const tLower = String(rawText).toLowerCase();
+  if (/(?:breaker|rock breaker|hammer|\u092c\u094d\u0932\u0947\u0915\u0930|\u0939\u0925\u094c\u0921\u093c\u093e)/.test(tLower)) return 'rock_breaker';
+  if (/(?:pahad|pathar|stone|quarry|mining|gitti|\u092a\u0939\u093e\u0921\u093c|\u092a\u0924\u094d\u0925\u0930)/.test(tLower)) return 'quarry_rock';
+  if (/(?:mitti|soil|canal|earthwork|khet|soil excavation|\u092e\u093f\u091f\u094d\u091f\u0940)/.test(tLower)) return 'soil_earthwork';
+  if (/(?:dono|mixed|kabhi mitti kabhi breaker)/.test(tLower)) return 'mixed';
+  return null;
+}
+
+function parseSaleUrgency(rawText) {
+  // Seller-only explicit urgency. Conservative: bare "jaldi"/"abhi"/"rate"/
+  // "market" never resolve without the surrounding sale/exploration statement.
+  // Returns URGENT/SOON/EXPLORING/NORMAL/null (never guesses).
+  if (!rawText) return null;
+  const text = String(rawText).toLowerCase();
+  if (/(?:jaldi\s*(?:se\s*)?(?:bechna|bechni|sale\s*karni|bech\s*dena)|turant\s*(?:bechna|bechni|sale)|abhi\s*(?:bechna|bechni|sale\s*karna)|fatafat\s*bechna|jaldi\s*se\s*sale\s*karni|immediately\s*sell)/.test(text)) {
+    return 'URGENT';
+  }
+  if (/(?:jaldi\s*hi\s*bech(?:na|ni|\s*unga|\s*dunga)|kuch\s*din\s*mein\s*bechna|is\s*hafte\s*bechna|next\s*week\s*tak\s*bechna|soon\s*sell)/.test(text)) {
+    return 'SOON';
+  }
+  if (/(?:abhi\s*rate\s*pata\s*kar|bas\s*market\s*dekh|abhi\s*options\s*dekh|pehle\s*rate\s*check|abhi\s*decide\s*nahi|abhi\s*soch\s*rah)/.test(text)) {
+    return 'EXPLORING';
+  }
+  return null;
+}
+
+function parsePriceNegotiability(rawText) {
+  // Seller-only explicit flexibility language. Conservative: bare prices or
+  // vague words never resolve. Returns true/false/null (never guesses).
+  if (!rawText) return null;
+  const text = String(rawText).toLowerCase();
+  // Explicit NON-negotiable first (strongest, most specific).
+  if (/(?:bilkul\s*final|ek\s*dam\s*final|final\s+(?:hai|price|rate)|\blast\s*price(?:\s+hai)?|isse\s*kam\s*nahi|isse\s*ni?che\s*nahi|\bfixed\b(?:\s*(?:hai|price|rate))?|\bno\s*negotiation\b|negotiation\s*nahi|rate\s*final|daam\s*final)/.test(text)) {
+    return false;
+  }
+  if (/(?:kam\s*ho\s*jaye(?:ga|gi)?|thoda\s*kam|kuch\s*kam\s*ho|negotiable(?:\s*hai)?|negotiate\s*ho|baat\s*ho\s*jaye(?:ga|gi)?|final\s*nahi\s*hai|adjust\s*kar\s*lenge|(?:price|rate)\s*flexible\s*hai|gunjaish\s*hai|thoda\s*bahut\s*kam)/.test(text)) {
+    return true;
+  }
+  return null;
+}
+
 function parseSpokenPrice(rawText) {
   if (!rawText) return null;
   const text = normalizeHindiNumerals(rawText).toLowerCase();
+  const approx = /(?:\b(?:around|approx(?:imately)?|almost|kareeb|lagbhag|lagbhag|aaspass|aaju\s*baaju)\b)/i.test(text);
+  const maxOnly = /(?:\btak\b|\bse\s*kam\b|\bkam\s*se\b|\bse\s*neeche\b|\bunder\b|\bbelow\b|\bmaximum\b|\bup\s*to\b)/i.test(text);
 
   // Range match e.g. "22-25 lakh", "22 se 25 lakh", "20 to 22 l"
-  const rangeMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:-|se|to)\s*(\d+(?:\.\d+)?)\s*(lakh|lac|lacs|lakhs|l|लाख|हजार|crore|cr)(?:\b|[^\w\u0900-\u097F]|$)/i);
+  const rangeMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:-|se|to|\u0938\u0947)\s*(\d+(?:\.\d+)?)\s*(lakh|lac|lacs|lakhs|l|लाख|हजार|crore|cr)(?:\b|[^\w\u0900-\u097F]|$)/i);
   if (rangeMatch) {
     const minVal = parseFloat(rangeMatch[1]);
     const maxVal = parseFloat(rangeMatch[2]);
@@ -164,7 +335,8 @@ function parseSpokenPrice(rawText) {
       min_inr: Math.round(minVal * multiplier),
       max_inr: Math.round(maxVal * multiplier),
       exact_inr: Math.round(maxVal * multiplier),
-      raw: rangeMatch[0]
+      raw: rangeMatch[0],
+      qualifier: 'range'
     };
   }
 
@@ -178,11 +350,15 @@ function parseSpokenPrice(rawText) {
     else if (unit.includes('crore') || unit.includes('cr')) multiplier = 10000000;
 
     const inr = Math.round(num * multiplier);
+    if (maxOnly) {
+      return { min_inr: null, max_inr: inr, exact_inr: inr, raw: singleMatch[0], qualifier: 'max' };
+    }
     return {
       min_inr: inr,
       max_inr: inr,
       exact_inr: inr,
-      raw: singleMatch[0]
+      raw: singleMatch[0],
+      qualifier: approx ? 'approximate' : 'exact'
     };
   }
 
@@ -195,8 +371,21 @@ function parseSpokenPrice(rawText) {
       min_inr: inr,
       max_inr: inr,
       exact_inr: inr,
-      raw: inUnitMatch[0]
+      raw: inUnitMatch[0],
+      qualifier: 'exact'
     };
+  }
+
+  // Fallback: number-word budgets with no digits ("bees se bais lakh").
+  const wordRes = parseWordBudget(rawText);
+  if (wordRes) {
+    if (maxOnly && wordRes.qualifier === 'exact') {
+      return { ...wordRes, min_inr: null, qualifier: 'max' };
+    }
+    if (approx && wordRes.qualifier === 'exact') {
+      return { ...wordRes, qualifier: 'approximate' };
+    }
+    return wordRes;
   }
 
   return null;
@@ -381,6 +570,7 @@ class VaaniConversationExtractor {
       machine_details: {
         brand: null,
         model: null,
+        quantity: null,
         model_year: null,
         running_hours: null,
         tonnage_class: 'unknown',
@@ -392,9 +582,13 @@ class VaaniConversationExtractor {
       },
       commercial_terms: {
         expected_price_inr: null,
+        price_negotiable: null,
+        sale_urgency: null,
         budget_max_inr: null,
         budget_min_inr: null,
         price_or_budget_raw: null,
+        budget_qualifier: null,
+        finance_required: null,
         purchase_timeline: 'not_applicable',
         yard_visit_agreed: false,
         yard_visit_schedule: null
@@ -432,6 +626,8 @@ class VaaniConversationExtractor {
         urgency: 'normal'
       },
       dnc_requested: false,
+      whatsapp_requested: false,
+      whatsapp_action: null,
       call_notes: ''
     };
 
@@ -572,24 +768,13 @@ class VaaniConversationExtractor {
       this._setField('machine_details.running_hours', hours, text, 'HIGH', turnIndex, isCorrection);
     }
 
-    // 7. APPLICATION HISTORY
-    if (tLower.match(/(?:breaker|rock breaker|hammer|ब्लेकर|हथौड़ा)/)) {
-      this._setField('machine_details.application_history', 'rock_breaker', text, 'HIGH', turnIndex, isCorrection);
-      if (this.extracted.customer_type === 'buyer') {
-        this._setField('buyer_requirements.application', 'rock_breaker', text, 'HIGH', turnIndex, isCorrection);
+    // 7. APPLICATION HISTORY (single implementation: parseApplicationHistory)
+    const appHistory = parseApplicationHistory(text);
+    if (appHistory) {
+      this._setField('machine_details.application_history', appHistory, text, 'HIGH', turnIndex, isCorrection);
+      if (this.extracted.customer_type === 'buyer' && appHistory !== 'mixed') {
+        this._setField('buyer_requirements.application', appHistory, text, 'HIGH', turnIndex, isCorrection);
       }
-    } else if (tLower.match(/(?:pahad|pathar|stone|quarry|mining|gitti|पहाड़|पत्थर)/)) {
-      this._setField('machine_details.application_history', 'quarry_rock', text, 'HIGH', turnIndex, isCorrection);
-      if (this.extracted.customer_type === 'buyer') {
-        this._setField('buyer_requirements.application', 'quarry_rock', text, 'HIGH', turnIndex, isCorrection);
-      }
-    } else if (tLower.match(/(?:mitti|soil|canal|earthwork|khet|soil excavation|मिट्टी)/)) {
-      this._setField('machine_details.application_history', 'soil_earthwork', text, 'HIGH', turnIndex, isCorrection);
-      if (this.extracted.customer_type === 'buyer') {
-        this._setField('buyer_requirements.application', 'soil_earthwork', text, 'HIGH', turnIndex, isCorrection);
-      }
-    } else if (tLower.match(/(?:dono|mixed|kabhi mitti kabhi breaker)/)) {
-      this._setField('machine_details.application_history', 'mixed', text, 'HIGH', turnIndex, isCorrection);
     }
 
     // 8. MECHANICAL CONDITION
@@ -664,6 +849,9 @@ class VaaniConversationExtractor {
       const priceInfo = parseSpokenPrice(text);
       if (priceInfo) {
         this._setField('commercial_terms.price_or_budget_raw', priceInfo.raw, text, 'HIGH', turnIndex, isCorrection);
+        if (priceInfo.qualifier) {
+          this._setField('commercial_terms.budget_qualifier', priceInfo.qualifier, text, 'HIGH', turnIndex, isCorrection);
+        }
         if (this.extracted.customer_type === 'buyer') {
           this._setField('commercial_terms.budget_max_inr', priceInfo.max_inr, text, 'HIGH', turnIndex, isCorrection);
           if (priceInfo.min_inr && priceInfo.min_inr !== priceInfo.max_inr) {
@@ -672,7 +860,63 @@ class VaaniConversationExtractor {
         } else {
           this._setField('commercial_terms.expected_price_inr', priceInfo.exact_inr, text, 'HIGH', turnIndex, isCorrection);
         }
+        if (this.extracted.customer_type === 'seller') {
+          const _neg = parsePriceNegotiability(text);
+          if (_neg !== null) {
+            this._setField('commercial_terms.price_negotiable', _neg, text, 'HIGH', turnIndex, isCorrection);
+          }
+        }
+        if (this.extracted.customer_type === 'seller') {
+          const _urg = parseSaleUrgency(text);
+          if (_urg !== null) {
+            // Latest explicit seller position wins (sequential overwrite).
+            this._setField('commercial_terms.sale_urgency', _urg, text, 'HIGH', turnIndex, isCorrection);
+          } else if (this.extracted.commercial_terms.sale_urgency === null
+            || this.extracted.commercial_terms.sale_urgency === undefined) {
+            // NORMAL only on concrete sale evidence in THIS turn, never by default.
+            const _hasPrice = parseSpokenPrice(text) !== null;
+            const _hasModel = (() => { try { return !!(matchMachineModel(text) || {}).model; } catch (_) { return false; } })();
+            const _sellTalk = /(?:bechna|bechni|sell|bikau)\b/.test(text.toLowerCase());
+            if ((_hasPrice || _hasModel) && _sellTalk) {
+              this._setField('commercial_terms.sale_urgency', 'NORMAL', text, 'MEDIUM', turnIndex, isCorrection);
+            }
+          }
+        }
       }
+    }
+
+    // 11b. BUYER QUANTITY (buyer language only: "do excavator chahiye")
+    if (this.extracted.customer_type === 'buyer') {
+      const qty = parseSpokenQuantity(text);
+      if (qty) {
+        this._setField('machine_details.quantity', qty.quantity, qty.raw, 'HIGH', turnIndex, isCorrection);
+      }
+      const fin = parseFinanceRequirement(text);
+      if (fin !== null) {
+        this._setField('commercial_terms.finance_required', fin, text, 'MEDIUM', turnIndex, isCorrection);
+      }
+    }
+
+    // 11d. ATTACHMENT / GST / SPECIAL NOTES (buyer only, keyword-level only).
+    // Appended to machine_condition_summary, never a structured claim.
+    if (this.extracted.customer_type === 'buyer') {
+      const notes = [];
+      if (/\b(bucket|balti|\u092c\u093e\u0932\u094d\u091f\u0940|\u092c\u0915\u0947\u091f)\b/i.test(text)) notes.push('Attachment: bucket/balti required');
+      if (/\bgst\b|gst\s*bill|bill\s*chahiye|billing/i.test(text)) notes.push('GST billing required');
+      if (notes.length) {
+        const prev = this.extracted.machine_details.machine_condition_summary || '';
+        const fresh = notes.filter((note) => !prev.includes(note));
+        if (fresh.length) {
+          this._setField('machine_details.machine_condition_summary',
+            (prev ? prev + '; ' : '') + fresh.join('; '), text, 'MEDIUM', turnIndex, isCorrection);
+        }
+      }
+    }
+
+    // 11c. WHATSAPP REQUEST READINESS (request to SEND details, never a sent claim)
+    if (parseWhatsappRequest(text)) {
+      this._setField('whatsapp_requested', true, text, 'HIGH', turnIndex, isCorrection);
+      this._setField('whatsapp_action', 'PENDING', text, 'HIGH', turnIndex, isCorrection);
     }
 
     // 12. BUYER TIMELINE & URGENCY
@@ -685,6 +929,14 @@ class VaaniConversationExtractor {
     } else if (tLower.match(/(?:1-3 mahine|baad mein|aage chal kar)/)) {
       this._setField('commercial_terms.purchase_timeline', 'future_1_3_months', text, 'HIGH', turnIndex, isCorrection);
       this._setField('buyer_requirements.urgency', 'planning', text, 'HIGH', turnIndex, isCorrection);
+    } else if (this.extracted.customer_type === 'buyer' && /(?:abhi\s+dekh\s*rah|market\s*explor|research\s*kar\s*rah|options?\s*dekh\s*rah|decide\s*nahi|decide\s*ni\s*kiya|faisla\s*nahi|abhi\s*(?:soch|dekh|pooch|pata\s*kar)\s*rah)/.test(tLower)) {
+      // exploring_market: buyer browsing, not ready. Never overwrites a
+      // meaningful explicit timeline unless this turn is an explicit
+      // correction/update.
+      const _cur = this.extracted.commercial_terms.purchase_timeline;
+      if (_cur === null || _cur === undefined || _cur === 'not_applicable' || _cur === 'unknown' || isCorrection) {
+        this._setField('commercial_terms.purchase_timeline', 'exploring_market', text, 'MEDIUM', turnIndex, isCorrection);
+      }
     }
 
     // 13. BUYER YARD VISIT
@@ -998,15 +1250,116 @@ function extractFromConversation(conversationInput) {
   return extractor.finalize();
 }
 
+// ============================================================================
+// CALLBACK DATETIME (Hindi + Roman-Hindi + Devanagari).
+// Resolves ONLY fully explicit day + clock-time expressions such as
+// "kal ek baje" (tomorrow 13:00). Anything ambiguous (no day, no hour,
+// duration "ghante", past-tense narrative) returns null so the generic
+// default scheduler is never fed a guess.
+const CALLBACK_DAY_OFFSETS = {
+  'aaj': 0, 'aj': 0, 'आज': 0,
+  'kal': 1, 'कल': 1,
+  'parson': 2, 'parsoon': 2, 'परसों': 2, 'परसो': 2,
+};
+
+const CALLBACK_PERIOD_HINTS = [
+  { re: /subah|subha|savere|सुबह|सवेरे/, shift: (h) => h },
+  { re: /dopahar|दोपहर/, shift: (h) => (h < 12 ? h + 12 : h) },
+  { re: /shaam|sham|शाम/, shift: (h) => (h < 12 ? h + 12 : h) },
+  { re: /raat|रात/, shift: (h) => (h === 12 ? 0 : (h < 12 ? h + 12 : h)) },
+];
+
+// Explicit request-to-contact cues. Presence defeats the past-tense veto
+// ("kal baat hui thi, kal ek baje phir call karna" still resolves).
+const CALLBACK_CONTACT_CUES = /call|phone|callback|colback|karn[aei]|karega|karenge|kijiye|sampark|bataiyega|batana/i;
+const CALLBACK_PAST_VETO = /\b(tha|thi|thay|thae|hue|hui|hua|huyi|chuka|chuki|gaya|gayi)\b/i;
+
+function escapeCallbackRegExp(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function parseCallbackDatetime(rawText, nowMs) {
+  if (!rawText) return null;
+  const text = normalizeHindiNumerals(String(rawText));
+  if (!text.trim()) return null;
+  const lowered = text.toLowerCase();
+  const EDGE = '(?:^|[^\\w\u0900-\u097F])';
+  const TAIL = '(?=$|[^\\w\u0900-\u097F])';
+
+  // Day: last day-word wins (corrections supersede, same discipline as budget).
+  let dayOffset = null;
+  for (const [word, offset] of Object.entries(CALLBACK_DAY_OFFSETS)) {
+    if (new RegExp(EDGE + escapeCallbackRegExp(word) + TAIL, 'i').test(lowered)) {
+      dayOffset = offset;
+    }
+  }
+
+  // Hour: ASCII digits or number words 1-12, immediately before baje/bajey/बजे.
+  // The leading-edge guard keeps phone fragments ("...45674 baje") from matching.
+  const hourWords = Object.keys(HINDI_NUMBER_WORDS)
+    .filter((w) => HINDI_NUMBER_WORDS[w] >= 1 && HINDI_NUMBER_WORDS[w] <= 12)
+    .sort((a, b) => b.length - a.length)
+    .map(escapeCallbackRegExp)
+    .join('|');
+  const timeRe = new RegExp(EDGE + '(\\d{1,2}|' + hourWords + ')\\s*(baje|bajey|बजे)' + TAIL, 'gi');
+  let hour = null;
+  let hourIndex = -1;
+  let m;
+  while ((m = timeRe.exec(lowered)) !== null) {
+    const token = m[1];
+    const n = /^\d+$/.test(token) ? parseInt(token, 10) : HINDI_NUMBER_WORDS[token];
+    if (Number.isFinite(n) && n >= 1 && n <= 12) {
+      hour = n; // last clock-time mention wins (corrections supersede)
+      hourIndex = m.index;
+    }
+  }
+
+  // Both day and clock time are required. A bare "3 baje" (no day) or a bare
+  // "kal baat karenge" (no hour) resolves to nothing: never invent a date.
+  if (dayOffset === null || hour === null) return null;
+
+  const hasCue = CALLBACK_CONTACT_CUES.test(lowered);
+  if (!hasCue && CALLBACK_PAST_VETO.test(lowered)) return null;
+
+  // Period: nearest hint to the hour mention wins; bare hours follow Indian
+  // business convention (7-11 morning, 12 noon, 1-6 afternoon).
+  let hour24 = null;
+  let bestDist = Infinity;
+  for (const hint of CALLBACK_PERIOD_HINTS) {
+    const hre = new RegExp(hint.re.source, 'gi');
+    let hm;
+    while ((hm = hre.exec(lowered)) !== null) {
+      const dist = Math.abs(hm.index - hourIndex);
+      if (dist < bestDist) { bestDist = dist; hour24 = hint.shift(hour); }
+    }
+  }
+  if (hour24 === null) {
+    hour24 = (hour >= 7 && hour <= 11) ? hour : (hour === 12 ? 12 : hour + 12);
+  }
+
+  // Server-local wall clock (IST on this box), identical frame to the
+  // existing next-morning-11:00 default. Stored as ISO for the CRM field.
+  const base = new Date(Number.isFinite(nowMs) ? nowMs : Date.now());
+  const due = new Date(base.getFullYear(), base.getMonth(), base.getDate() + dayOffset, hour24, 0, 0, 0);
+  return { datetime: due.toISOString(), qualifier: 'explicit' };
+}
+
 module.exports = {
   VaaniConversationExtractor,
   extractFromConversation,
   MACHINE_TAXONOMY,
   matchMachineModel,
   parseSpokenPrice,
+  parseSpokenQuantity,
+  parseFinanceRequirement,
+  parseWhatsappRequest,
+  parsePriceNegotiability,
+  parseSaleUrgency,
+  parseApplicationHistory,
   parseModelYear,
   parseOperatingHours,
   normalizeIndianPhone,
   parseLocation,
-  normalizeHindiNumerals
+  normalizeHindiNumerals,
+  parseCallbackDatetime
 };

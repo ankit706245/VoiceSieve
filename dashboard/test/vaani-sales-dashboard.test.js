@@ -191,21 +191,23 @@ test('global search across customers, machine model, and location', async () => 
 });
 
 test('HTTP API endpoints return valid status and schema', async () => {
-  const baseUrl = 'http://localhost:8787';
+  const baseUrl = process.env.DASHBOARD_TEST_URL || 'http://localhost:8787';
 
   // Verify unauthenticated request returns 401
   const unauthRes = await fetch(`${baseUrl}/api/vaani/sales/overview?demo=1`);
   assert.equal(unauthRes.status, 401);
 
-  // Authenticate with valid session token
-  const token = await core.createSession('u_290fde84dd4df51e', 't_69d344e9ee8945d8');
+  // Authenticate with valid session token for demo user
+  const token = await core.createSession('u_02162b1d2ea3f939', 't_87a6e07e9cd2fe2d');
   const headers = { Cookie: `rxv_sess=${token}` };
 
-  // Overview
+  // Overview and Buyers are bearer-only BRAIVEX endpoints. The legacy rxv_sess
+  // cookie must be rejected here; the bearer path is covered by
+  // test/braivex-require-auth.test.js and test/vaani-overview-braivex.test.js.
   const resOverview = await fetch(`${baseUrl}/api/vaani/sales/overview?demo=1`, { headers });
-  assert.equal(resOverview.status, 200);
+  assert.equal(resOverview.status, 401);
   const dataOverview = await resOverview.json();
-  assert.ok(dataOverview.total_leads >= 0);
+  assert.equal(dataOverview.code, 'bad_token');
 
   // Sellers
   const resSellers = await fetch(`${baseUrl}/api/vaani/sales/sellers?demo=1`, { headers });
@@ -215,9 +217,9 @@ test('HTTP API endpoints return valid status and schema', async () => {
 
   // Buyers
   const resBuyers = await fetch(`${baseUrl}/api/vaani/sales/buyers?demo=1`, { headers });
-  assert.equal(resBuyers.status, 200);
+  assert.equal(resBuyers.status, 401);
   const dataBuyers = await resBuyers.json();
-  assert.ok(Array.isArray(dataBuyers.buyers));
+  assert.equal(dataBuyers.code, 'bad_token');
 
   // Machines
   const resMachines = await fetch(`${baseUrl}/api/vaani/sales/machines?demo=1`, { headers });
@@ -464,3 +466,117 @@ test('Overview recent activities feed and honest empty state in Real DB', async 
   });
 });
 
+test('Classification: Dograh buyer_seller_classification = "buyer" -> "buyer"', async () => {
+  const runId = 999901;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { buyer_seller_classification: "buyer" } };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'buyer');
+});
+
+test('Classification: Dograh buyer_seller_classification = "seller" -> "seller"', async () => {
+  const runId = 999902;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { buyer_seller_classification: "seller" } };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'seller');
+});
+
+test('Classification: intent = "purchase" -> "buyer"', async () => {
+  const runId = 999903;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { intent: "purchase" } };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'buyer');
+});
+
+test('Classification: intent = "sell" -> "seller"', async () => {
+  const runId = 999904;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { intent: "sell" } };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'seller');
+});
+
+test('Classification: intent = "not_interested" -> "other"', async () => {
+  const runId = 999905;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { intent: "not_interested" } };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'other');
+});
+
+test('Classification: Machine-only data remains unknown', async () => {
+  const runId = 999906;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", machine_brand: "JCB" };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'unknown');
+});
+
+test('Classification: Buyer + machine -> "buyer"', async () => {
+  const runId = 999907;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { intent: "purchase" }, machine_brand: "JCB", machine_model: "3DX" };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'buyer');
+});
+
+test('Classification: Seller + machine -> "seller"', async () => {
+  const runId = 999908;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { intent: "sell" }, machine_brand: "JCB", machine_model: "3DX" };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'seller');
+});
+
+test('Classification: Explicit correction seller -> buyer -> "buyer"', async () => {
+  const runId = 999909;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { buyer_seller_classification: "seller" }, transcript: "actually mujhe machine kharidni hai, not sell" };
+  
+  const originalExtractor = vaaniSales.extractFromConversation;
+  vaaniSales.extractFromConversation = (transcript) => {
+    return {
+      extracted: { customer_type: 'buyer', machine_details: {}, commercial_terms: {}, evidence_readiness: {} },
+      provenance: {}, missing_info: [], correction_history: [{ old: 'seller', new: 'buyer' }], follow_up_question: null
+    };
+  };
+  await vaaniSales.ingestCallComplete(payload);
+  vaaniSales.extractFromConversation = originalExtractor;
+
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'buyer');
+});
+
+test('Classification: Explicit correction buyer -> seller -> "seller"', async () => {
+  const runId = 999910;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { buyer_seller_classification: "buyer" }, transcript: "I want to sell it, not buy" };
+  const originalExtractor = vaaniSales.extractFromConversation;
+  vaaniSales.extractFromConversation = (transcript) => {
+    return {
+      extracted: { customer_type: 'seller', machine_details: {}, commercial_terms: {}, evidence_readiness: {} },
+      provenance: {}, missing_info: [], correction_history: [{ old: 'buyer', new: 'seller' }], follow_up_question: null
+    };
+  };
+  await vaaniSales.ingestCallComplete(payload);
+  vaaniSales.extractFromConversation = originalExtractor;
+
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'seller');
+});
+
+test('Classification: Missing classification -> unknown', async () => {
+  const runId = 999911;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000" };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'unknown');
+});
+
+test('Classification: Invalid classification -> unknown', async () => {
+  const runId = 999912;
+  const payload = { call_metadata: { run_id: runId }, id: runId, workflow_id: 3, organization_id: 1, primary_phone: "+919999900000", extracted_variables: { intent: "nonsense_string_123" } };
+  await vaaniSales.ingestCallComplete(payload);
+  const row = await vaaniSales.queryPostgres(`SELECT customer_type FROM vaani_excavator_sales_leads WHERE run_id = ${runId}`);
+  assert.equal(row, 'unknown');
+});

@@ -1,0 +1,96 @@
+# Vaani Docker build context ignore file
+# Build context: repository root
+# Dockerfile: rumik-overlay-local/Dockerfile
+
+# Secret / credential files (never include in image)
+.env
+.env.local
+.env.example
+*.pem
+*.key
+*.secret
+credentials*
+secrets*
+service-account*.json
+
+# Git metadata (parent and nested)
+.git/
+.gitignore
+.dograh/
+**/.git/
+**/.gitignore
+
+# Python caches and bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+.env
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Logs and runtime artifacts
+*.log
+logs/
+*.pid
+data/
+
+# Docker-related
+.dockerignore
+Dockerfile*
+docker-compose*
+.docker/
+
+# VS Code / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+
+# Test artifacts and scratch files (not needed in image)
+**/test_*.py
+**/*_test.py
+**/test_*.js
+**/*_test.js
+patch*.py
+patch*.js
+extract*.py
+end_run_*.py
+test_run_*.js
+fix_sales.py
+restore.py
+restart_ui.sh
+current_diff.patch
+*.temp
+*.tmp
+
+# Documentation and reports (not needed at runtime)
+docs/
+*.md
+AGENTS.md
+CLAUDE.md
+CONTRIBUTING.md
+LICENSE
+SECURITY.md
+SECURITY-AUDIT.md
+THREAT-MODEL.md
+
+# Dashboard build artifacts
+dashboard/.next/
+dashboard/dist/
+dashboard/build/
+dashboard/tests/
+dashboard/test/
+
+# Miscellaneous local development files
+cookies.txt
+one-shot-prompt.md

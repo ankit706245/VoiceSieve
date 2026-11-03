@@ -1,32 +1,51 @@
 import asyncio, json, uuid, wave, io, time, os, sys
+from pathlib import Path
 import aiohttp, websockets
 from aiortc import RTCPeerConnection, RTCSessionDescription, MediaStreamTrack
 from av import AudioFrame
 import numpy as np
 
+# The caller fixtures are generated through Rumik silk TTS, never local say.
+sys.path.insert(0, str(Path(__file__).resolve().parent / "scripts"))
+from generate_test_audio import ensure_test_audio
+
 async def main():
     email = sys.argv[1]
     password = sys.argv[2]
+
+    print("Preparing caller audio fixtures via Rumik silk TTS...")
+    try:
+        caller_audio = ensure_test_audio()
+    except Exception as exc:
+        print(f"ERROR: couldn't prepare Rumik caller audio: {exc}", file=sys.stderr)
+        return
+    for name, path in caller_audio.items():
+        print(f"  {name}: {path}")
     
     async with aiohttp.ClientSession() as session:
         async with session.post(
-            "http://localhost:8000/api/v1/auth/login",
+            "http://localhost:8787/api/auth/login",
             json={"email": email, "password": password}
         ) as resp:
             data = await resp.json()
-            tok = data["token"]
-            print("Token acquired successfully")
+            print("LOGIN DATA KEYS/VALUES:", data)
+            tok = data.get("token") or data.get("access_token") or data.get("session_id")
+            print("Token acquired successfully:", tok[:10] if tok else "None")
 
         async with session.post(
             "http://localhost:8000/api/v1/workflow/3/runs",
-            headers={"Authorization": f"Bearer {tok}"},
-            json={"name": f"test-run-{uuid.uuid4().hex[:6]}", "mode": "smallwebrtc"}
+            headers={"Content-Type": "application/json", "X-API-Key": "dgr_04jEGFVMZAwDZ9-Dr9d8YRaCcYNuegWUmJMAsD6OYvQ"},
+            json={"name": f"test-run-{uuid.uuid4().hex[:6]}", "mode": "smallwebrtc", "workflow_id": 3}
         ) as resp:
             run_data = await resp.json()
-            run_id = run_data["id"]
+            print("RUN RESPONSE:", run_data)
+            run_id = run_data.get("id") or run_data.get("run_id") or (run_data.get("data") or {}).get("id")
+        if not run_id:
+            print("RUN DATA KEYS:", run_data.keys())
+            raise KeyError("No id or run_id found in response:")
             print(f"Created smallwebrtc run: id={run_id}")
 
-    ws_url = f"ws://localhost:8000/api/v1/ws/signaling/3/{run_id}?token={tok}"
+    ws_url = f"ws://localhost:8000/api/v1/ws/signaling/3/{run_id}?api_key=dgr_04jEGFVMZAwDZ9-Dr9d8YRaCcYNuegWUmJMAsD6OYvQ"
     async with websockets.connect(ws_url) as ws:
         print("Connected to WebSocket signaling")
         pc = RTCPeerConnection()
@@ -46,6 +65,13 @@ async def main():
             def queue_wav(self, path):
                 print(f"Queueing WAV for playback: {path}")
                 with wave.open(path, 'rb') as w:
+                    if (w.getnchannels() != 1 or w.getsampwidth() != 2
+                            or w.getframerate() != self.sample_rate):
+                        raise ValueError(
+                            f"{path}: expected 16 kHz mono 16-bit WAV, got "
+                            f"{w.getframerate()} Hz, {w.getnchannels()} channel(s), "
+                            f"{w.getsampwidth() * 8}-bit"
+                        )
                     sr = w.getframerate()
                     raw = w.readframes(w.getnframes())
                 # chunk into 10ms frames (160 samples = 320 bytes)
@@ -159,7 +185,7 @@ async def main():
         
         # 2. Hindi business question
         print("\n--- SCENARIO 2: Hindi Business Question ---")
-        audio_track.queue_wav("/tmp/user_inputs/q1_hindi.wav")
+        audio_track.queue_wav(str(caller_audio["q1_hindi"]))
         # Wait for user speech to finish
         while audio_track.playing_file:
             await asyncio.sleep(0.2)
@@ -173,7 +199,7 @@ async def main():
         
         # 3. Hinglish question & Pricing
         print("\n--- SCENARIO 3 & 4: Hinglish & Pricing Question ---")
-        audio_track.queue_wav("/tmp/user_inputs/q2_hinglish.wav")
+        audio_track.queue_wav(str(caller_audio["q2_hinglish"]))
         while audio_track.playing_file:
             await asyncio.sleep(0.2)
         print("User Hinglish question sent. Waiting for bot reply...")
@@ -187,7 +213,7 @@ async def main():
         # 4. User interruption / barge-in
         print("\n--- SCENARIO 5: User Interruption / Barge-in ---")
         # Ask question 3
-        audio_track.queue_wav("/tmp/user_inputs/q3_business.wav")
+        audio_track.queue_wav(str(caller_audio["q3_business"]))
         while audio_track.playing_file:
             await asyncio.sleep(0.2)
         # Wait for bot to START speaking
@@ -196,7 +222,7 @@ async def main():
             await asyncio.sleep(0.2)
         print("Bot is speaking! Now interrupting immediately with user speech...")
         # Send interruption
-        audio_track.queue_wav("/tmp/user_inputs/q4_interrupt.wav")
+        audio_track.queue_wav(str(caller_audio["q4_interrupt"]))
         interrupt_time = time.time()
         # Verify bot stops speaking within 1.5s
         await asyncio.sleep(1.0)
@@ -214,7 +240,7 @@ async def main():
         
         # 5. Callback request
         print("\n--- SCENARIO 6: Callback Request ---")
-        audio_track.queue_wav("/tmp/user_inputs/q5_callback.wav")
+        audio_track.queue_wav(str(caller_audio["q5_callback"]))
         while audio_track.playing_file:
             await asyncio.sleep(0.2)
         print("User callback request sent. Waiting for bot reply...")
@@ -227,7 +253,7 @@ async def main():
         
         # 6. End conversation
         print("\n--- SCENARIO 7: End Conversation ---")
-        audio_track.queue_wav("/tmp/user_inputs/q6_end.wav")
+        audio_track.queue_wav(str(caller_audio["q6_end"]))
         while audio_track.playing_file:
             await asyncio.sleep(0.2)
         print("User end sent. Waiting for final goodbye...")

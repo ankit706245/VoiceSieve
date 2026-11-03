@@ -1,5 +1,5 @@
 /* ==========================================================================
-   RapidX Voice. Marketing landing behavior.
+   Vaani. Marketing landing behavior.
    Pure vanilla JS, zero dependencies. Progressive enhancement only.
    Content is visible by default. JS only adds motion and safety nets.
    No em dashes anywhere. Use commas or periods.
@@ -45,7 +45,7 @@
   function buildAvatars() {
     var nodes = document.querySelectorAll(".avatar[data-name]");
     Array.prototype.forEach.call(nodes, function (el) {
-      var name = el.getAttribute("data-name") || "RapidX";
+      var name = el.getAttribute("data-name") || "Vaani";
       var h = hashStr(name);
       var c1 = VOLT[h % VOLT.length];
       var c2 = VOLT[(h >> 3) % VOLT.length];
@@ -60,7 +60,7 @@
   /* Branded SVG data-URI used by the image guard if any <img> fails.       */
   /* ---------------------------------------------------------------------- */
   function brandedDataUri(label) {
-    var txt = (label || "RapidX Voice").replace(/[<>&"]/g, " ");
+    var txt = (label || "Vaani").replace(/[<>&"]/g, " ");
     var svg =
       "<svg xmlns='http://www.w3.org/2000/svg' width='640' height='400' viewBox='0 0 640 400'>" +
       "<defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>" +
@@ -81,7 +81,7 @@
       function swap() {
         if (img.getAttribute("data-guarded") === "1") { return; }
         img.setAttribute("data-guarded", "1");
-        img.src = brandedDataUri(img.getAttribute("alt") || "RapidX Voice");
+        img.src = brandedDataUri(img.getAttribute("alt") || "Vaani");
       }
       img.addEventListener("error", swap);
       // Already broken by the time we run (cached failure).
@@ -363,22 +363,22 @@
         forced++;
       }
     });
-    if (forced) { console.warn("[RapidX Voice] force-showed " + forced + " element(s) stuck at opacity 0."); }
+    if (forced) { console.warn("[Vaani] force-showed " + forced + " element(s) stuck at opacity 0."); }
 
     // Warn on broken images.
     var broken = 0;
     Array.prototype.forEach.call(document.querySelectorAll("img"), function (img) {
       if (img.complete && img.naturalWidth === 0 && img.getAttribute("data-guarded") !== "1") {
         broken++;
-        console.warn("[RapidX Voice] broken image:", img.getAttribute("src"));
+        console.warn("[Vaani] broken image:", img.getAttribute("src"));
       }
     });
-    if (broken) { console.warn("[RapidX Voice] " + broken + " broken image(s) detected."); }
+    if (broken) { console.warn("[Vaani] " + broken + " broken image(s) detected."); }
 
     // Warn if the hero H1 is missing.
     var h1 = document.querySelector(".hero-h1, h1");
     if (!h1 || !h1.textContent.trim()) {
-      console.warn("[RapidX Voice] hero H1 missing or empty.");
+      console.warn("[Vaani] hero H1 missing or empty.");
     }
   }
 

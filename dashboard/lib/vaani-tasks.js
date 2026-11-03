@@ -47,6 +47,7 @@ const TASK_PRIORITIES = Object.freeze({
 });
 
 const TASK_TYPES = Object.freeze({
+  OWNER_HANDOFF: 'OWNER_HANDOFF',
   CALL_BACK: 'CALL_BACK',
   REQUEST_PHOTOS: 'REQUEST_PHOTOS',
   REQUEST_METER_PHOTO: 'REQUEST_METER_PHOTO',
@@ -144,6 +145,29 @@ function buildCandidateTasks(context) {
 
   const candidates = [];
 
+  // PHASE 3: Autonomous Lead Prioritization Override
+  if (context.next_action === 'OWNER_HANDOFF' || context.deal_readiness === 'READY_FOR_HUMAN') {
+    candidates.push({
+      task_type: TASK_TYPES.OWNER_HANDOFF,
+      title: `Owner Handoff: ${caller_name || customer_type} (${mach_details.brand || ''} ${mach_details.model || ''})`,
+      description: context.owner_summary || context.deal_ready_reason || `Customer is ready for final discussion.`,
+      assigned_to: 'Owner / Manager',
+      reason: 'READY_FOR_HUMAN'
+    });
+    // Skip deterministic generation if it's already escalated to owner
+    return candidates.map(c => _formatCandidate(c, context));
+  }
+
+  if (context.next_action && context.next_action !== 'NO_ACTION_REQUIRED' && context.next_action !== 'NO_FOLLOW_UP' && !['MATCH_BUYER', 'EVIDENCE_COLLECTION', 'YARD_VISIT'].includes(context.next_action)) {
+    candidates.push({
+      task_type: context.next_action,
+      title: `${context.next_action.replace(/_/g, ' ')}: ${mach_details.brand || 'unknown'} ${mach_details.model || 'unknown'}`,
+      description: `LLM recommended action based on conversation outcome.`,
+      assigned_to: 'Sales Operator',
+      reason: 'Automated intelligence recommendation'
+    });
+  }
+
   if (customer_type === 'seller') {
     // Evidence tasks
     if (!ev_readiness.photos_agreed) {
@@ -226,8 +250,20 @@ function buildCandidateTasks(context) {
   }
 
   // Format candidate tasks with priority, timing, and unique deduplication keys
-  return candidates.map(c => {
-    const priority = determineTaskPriority(customer_type, qual_state, lead_temp, comm_terms, ev_readiness, c.task_type);
+  return candidates.map(c => _formatCandidate(c, context));
+}
+
+function _formatCandidate(c, context) {
+    const {
+      organization_id, lead_id, customer_id, customer_type, qual_state, lead_temp,
+      comm_terms = {}, ev_readiness = {}, follow_up_datetime, run_id, caller_name, primary_phone, mach_details = {}, sales_priority, deal_readiness
+    } = context;
+    
+    let priority = sales_priority || determineTaskPriority(customer_type, qual_state, lead_temp, comm_terms, ev_readiness, c.task_type);
+    if (c.task_type === 'OWNER_HANDOFF' && (!priority || priority === 'LOW' || priority === 'MEDIUM')) {
+        priority = 'CRITICAL';
+    }
+
     const dueAt = determineTaskDueAt(c.task_type, follow_up_datetime, comm_terms);
     const taskId = `task_${organization_id}_${run_id}_${c.task_type.toLowerCase()}`;
 
@@ -248,14 +284,14 @@ function buildCandidateTasks(context) {
       metadata: {
         customer_type,
         customer_name: caller_name,
+        machine_model: mach_details.model || mach_details.brand || null,
         primary_phone,
         lead_temperature: lead_temp,
         qualification_state: qual_state,
-        machine_model: mach_details.model || mach_details.brand || null,
-        price_raw: comm_terms.price_or_budget_raw || null
+        sales_priority: sales_priority || null,
+        deal_readiness: deal_readiness || null
       }
     };
-  });
 }
 
 /**
@@ -556,6 +592,69 @@ async function getTasksForOrganization(organizationId) {
   };
 }
 
+/**
+ * Due-task sweeper (Phase 3): promote PENDING tasks whose due_at has passed
+ * to DUE through the validated transition path. No scheduler existed before,
+ * so tasks sat in PENDING forever. Safe to run periodically; each transition
+ * is individually validated and failures are collected, never thrown.
+ *
+ * The sweeper ONLY changes task status. It never places a call, never sends a
+ * WhatsApp message and never notifies anybody.
+ *
+ * Options (all optional; defaults preserve today's behaviour):
+ *   limit           max rows examined per sweep (default 100)
+ *   organizationId  restrict the sweep to one organization (default: all orgs)
+ *   dryRun          read-only preview: list candidates, change nothing
+ *   queryFn         injectable query seam (unit tests, no database)
+ *   transitionFn    injectable transition seam (unit tests, no database)
+ */
+async function sweepDueTasks({ limit = 100, organizationId = null, dryRun = false, queryFn = null, transitionFn = null } = {}) {
+  const supadb = require('./supadb');
+  const out = { checked: 0, transitioned: [], candidates: [], errors: [], by_org: {}, dry_run: Boolean(dryRun) };
+  const maxRows = parseInt(limit, 10) || 100;
+  const orgInt = (organizationId === null || organizationId === undefined) ? null : parseInt(organizationId, 10);
+  if (orgInt !== null && (!Number.isFinite(orgInt) || orgInt <= 0)) {
+    out.errors.push('invalid_organization_id');
+    return out;
+  }
+  // Organization scope is applied to the SELECT as well as (already) to the
+  // transition itself, so a sweep can be restricted to a single organization.
+  const orgClause = (orgInt === null) ? '' : ` AND organization_id = ${sqlEscapeInt(orgInt)}`;
+  const sql = `SELECT row_to_json(t) FROM (SELECT task_id, organization_id FROM public.vaani_follow_up_tasks WHERE status = 'PENDING' AND due_at IS NOT NULL AND due_at <= CURRENT_TIMESTAMP${orgClause} ORDER BY due_at LIMIT ${maxRows}) t;`;
+  let stdout = '';
+  try {
+    if (queryFn) {
+      stdout = await queryFn(sql);
+    } else {
+      stdout = await new Promise((resolve, reject) => {
+        supadb.queryTextCallback(sql, { timeout: 15000 }, (err, out2) => (err ? reject(err) : resolve(out2)));
+      });
+    }
+  } catch (e) {
+    out.errors.push(`sweep-query: ${e.message}`);
+    return out;
+  }
+  const rows = stdout.trim().split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  out.checked = rows.length;
+  const transition = transitionFn || transitionTaskStatus;
+  for (const r of rows) {
+    const orgKey = String(r.organization_id);
+    out.by_org[orgKey] = (out.by_org[orgKey] || 0) + 1;
+    if (out.dry_run) {
+      // Read-only preview: record the candidate, change nothing at all.
+      out.candidates.push(r.task_id);
+      continue;
+    }
+    try {
+      await transition(r.task_id, 'DUE', r.organization_id, 'System Sweeper', 'Due time reached');
+      out.transitioned.push(r.task_id);
+    } catch (e) {
+      out.errors.push(`${r.task_id}: ${e.message}`);
+    }
+  }
+  return out;
+}
+
 module.exports = {
   TASK_STATUSES,
   TASK_PRIORITIES,
@@ -567,5 +666,6 @@ module.exports = {
   processCallFollowUpTasks,
   transitionTaskStatus,
   markEvidenceReceived,
-  getTasksForOrganization
+  getTasksForOrganization,
+  sweepDueTasks
 };

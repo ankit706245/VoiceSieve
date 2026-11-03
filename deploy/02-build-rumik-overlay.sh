@@ -13,12 +13,14 @@ OVERLAY="$ROOT/rumik-overlay-local"
 [ -f "$OVERLAY/registry.py" ] || die "Missing $OVERLAY/registry.py"
 [ -f "$OVERLAY/service_factory.py" ] || die "Missing $OVERLAY/service_factory.py"
 [ -f "$OVERLAY/check_validity.py" ] || die "Missing $OVERLAY/check_validity.py"
+[ -f "$OVERLAY/hindi_speech_normalizer.py" ] || die "Missing $OVERLAY/hindi_speech_normalizer.py"
+[ -f "$OVERLAY/reasoning_output_guard.py" ] || die "Missing $OVERLAY/reasoning_output_guard.py"
 
 sed "s|^FROM .*|FROM $BASE_IMG|" "$OVERLAY/Dockerfile" \
   | rsh "cat > /opt/rumik-overlay/Dockerfile"
 
 say "Uploading the verified Rumik registry and service patches"
-for file in registry.py service_factory.py check_validity.py; do
+for file in registry.py service_factory.py check_validity.py hindi_speech_normalizer.py reasoning_output_guard.py; do
   rsh "cat > /opt/rumik-overlay/$file" < "$OVERLAY/$file"
 done
 

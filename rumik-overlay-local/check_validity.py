@@ -61,14 +61,17 @@ class UserConfigurationValidator:
             ServiceProviders.GOOGLE_REALTIME.value: self._check_google_api_key,
             ServiceProviders.GOOGLE_VERTEX_REALTIME.value: self._check_google_vertex_realtime_api_key,
             ServiceProviders.AZURE_REALTIME.value: self._check_azure_realtime_api_key,
+            ServiceProviders.AWS_NOVA_SONIC.value: self._check_aws_bedrock_api_key,
             ServiceProviders.ASSEMBLYAI.value: self._check_assemblyai_api_key,
             ServiceProviders.GLADIA.value: self._check_gladia_api_key,
+            ServiceProviders.SONIOX.value: self._check_soniox_api_key,
             ServiceProviders.RIME.value: self._check_rime_api_key,
             ServiceProviders.MINIMAX.value: self._check_minimax_api_key,
             ServiceProviders.SMALLEST.value: self._check_smallest_api_key,
             ServiceProviders.XAI.value: self._check_xai_api_key,
             ServiceProviders.LMNT.value: self._check_lmnt_api_key,
             ServiceProviders.RUMIK.value: self._check_rumik_api_key,
+            ServiceProviders.SPEECHIFY.value: self._check_speechify_api_key,
         }
 
     async def validate(
@@ -177,8 +180,11 @@ class UserConfigurationValidator:
                 return [{"model": service_name, "message": str(e)}]
             return []
 
-        # AWS Bedrock uses AWS credentials instead of api_key
-        if provider == ServiceProviders.AWS_BEDROCK.value:
+        # AWS Bedrock services use IAM credentials instead of api_key.
+        if provider in {
+            ServiceProviders.AWS_BEDROCK.value,
+            ServiceProviders.AWS_NOVA_SONIC.value,
+        }:
             try:
                 if not self._check_aws_bedrock_api_key(provider, service_config):
                     return [
@@ -427,25 +433,35 @@ class UserConfigurationValidator:
         return True
 
     def _check_lmnt_api_key(self, model: str, api_key: str) -> bool:
-        # Best-effort smoke test against LMNT's voice-list endpoint. Only a clear
-        # auth failure rejects the save; other statuses are treated as
-        # inconclusive so transient errors or API changes don't block valid keys.
+        raise ValueError(
+            "LMNT is no longer available. Please select another TTS provider."
+        )
+
+    def _check_speechify_api_key(self, model: str, api_key: str) -> bool:
+        # Best-effort smoke test against Speechify's voice-list endpoint. Only a
+        # clear auth failure rejects the save; connection failures and other
+        # statuses are treated as inconclusive so transient errors or API
+        # changes don't block valid keys.
         try:
             response = httpx.get(
-                "https://api.lmnt.com/v1/ai/voice/list",
-                headers={"X-API-Key": api_key, "lmnt-version": "1.1"},
+                "https://api.speechify.ai/v1/voices?limit=1",
+                headers={"Authorization": f"Bearer {api_key}"},
                 timeout=10.0,
             )
         except httpx.RequestError:
-            raise ValueError(
-                "Could not connect to the LMNT API. Please check your network "
-                "connection and try again."
-            )
+            return True
         if response.status_code == 401:
             raise ValueError(
-                "Invalid LMNT API key. The key was rejected by the LMNT API. "
+                "Invalid Speechify API key. The key was rejected by the Speechify API. "
                 "Please check that your API key is correct and active. "
-                "You can find your key at https://app.lmnt.com."
+                "You can find your key at https://platform.speechify.ai."
+            )
+        if response.status_code == 403:
+            raise ValueError(
+                "Speechify API authorization failed: the key was recognized but is "
+                "not allowed to access the TTS API (expired plan, revoked key, or "
+                "missing scope). Check your key and plan at "
+                "https://platform.speechify.ai."
             )
         return True
 
@@ -495,6 +511,31 @@ class UserConfigurationValidator:
 
     def _check_gladia_api_key(self, model: str, api_key: str) -> bool:
         return True
+
+    def _check_soniox_api_key(self, model: str, api_key: str) -> bool:
+        try:
+            response = httpx.get(
+                "https://api.soniox.com/v1/models",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=10.0,
+            )
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code in (401, 403):
+                raise ValueError(
+                    "Invalid Soniox API key. The key was rejected by the Soniox API. "
+                    "Please verify that your API key is correct and active."
+                ) from exc
+            raise ValueError(
+                "The Soniox API returned an error while validating the API key. "
+                "Please try again later."
+            ) from exc
+        except httpx.RequestError as exc:
+            raise ValueError(
+                "Could not connect to the Soniox API. Please check your network "
+                "connection and try again."
+            ) from exc
 
     def _check_rime_api_key(self, model: str, api_key: str) -> bool:
         return True

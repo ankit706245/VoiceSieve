@@ -91,6 +91,34 @@ def _wav_to_pcm(wav_audio: bytes) -> tuple[bytes, int, int]:
     return pcm, sample_rate, channels
 
 
+_LONG_DIGIT_RUN_RE = re.compile(r"(?<!\d)\d{6,}(?!\d)")
+
+
+def _chunk_ten_digits(digits: str) -> str:
+    """Group a 10-digit run as XXXX XXX XXX (human sales-call pattern)."""
+    return "%s %s %s" % (digits[:4], digits[4:7], digits[7:])
+
+
+def _spell_out_long_numbers(text: str) -> str:
+    """Keep long bare digit runs from being read as amounts.
+
+    A 10-digit phone number like 8290453674 would otherwise be verbalized
+    as a large amount ("eight hundred twenty-nine crore ..."). It is
+    grouped as XXXX XXX XXX (e.g. "8290 453 674"), matching how human
+    sales agents read numbers back. Shorter runs (6-9 digits, OTPs etc.)
+    are spaced digit-by-digit. 4-digit years and small amounts are left
+    untouched.
+    """
+
+    def _repl(m):
+        digits = m.group(0)
+        if len(digits) == 10:
+            return _chunk_ten_digits(digits)
+        return " ".join(digits)
+
+    return _LONG_DIGIT_RUN_RE.sub(_repl, text)
+
+
 def _settings_value(value):
     return None if value is NOT_GIVEN else value
 
@@ -559,6 +587,7 @@ class RumikTTSService(InterruptibleTTSService):
         """Send text to Rumik and let the receive loop stream the audio."""
 
         text = re.sub(r"\s+", " ", text).strip()
+        text = _spell_out_long_numbers(text)
         logger.debug(f"{self}: generating Rumik TTS [{text}]")
 
         if not text:
@@ -708,6 +737,7 @@ class RumikHttpTTSService(TTSService):
         """Generate speech from text using Rumik's HTTP TTS API."""
 
         text = re.sub(r"\s+", " ", text).strip()
+        text = _spell_out_long_numbers(text)
         logger.debug(f"{self}: generating Rumik HTTP TTS [{text}]")
         if not text:
             return
