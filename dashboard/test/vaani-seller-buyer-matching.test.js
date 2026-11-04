@@ -178,12 +178,12 @@ test('seller detail integration via lead360 with letter-coded buyers', () => {
 
 test('org A cannot see org B matches through shared engine', () => {
   assert.ok(libSrc.includes('await getBuyers({}, false, orgInt)'), 'seller matching reads ctx-org buyers only');
-  assert.ok(serverSrc.includes('WHERE m.organization_id = $1 AND m.buyer_run_id = $2'), 'persisted matches filtered by ctx org');
+  assert.ok(libSrc.includes('WHERE organization_id = $1 AND buyer_run_id = $2'), 'persisted matches filtered by ctx org');
 });
 
-test('unauthenticated access remains protected on match routes', () => {
-  assert.ok(serverSrc.includes("if (route.startsWith('/api/vaani/buyers/') && route.endsWith('/matches')"), 'GET matches route intact');
-  assert.ok(serverSrc.includes('apiVaaniBuyerMatchesPost'), 'POST matches route intact');
+test('unauthenticated access remains protected on match data', () => {
+  assert.ok(libSrc.includes('async function runIntelligentMatching(organizationId'), 'match writer is org-scoped');
+  assert.ok(!/['"]\/api\/[^'"]*matches/i.test(serverSrc), 'no public matches route');
 });
 
 test('no cross-tenant leakage vectors in new engine', () => {

@@ -1,7 +1,6 @@
 'use strict';
-// BRAIVEX login UI tests. Static read-only checks against the new login
-// page plus regression guards for the existing auth stack. No network,
-// no database, no secrets.
+// Braivex login UI tests. Static read-only checks against the login page and
+// the cookie-based auth routes it uses. No network, no database, no secrets.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -11,48 +10,46 @@ const pagePath = path.join(__dirname, '..', 'public', 'braivex-login.html');
 const src = fs.readFileSync(pagePath, 'utf8');
 const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 
-test('login page contains BRAIVEX branding', () => {
+test('login page contains Braivex branding and both auth modes', () => {
   assert.ok(src.includes('BRAIVEX'), 'BRAIVEX brand present');
-  assert.ok(src.includes('VAANI'), 'VAANI product name present');
+  assert.ok(src.includes('Vaani CRM'), 'Vaani product name present');
   assert.ok(/<input[^>]*type="email"/i.test(src), 'email input present');
   assert.ok(/<input[^>]*type="password"/i.test(src), 'password input present');
-  assert.ok(/<button[^>]*type="submit"/i.test(src), 'login button present');
+  assert.ok(/<button[^>]*type="submit"/i.test(src), 'submit button present');
+  assert.ok(src.includes('Create account'), 'signup tab present');
 });
 
 test('login page does not contain RapidX branding', () => {
   assert.ok(!/rapidx/i.test(src), 'no RapidX references');
-  assert.ok(!/AI Sales Agent/i.test(src), 'no old agent wording');
   assert.ok(!/Agency OS/i.test(src), 'no Agency OS wording');
 });
 
-test('login form submits to the BRAIVEX bridge endpoint', () => {
-  assert.ok(src.includes('/api/auth/braivex/login'), 'posts to bridge route');
-  assert.ok(!src.includes('/api/auth/login"') || src.includes('/api/auth/braivex/login'),
-    'does not use the legacy login route');
+test('login form uses the implemented local auth routes', () => {
+  assert.ok(src.includes("LOGIN_ROUTE = '/api/auth/login'"), 'posts to /api/auth/login');
+  assert.ok(src.includes("SIGNUP_ROUTE = '/api/auth/signup'"), 'signup posts to /api/auth/signup');
+  assert.ok(!src.includes('/api/auth/braivex/login'), 'no dead bridge route');
+  assert.ok(serverSrc.includes("if (route === '/api/auth/login') return apiLogin(req, res, body);"),
+    'server implements the login route');
+  assert.ok(serverSrc.includes("if (route === '/api/auth/signup') return apiSignup(req, res, body);"),
+    'server implements the signup route');
 });
 
-test('successful login redirects to the Vaani dashboard', () => {
-  assert.ok(src.includes('/vaani-sales.html'), 'redirects to vaani-sales');
+test('successful auth lands on the CRM with a safe local redirect', () => {
+  assert.ok(src.includes("DASHBOARD_URL = '/app.html'"), 'default destination is the CRM');
+  assert.ok(src.includes("q.charAt(0) === '/'"), 'redirect must be a local path');
+  assert.ok(src.includes("q.charAt(1) !== '/'"), 'protocol-relative URLs rejected');
+  assert.ok(src.includes("q.charAt(1) !== '\\\\'"), 'backslash redirects rejected');
 });
 
 test('failed login shows a generic error without internals', () => {
   assert.ok(src.includes('Invalid email or password.'), 'generic error shown');
-  assert.ok(!src.includes('access_token'), 'no token leakage in page');
-  assert.ok(!/supabase.+error/i.test(src.replace('Sign in with your BRAIVEX account', '')),
-    'no Supabase internals in error path');
+  assert.ok(!src.includes('access_token = '), 'no hardcoded token value in page');
+  assert.ok(!/supabase.+error/i.test(src), 'no Supabase internals in error path');
 });
 
-test('password is never persisted to web storage', () => {
+test('password and token are never persisted to web storage', () => {
   const codeOnly = src.replace(/\/\/[^\n]*/g, '');
   assert.ok(!codeOnly.includes('localStorage'), 'no localStorage usage');
   assert.ok(!codeOnly.includes('sessionStorage'), 'no sessionStorage usage');
-});
-
-test('old RapidX auth and UI remain available as rollback', () => {
-  assert.ok(fs.existsSync(path.join(__dirname, '..', 'public', 'app.html')), 'app.html intact');
-  assert.ok(serverSrc.includes('async function apiLogin(req, res, body)'), 'apiLogin intact');
-  assert.ok(serverSrc.includes("if (route === '/api/auth/login') return apiLogin(req, res, body);"),
-    'legacy login route intact');
-  assert.ok(serverSrc.includes("if (route === '/api/auth/braivex/login') return apiBraivexLogin(req, res, body);"),
-    'bridge route intact');
+  assert.ok(!codeOnly.includes('setItem'), 'nothing is persisted');
 });

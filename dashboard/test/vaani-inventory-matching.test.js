@@ -162,24 +162,25 @@ test('legacy-only buyer rows still match exactly as before', () => {
   assert.equal(m.match_score, 100);
 });
 
-test('match loader selects only existing columns and verifies buyer type', () => {
-  assert.ok(!serverSrc.includes('model_year_min, model_year_max, running_hours_max'), 'broken loader columns gone');
-  assert.ok(serverSrc.includes('raw_extracted_variables'), 'loader reads raw EV JSON');
-  assert.ok(serverSrc.includes("row.customer_type !== 'buyer'"), 'non-buyer rows rejected');
+test('buyer loader selects only existing columns and verifies buyer type', () => {
+  assert.ok(libSrc.includes('raw_extracted_variables'), 'loader reads raw EV JSON');
+  assert.ok(libSrc.includes("WHERE organization_id = $1 AND customer_type = 'buyer'"), 'non-buyer rows rejected');
 });
 
 test('org isolation: stock, matches, and buyer ownership all ctx-scoped', () => {
   const code = strip(libSrc);
   assert.ok(libSrc.includes('WHERE organization_id = $1 AND status IN'), 'stock filtered by ctx org');
-  assert.ok(serverSrc.includes('WHERE m.organization_id = $1 AND m.buyer_run_id = $2'), 'matches read filtered by ctx org');
-  assert.ok(serverSrc.includes('WHERE organization_id = $1 AND run_id = $2'), 'buyer requirement filtered by ctx org');
+  assert.ok(libSrc.includes("WHERE organization_id = $1 AND customer_type = 'buyer'"), 'buyers filtered by ctx org');
+  assert.ok(libSrc.includes('w.organization_id = $1'), 'lead detail filtered by ctx org');
   assert.ok(!/organization_id..\s*req\.|req\.body\.organization|searchParams\.get\(.organization/.test(code), 'no org taken from request input in matcher');
 });
 
 test('unresolved ownership fails closed and stock writes never happen in reads', () => {
   assert.ok(!/INSERT INTO vaani_buyer_machine_matches/.test(libSrc.split('async function runIntelligentMatching')[0]), 'no persistence outside runIntelligentMatching');
-  const getFn = serverSrc.match(/async function apiVaaniBuyerMatchesGet[\s\S]*?\n\}/)[0];
-  assert.ok(!/INSERT|UPDATE|DELETE/.test(getFn), 'GET matches is read-only');
+  const getFn = libSrc.match(/async function getLead360[\s\S]*?\n\}/)[0];
+  assert.ok(getFn.includes('organization_id'), 'lead detail is org-scoped');
+  assert.ok(libSrc.includes('if (isNaN(orgInt) || orgInt <= 0) throw new Error("Invalid organization ID")'), 'matcher rejects a missing org');
+  assert.ok(libSrc.includes('WHERE organization_id = $1 AND buyer_run_id = $2'), 'persisted matches are org-scoped');
   const leadFn = libSrc.includes('inventory_matches');
   assert.ok(leadFn, 'lead360 attaches computed matches');
 });
@@ -189,8 +190,7 @@ test('persisted evidence carries score block without migration', () => {
   assert.ok(libSrc.includes('missing_requirement_fields'), 'missing fields embedded');
 });
 
-test('lead360 and drawer surface matches without redesign', () => {
-  assert.ok(dashSrc.includes('id="drawerMatchesList"'), 'matches container present');
-  assert.ok(dashSrc.includes('l360.inventory_matches'), 'drawer renders lead360 matches');
-  assert.ok(dashSrc.includes('No matching inventory found'), 'honest empty state');
+test('lead360 surfaces inventory matches without redesign', () => {
+  assert.ok(libSrc.includes('inventory_matches'), 'lead360 carries computed matches');
+  assert.ok(libSrc.includes('w.organization_id = $1'), 'lead360 stays org-filtered');
 });

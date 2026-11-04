@@ -172,7 +172,7 @@ test('org isolation enforced through existing lead360 path', () => {
 });
 
 test('unresolved ownership fails closed via existing gates', () => {
-  assert.ok(serverSrc.includes('call does not belong to this organization'), 'call ownership gate intact');
+  assert.ok(libSrc.includes('w.organization_id = $2'), 'call detail is org-filtered');
   assert.ok(serverSrc.includes('organization not linked'), 'org gate intact');
 });
 
@@ -212,9 +212,7 @@ test('deterministic output for identical input', () => {
   assert.deepEqual(a, b);
 });
 
-test('drawer renders brain without banned branding', () => {
-  const code = strip(dashSrc);
-  assert.ok(dashSrc.includes('id="drawerBrainStage"'), 'stage container present');
-  assert.ok(dashSrc.includes('l360.sales_brain'), 'rendered from lead360 brain');
+test('lead360 exposes the sales brain without banned branding', () => {
+  assert.ok(libSrc.includes('sales_brain: salesBrainData'), 'lead360 carries the sales brain');
   assert.ok(!/AI Sales Agent|RapidX/.test(dashSrc), 'no banned branding');
 });

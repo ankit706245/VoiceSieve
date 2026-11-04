@@ -10,6 +10,7 @@
  * no fallback organization: unknown users get 403, bad tokens get 401.
  */
 
+const crypto = require('crypto');
 const supadb = require('./supadb');
 
 function braivexConfig() {
@@ -29,6 +30,66 @@ function authError(message, status, code) {
   err.status = status;
   err.code = code;
   return err;
+}
+
+// Create a new Supabase Auth user (email + password).
+// Returns { accessToken, user }. accessToken is null when the user is
+// unconfirmed (mailer_autoconfirm: false) — they must confirm via email first.
+// Throws 409 if email already exists, 422 on validation failure.
+async function supabaseSignup(email, password, fetchImpl) {
+  const { url, anonKey } = braivexConfig();
+  const doFetch = fetchImpl || fetch;
+  let res;
+  try {
+    res = await doFetch(url + '/auth/v1/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', apikey: anonKey },
+      body: JSON.stringify({ email, password }),
+    });
+  } catch (e) {
+    throw authError('Supabase Auth is unreachable', 503, 'supabase_unreachable');
+  }
+  let data = {};
+  try { data = await res.json(); } catch (_) {}
+  if (res.status === 409) throw authError('an account with this email already exists', 409, 'email_taken');
+  if (res.status === 422) throw authError(data.message || 'validation failed', 422, 'validation_error');
+  if (res.status === 429) throw authError('signup rate limit exceeded. Please wait a moment and try again.', 429, 'rate_limited');
+  if (!res.ok || !data.id || !data.email) {
+    throw authError('signup failed', 400, 'signup_failed');
+  }
+  // Supabase returns the existing user with an empty identities array when the
+  // email is already registered. Only a user with an identity was just created.
+  const isNewUser = Array.isArray(data.identities)
+    ? data.identities.length > 0
+    : Boolean(data.access_token || data.confirmation_sent_at);
+  return { accessToken: data.access_token || null, isNewUser, user: { id: data.id, email: data.email, ...data.user_metadata } };
+}
+
+// Create a separate organization, its default Vaani workflow, and the user
+// profile mapping in one atomic statement. Every signup gets its own org, so
+// CRM rows never leak between customers.
+function provisionWorkspace(supabaseUserId, tenantId, queryImpl) {
+  const providerId = `braivex_${Date.now()}_${crypto.randomUUID()}`;
+  const esc = (v) => String(v).replace(/'/g, "''");
+  const sql = `WITH new_org AS (
+    INSERT INTO public.organizations (provider_id) VALUES ('${esc(providerId)}') RETURNING id
+  ), new_wf AS (
+    INSERT INTO public.workflows (name, workflow_definition, template_context_variables, call_disposition_codes, organization_id, status, workflow_uuid)
+    SELECT 'Vaani Sales', '{}'::json, '{}'::json, '{}'::json, id, 'active', 'braivex_' || id
+    FROM new_org RETURNING organization_id
+  )
+  INSERT INTO public.vaani_user_profiles (supabase_user_id, organization_id, tenant_id, role)
+  SELECT '${esc(supabaseUserId)}', organization_id, '${esc(tenantId)}', 'owner' FROM new_wf
+  RETURNING organization_id;`;
+  const run = queryImpl || ((q, opts, cb) => supadb.queryTextCallback(q, opts, cb));
+  return new Promise((resolve, reject) => {
+    run(sql, { timeout: 8000 }, (err, stdout, stderr) => {
+      if (err) return reject(new Error(String(stderr || err.message).slice(0, 300)));
+      const orgId = parseInt(String(stdout || '').trim(), 10);
+      if (!Number.isFinite(orgId) || orgId <= 0) return reject(new Error('organization setup failed'));
+      resolve(orgId);
+    });
+  });
 }
 
 // Exchange email+password for a Supabase session (password grant).
@@ -52,6 +113,22 @@ async function supabaseTokenExchange(email, password, fetchImpl) {
     throw authError('invalid email or password', 401, 'bad_creds');
   }
   return { accessToken: data.access_token, user: data.user };
+}
+
+// Revoke the current Supabase session (refresh token) on logout. Access tokens
+// are JWTs and expire on their own; this stops the session being refreshed.
+async function supabaseLogout(accessToken, fetchImpl) {
+  const { url, anonKey } = braivexConfig();
+  const doFetch = fetchImpl || fetch;
+  if (!accessToken || !url || !anonKey) return;
+  try {
+    await doFetch(url + '/auth/v1/logout', {
+      method: 'POST',
+      headers: { apikey: anonKey, Authorization: 'Bearer ' + accessToken },
+    });
+  } catch (_) {
+    // Best effort: the local cookie is cleared regardless.
+  }
 }
 
 // Verify an access token against Supabase Auth. Returns the user or throws 401.
@@ -138,6 +215,9 @@ function mapBraivexAuthError(err, fallbackMessage) {
   const code = (err && err.code) || 'braivex_error';
   if (status === 401) return { status: 401, body: { error: 'invalid email or password', code: 'bad_creds' } };
   if (status === 403) return { status: 403, body: { error: 'account is not linked to an organization', code: 'org_not_linked' } };
+  if (status === 400 || status === 409 || status === 422 || status === 429) {
+    return { status, body: { error: err.message || fallbackMessage, code } };
+  }
   if (status === 503) return { status: 503, body: { error: fallbackMessage || 'authentication service unavailable', code } };
   return { status: 500, body: { error: fallbackMessage || 'authentication failed', code } };
 }
@@ -205,7 +285,10 @@ async function requireBraivexAuth(req, res, handler, impls) {
 module.exports = {
   braivexConfig,
   isBraivexConfigured,
+  supabaseSignup,
+  provisionWorkspace,
   supabaseTokenExchange,
+  supabaseLogout,
   supabaseVerifyToken,
   resolveOrgMapping,
   mapBraivexAuthError,

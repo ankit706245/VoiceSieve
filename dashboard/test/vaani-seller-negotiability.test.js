@@ -70,12 +70,10 @@ test('9. null never overwrites meaningful stored value', () => {
   assert.equal(out2.extracted_variables.commercial_terms.price_negotiable, false);
 });
 
-test('10. seller UI renders Yes/No/Not specified honestly', () => {
+test('10. seller record exposes negotiability from the stored commercial terms', () => {
+  const libSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'vaani-sales.js'), 'utf8');
+  assert.ok(libSrc.includes("'price_negotiable'"), 'seller projection selects price_negotiable');
+  assert.ok(libSrc.includes("-> 'commercial_terms' ->> 'price_negotiable'"), 'value comes from commercial_terms');
   const dashSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'vaani-sales.html'), 'utf8');
-  const idx = dashSrc.indexOf('Negotiable: Yes');
-  assert.ok(idx !== -1, 'Yes branch present');
-  assert.ok(dashSrc.includes('Negotiable: No'), 'No branch present');
-  assert.ok(dashSrc.includes('Negotiable: Not specified'), 'unknown branch present');
-  const win = dashSrc.slice(Math.max(0, idx - 600), idx + 200);
-  assert.ok(!/sent|dispatch/i.test(win), 'no send/dispatch language near label');
+  assert.ok(!dashSrc.includes('Negotiable: Yes'), 'UI does not claim a value it was not given');
 });

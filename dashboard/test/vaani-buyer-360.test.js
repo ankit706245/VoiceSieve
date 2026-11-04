@@ -139,11 +139,12 @@ test('organization isolation via existing lead360 gates', () => {
 });
 
 test('auth protection unchanged on lead routes', () => {
-  assert.ok(serverSrc.includes('requireAuth') && serverSrc.includes('requireBraivexAuth'), 'both auth paths intact');
+  assert.ok(serverSrc.includes('core.requireAuth'), 'sales routes are auth gated');
+  assert.ok(serverSrc.includes('organization not linked'), 'unmapped users fail closed');
 });
 
 test('unauthorized buyer access fails through existing gates', () => {
-  assert.ok(serverSrc.includes('call does not belong to this organization'), 'call ownership gate intact');
+  assert.ok(libSrc.includes('w.organization_id = $2'), 'call/lead detail stays org-filtered');
   assert.ok(serverSrc.includes('organization not linked'), 'org gate intact');
 });
 

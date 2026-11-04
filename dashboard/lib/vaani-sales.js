@@ -993,20 +993,6 @@ function sqlEscapeInt(val) {
   return String(parseInt(val, 10));
 }
 
-function formatSql(sql, params) {
-  if (!params || !params.length) return sql;
-  return sql.replace(/\$(\d+)/g, (match, idx) => {
-    const i = parseInt(idx, 10) - 1;
-    if (i < 0 || i >= params.length) return match;
-    const val = params[i];
-    if (val === null || val === undefined) return 'NULL';
-    if (typeof val === 'number') return Number.isFinite(val) ? String(val) : 'NULL';
-    if (typeof val === 'boolean') return val ? 'true' : 'false';
-    if (typeof val === 'object') return `'${JSON.stringify(val).replace(/'/g, "''")}'::jsonb`;
-    return `'${String(val).replace(/'/g, "''")}'`;
-  });
-}
-
 function queryPostgres(sql, params = []) {
   const timeout = 8000;
 
@@ -1028,28 +1014,9 @@ function queryPostgres(sql, params = []) {
     }
   };
 
-  if (process.env.VAANI_DATABASE_URL) {
-    // Genuine PostgreSQL parameter binding: values travel separately from SQL text.
-    // Values can never be interpreted as SQL — even strings containing quotes,
-    // semicolons, or SQL keywords.
-    return new Promise((resolve, reject) => {
-      supadb.queryParams(sql, params, { timeout }, (err, stdout, stderr) => {
-        if (err) return reject(new Error(stderr || err.message));
-        try {
-          resolve(parseResponse(stdout));
-        } catch (parseErr) {
-          resolve(stdout.trim());
-        }
-      });
-    });
-  }
-
-  // Legacy Docker/psql path: client-side substitution is the only option.
-  // NOT genuine driver-level parameter binding — values are escaped inline
-  // into the SQL string before being sent to psql.
-  const finalSql = formatSql(sql, params);
+  // Supabase only. queryParams fails closed when VAANI_DATABASE_URL is unset.
   return new Promise((resolve, reject) => {
-    supadb.queryTextCallback(finalSql, { timeout }, (err, stdout, stderr) => {
+    supadb.queryParams(sql, params, { timeout }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));
       try {
         resolve(parseResponse(stdout));
@@ -1116,11 +1083,10 @@ async function getOverview(isDemo = false, organizationId = null) {
   }
 
   try {
-    const preferredWfId = preferredWorkflowId();
     const sql = `
       SELECT json_build_object(
         'total_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1),
-        'connected_calls', (SELECT COUNT(*) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = $1 AND ($2::int IS NULL OR w.id = $2::int)),
+        'connected_calls', (SELECT COUNT(*) FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE w.organization_id = $1),
         'hot_sellers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND customer_type = 'seller' AND lead_temperature = 'HOT'),
         'hot_buyers', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND customer_type = 'buyer' AND lead_temperature = 'HOT'),
         'qualified_leads', (SELECT COUNT(DISTINCT COALESCE(NULLIF(callback_number, ''), run_id::text)) FROM vaani_excavator_sales_leads WHERE organization_id = $1 AND qualification_state = 'QUALIFIED'),
@@ -1152,7 +1118,7 @@ async function getOverview(isDemo = false, organizationId = null) {
         )
       );
     `;
-    const result = await queryPostgres(sql, [orgInt, preferredWfId]);
+    const result = await queryPostgres(sql, [orgInt]);
     if (result && typeof result === 'object') {
       const activities = await getRecentActivities(10, false, orgInt);
       return { is_demo: false, ...result, recent_activities: activities };
@@ -1586,13 +1552,29 @@ async function getFollowUps(isDemo = false, organizationId = null) {
       `;
       const result = await queryPostgres(sql, [orgInt]);
       list = Array.isArray(result) ? result : [];
+      if (list.length) {
+        // Follow-up status lives in workflow_runs.annotations so it survives restarts.
+        const ids = list.map((item) => parseInt(item.id, 10)).filter((id) => !isNaN(id));
+        if (ids.length) {
+          const statusJson = await queryPostgres(
+            `SELECT COALESCE(json_object_agg(id, COALESCE(annotations::jsonb ->> 'vaani_follow_up_status', 'pending')), '{}'::json)
+             FROM workflow_runs WHERE id = ANY($1::int[]);`,
+            [ids]
+          );
+          if (statusJson && typeof statusJson === 'object') {
+            for (const item of list) {
+              if (statusJson[String(item.id)]) item.status = statusJson[String(item.id)];
+            }
+          }
+        }
+      }
     } catch (err) {
       console.error('[VAANI SALES] Error querying follow-ups from PG:', err.message);
       list = [];
     }
   }
 
-  // Apply in-memory overrides & categorize by date
+  // Demo mode still uses the in-memory overlay; real rows persist in Supabase.
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const endOfToday = startOfToday + 86400000;
@@ -1919,15 +1901,22 @@ async function updateFollowUpStatus(followUpId, status, organizationId = null) {
       err.code = 'not_found';
       throw err;
     }
-    const checkSql = `SELECT r.id FROM workflow_runs r JOIN workflows w ON r.workflow_id = w.id WHERE r.id = $1 AND w.organization_id = $2 LIMIT 1;`;
-    const exists = await queryPostgres(checkSql, [runInt, orgInt]);
-    if (!exists || (typeof exists === 'object' && !exists.id)) {
+    const updated = await queryPostgres(
+      `UPDATE workflow_runs
+       SET annotations = jsonb_set(COALESCE(annotations::jsonb, '{}'::jsonb), '{vaani_follow_up_status}', to_jsonb($3::text))
+       WHERE id = $1 AND workflow_id IN (SELECT id FROM workflows WHERE organization_id = $2)
+       RETURNING id;`,
+      [runInt, orgInt, lowerStatus]
+    );
+    if (!updated) {
       const err = new Error('Follow-up record not found for organization');
       err.code = 'not_found';
       throw err;
     }
+    return { success: true, id: followUpId, status: lowerStatus, updated_at: new Date().toISOString() };
   }
 
+  // Demo mode has no organization, so the overlay is intentionally in-memory.
   localFollowUpOverrides.set(String(followUpId), lowerStatus);
   return { success: true, id: followUpId, status: lowerStatus, updated_at: new Date().toISOString() };
 }
@@ -5447,33 +5436,7 @@ async function ingestCallComplete(payload) {
   const isDuplicate = Boolean(existingRun && (existingRun.is_completed || existingRun.state === 'completed'));
 
   const leadId = payload.lead_id || `lead_${numericRunId}`;
-  // VAANI-001: Explicit, validated precedence for buyer/seller classification.
-  // Order: payload.customer_type > extracted_variables.buyer_seller_classification > extracted_variables.intent.
-  // Ambiguous/unrecognized values never silently become buyer or seller — they resolve to 'unknown'.
-  const normalizeCustomerType = (val) => {
-    if (!val) return null;
-    const v = String(val).toLowerCase().trim();
-    if (v === 'buyer' || v === 'purchase' || v === 'buy' || v === 'buying') return 'buyer';
-    if (v === 'seller' || v === 'sell' || v === 'selling') return 'seller';
-    if (v === 'not_interested' || v === 'other' || v === 'dnc') return 'other';
-    return null;
-  };
-
-  const extVars = payload.extracted_variables || payload.raw_extracted_variables || {};
-  const CLASSIFICATION_SOURCES = [
-    payload.customer_type,
-    extVars.buyer_seller_classification,
-    extVars.intent,
-  ];
-
-  let customerType = 'unknown';
-  for (const rawVal of CLASSIFICATION_SOURCES) {
-    const normalized = normalizeCustomerType(rawVal);
-    if (normalized) {
-      customerType = normalized;
-      break;
-    }
-  }
+  const customerType = resolveCustomerType(payload);
 
   const machDetails = { ...(payload.machine_details || {}) };
   if (!machDetails.brand && payload.machine_brand) machDetails.brand = payload.machine_brand;
@@ -6367,6 +6330,48 @@ function toIntOrNull(v) {
   return Number.isSafeInteger(n) && n >= 0 ? n : null;
 }
 
+function normalizeLeadTemperature(v) {
+  const t = String(v || '').toUpperCase();
+  return ['HOT', 'WARM', 'COLD'].includes(t) ? t : 'WARM';
+}
+
+function normalizeApplicationHistory(v) {
+  const s = String(v || '').toLowerCase();
+  if (s.includes('rock') || s.includes('quarry')) return 'rock_breaker';
+  if (s.includes('soil') || s.includes('earth')) return 'soil_earthwork';
+  if (s.includes('mixed')) return 'mixed';
+  return 'unknown';
+}
+
+function normalizeOwnershipType(v) {
+  const s = String(v || '').toLowerCase();
+  return s.includes('broker') || s.includes('munim') ? 'broker' : 'owner';
+}
+
+// VAANI-001: explicit, validated buyer/seller classification. Order:
+// payload.customer_type > extracted_variables.buyer_seller_classification >
+// extracted_variables.intent. Ambiguous or unrecognized values resolve to
+// 'unknown', never a fabricated buyer or seller.
+function normalizeCustomerType(val) {
+  if (!val) return null;
+  const v = String(val).toLowerCase().trim();
+  if (v === 'buyer' || v === 'purchase' || v === 'buy' || v === 'buying') return 'buyer';
+  if (v === 'seller' || v === 'sell' || v === 'selling') return 'seller';
+  if (v === 'not_interested' || v === 'other' || v === 'dnc') return 'other';
+  return null;
+}
+
+function resolveCustomerType(payload) {
+  const src = payload || {};
+  const extVars = src.extracted_variables || src.raw_extracted_variables || {};
+  const sources = [src.customer_type, extVars.buyer_seller_classification, extVars.intent];
+  for (const rawVal of sources) {
+    const normalized = normalizeCustomerType(rawVal);
+    if (normalized) return normalized;
+  }
+  return 'unknown';
+}
+
 function buildManualLeadInsert(type, data, orgId, wfId) {
   const budgetParsed = parseBudgetInr(data.budget);
   if (!budgetParsed.ok) throw new Error('Invalid budget: enter digits with optional Lakh/Crore, e.g. 1800000 or 18 Lakh');
@@ -6392,6 +6397,13 @@ function buildManualLeadInsert(type, data, orgId, wfId) {
     customer_type: type,
     caller_name: data.name || '',
     callback_number: data.phone || '',
+    whatsapp_number: data.whatsapp || '',
+    address: data.address || '',
+    ownership_type: normalizeOwnershipType(data.ownership || data.ownership_type),
+    application_history: normalizeApplicationHistory(data.application || data.application_history),
+    lead_temperature: normalizeLeadTemperature(data.temperature),
+    qualification_state: data.qualification_state || 'IN_PROGRESS',
+    next_action: data.next_action || 'Manually added',
     lead_status: data.lead_status || null,
     availability_status: data.availability_status || null,
     commercial_terms: {
@@ -6406,14 +6418,16 @@ function buildManualLeadInsert(type, data, orgId, wfId) {
       brand: parsedBrand,
       model: parsedModel,
       machine_type: data.machine_type || null,
-      model_year: data.year ? parseInt(data.year, 10) : null,
+      model_year: toIntOrNull(data.year),
       model_year_min: toIntOrNull(data.year_min),
       model_year_max: toIntOrNull(data.year_max),
-      running_hours: data.hours ? parseInt(data.hours, 10) : null,
+      running_hours: toIntOrNull(data.hours),
       max_hours: toIntOrNull(data.max_hours),
       location_city: data.location || '',
+      location_state: data.state || '',
       preferred_city: data.preferred_city || null,
       condition: data.condition || null,
+      application_history: normalizeApplicationHistory(data.application || data.application_history),
       new_or_used: normalizeNewOrUsed(data.new_or_used)
     },
     tonnage_class: data.requirement || '',
@@ -6465,11 +6479,11 @@ async function addMachineRecord(orgId, data) {
   // Naive duplicate check by brand, model, and year
   if (data.brand && data.model) {
     const checkSql = `
-      SELECT machine_id FROM vaani_machines 
-      WHERE brand = $1 AND model = $2 AND (manufacturing_year = $3 OR $3 IS NULL)
+      SELECT machine_id FROM vaani_machines
+      WHERE organization_id = $4 AND brand = $1 AND model = $2 AND (manufacturing_year = $3 OR $3 IS NULL)
       LIMIT 1
     `;
-    const exists = await queryPostgres(checkSql, [data.brand, data.model, data.year ? parseInt(data.year, 10) : null]);
+    const exists = await queryPostgres(checkSql, [data.brand, data.model, data.year ? parseInt(data.year, 10) : null, orgId]);
     const duplicateFound = Array.isArray(exists)
       ? exists.length > 0
       : (exists !== null && exists !== undefined && String(exists).trim() !== '');
@@ -6521,7 +6535,7 @@ function buildManualMachineInsert(orgId, data, sourceLeadRunId) {
       organization_id, machine_id, source_lead_run_id, brand, model, manufacturing_year,
       hour_meter_reading, application_history, sourcing_cost_inr, target_resale_inr, status, current_location, updated_at
     ) VALUES (
-      $1, $2, $3, $4, $5, $6, $7, null, $8, $9, $10, $11, CURRENT_TIMESTAMP
+      $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP
     )
   `;
   return { sql, params: [
@@ -6530,8 +6544,9 @@ function buildManualMachineInsert(orgId, data, sourceLeadRunId) {
     linkId,
     data.brand || 'Unknown',
     data.model || '',
-    data.year ? parseInt(data.year, 10) : null,
-    data.hours ? parseInt(data.hours, 10) : null,
+    toIntOrNull(data.year),
+    toIntOrNull(data.hours),
+    normalizeApplicationHistory(data.application || data.application_history),
     price,
     price,
     data.status || 'in_sourcing_pipeline',
@@ -6660,11 +6675,14 @@ module.exports = {
   addLead,
   buildManualLeadInsert,
   buildManualMachineInsert,
+  normalizeLeadTemperature,
+  normalizeApplicationHistory,
+  normalizeOwnershipType,
+  resolveCustomerType,
   mapLeadSaveError,
   mapVoiceSessionError,
   parseBudgetInr,
   toIntOrNull,
-  formatSql,
   mergeExtractedVariables,
   resolveArtifactUrl,
   verifyArtifactUrl,

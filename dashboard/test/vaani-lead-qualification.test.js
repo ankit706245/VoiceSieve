@@ -134,7 +134,7 @@ test('extracted_variables and gathered_context structures preserved', () => {
 test('cross-org posture unchanged: no new unscoped endpoints', () => {
   const routes = [...serverSrc.matchAll(/route === '([^']+)'/g)].map((m) => m[1]);
   assert.ok(!routes.some((r) => /qualif/i.test(r)), 'no new qualification routes');
-  assert.ok(serverSrc.includes("if (route === '/api/vaani/sales/overview') return braivexAuth.requireBraivexAuth"), 'bearer routes intact');
+  assert.ok(serverSrc.includes('core.requireAuth'), 'sales routes are auth gated');
 });
 
 test('failed and no-answer calls cannot fabricate qualification', () => {
@@ -143,10 +143,9 @@ test('failed and no-answer calls cannot fabricate qualification', () => {
   assert.ok(!/failed|no_answer/.test(libSrc.split('function evaluateQualificationCompleteness')[1].split('function evaluateQualification(')[0]), 'no lifecycle coupling in pure layer');
 });
 
-test('drawer shows qualification status with collected and missing', () => {
+test('drawer shows qualification status from lead-360', () => {
   const code = strip(dashSrc);
-  assert.ok(dashSrc.includes('id="drawerQualStatus"'), 'status container present');
-  assert.ok(dashSrc.includes('id="drawerQualMissing"'), 'missing container present');
-  assert.ok(code.includes('l360.qualification'), 'rendered from lead-360 qualification');
+  assert.ok(dashSrc.includes('id="drawerStage"'), 'status container present');
+  assert.ok(code.includes('l360.qualification_state'), 'rendered from lead-360 qualification');
   assert.ok(!/AI Sales Agent|RapidX/.test(dashSrc), 'no banned branding in dashboard');
 });

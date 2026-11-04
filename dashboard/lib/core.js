@@ -5,10 +5,8 @@
  * provider specific:
  *   - a tiny .env loader (no dotenv)
  *   - http helpers (send, sendJson, readBody, httpsPost, httpsGet)
- *   - a multi-tenant JSON store over data/db.json with ATOMIC writes and a
- *     serial write queue (no torn files, no lost updates under concurrency)
- *   - auth: scrypt password hashing, opaque session tokens, the rxv_sess cookie,
- *     getSession + requireAuth (tenant scoped)
+ *   - auth: Supabase bearer-token verification, getSession + requireAuth
+ *     (organization scoped)
  *   - a per-IP token-bucket rate limiter
  *   - a static file server with MIME mapping and a path-traversal guard
  *   - htmlEscape for safe DOM injection
@@ -67,8 +65,8 @@ function send(res, status, body, headers = {}) {
   res.end(body);
 }
 
-function sendJson(res, status, obj) {
-  send(res, status, JSON.stringify(obj), { 'Content-Type': 'application/json' });
+function sendJson(res, status, obj, headers = {}) {
+  send(res, status, JSON.stringify(obj), { 'Content-Type': 'application/json', ...headers });
 }
 
 /**
@@ -151,185 +149,16 @@ function htmlEscape(s) {
 }
 
 /* ==========================================================================
-   4. Multi-tenant JSON store over data/db.json
-   - Lazy load once into memory, cached.
-   - Corrupt or missing file falls back to a clean default (try/catch).
-   - ATOMIC writes: serialize to data/db.json.tmp then fs.renameSync into place,
-     so a crash mid-write never leaves a half file.
-   - A serial write queue funnels every mutation through one promise chain so
-     two concurrent requests cannot clobber each other (last-write-wins is the
-     bug we are preventing: each write reads-modifies-writes under the lock).
+   4. Auth: Supabase bearer tokens, requireAuth
    ========================================================================== */
 
-const DATA_DIR = path.join(ROOT, 'data');
-const DB_FILE = process.env.RAPIDX_DB_FILE ? path.resolve(process.env.RAPIDX_DB_FILE) : path.join(DATA_DIR, 'db.json');
-const DB_TMP = `${DB_FILE}.tmp`;
+const COOKIE_NAME = 'braivex_token';
 
-function defaultDb() {
-  return {
-    schemaVersion: 4,
-    tenants: [], users: [], agents: [], usage: [], sessions: [],
-    wallets: [], ledger: [], paymentIntents: [], supportTickets: [],
-    supportMessages: [], auditEvents: [], presets: [], byonConnections: [],
-    hvacJobs: [], hvacSettings: [], paymentEvents: [], demoLinks: [],
-    invoices: [], invoiceEvents: [], integrationRequests: [], agencyPrompts: [],
-    clientActivities: [], tenantStatusEvents: [],
-  };
-}
-
-const COLLECTIONS = [
-  'tenants', 'users', 'agents', 'usage', 'sessions', 'wallets', 'ledger',
-  'paymentIntents', 'supportTickets', 'supportMessages', 'auditEvents',
-  'presets', 'byonConnections', 'hvacJobs', 'hvacSettings', 'paymentEvents', 'demoLinks',
-  'invoices', 'invoiceEvents', 'integrationRequests', 'agencyPrompts',
-  'clientActivities', 'tenantStatusEvents',
-];
-
-function migrateDb(parsed) {
-  const out = Object.assign(defaultDb(), parsed || {});
-  for (const k of COLLECTIONS) if (!Array.isArray(out[k])) out[k] = [];
-  out.schemaVersion = 4;
-  for (const tenant of out.tenants) {
-    if (!tenant.status) tenant.status = 'active';
-    if (!tenant.privacyMode) tenant.privacyMode = 'standard';
-  }
-  for (const user of out.users) {
-    if (!['super_admin', 'admin', 'owner', 'member'].includes(user.role)) user.role = 'member';
-    if (!user.status) user.status = 'active';
-  }
-  return out;
-}
-
-let _db = null;        // in-memory cache
-let _writeChain = Promise.resolve(); // serial queue tail
-
-function ensureDataDir() {
-  try { fs.mkdirSync(path.dirname(DB_FILE), { recursive: true }); } catch (_) {}
-}
-
-// Load db.json into memory. On a missing or corrupt file, return a fresh default
-// (the caller is expected to seed and persist).
-function loadDb() {
-  if (_db) return _db;
-  ensureDataDir();
-  try {
-    const raw = fs.readFileSync(DB_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    // Defensive: guarantee every collection exists even if the file is partial.
-    _db = migrateDb(parsed);
-  } catch (_) {
-    _db = defaultDb();
-  }
-  return _db;
-}
-
-// Synchronous atomic flush of the current in-memory db to disk.
-function flushSync() {
-  ensureDataDir();
-  const json = JSON.stringify(_db, null, 2);
-  fs.writeFileSync(DB_TMP, json, { mode: 0o600 });
-  fs.chmodSync(DB_TMP, 0o600);
-  fs.renameSync(DB_TMP, DB_FILE);
-  fs.chmodSync(DB_FILE, 0o600);
-}
-
-/**
- * Run a mutation against the db under the serial write lock.
- * `fn(db)` receives the live in-memory db, may mutate it, and may return a value
- * which becomes the resolved value of the returned promise. The db is flushed
- * atomically after fn runs. Errors inside fn reject without flushing a partial.
- */
-function mutate(fn) {
-  const run = () => new Promise((resolve, reject) => {
-    try {
-      const db = loadDb();
-      const out = fn(db);
-      flushSync();
-      resolve(out);
-    } catch (e) {
-      reject(e);
-    }
-  });
-  // Chain onto the tail so writes execute one at a time, in order. We swallow
-  // the previous result/error for the chain itself but surface this run's own
-  // result to the caller.
-  const next = _writeChain.then(run, run);
-  _writeChain = next.catch(() => {});
-  return next;
-}
-
-// Read-only snapshot accessor (reloads file so changes from other processes/logins are visible).
-function db() {
-  ensureDataDir();
-  try {
-    const raw = fs.readFileSync(DB_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    _db = migrateDb(parsed);
-  } catch (_) {
-    if (!_db) _db = defaultDb();
-  }
-  return _db;
-}
-
-/* ==========================================================================
-   5. Auth: scrypt password hashing, sessions, cookie, requireAuth
-   ========================================================================== */
-
-// Password hash format: scrypt$<saltHex>$<hashHex>
-function hashPassword(password) {
-  const salt = crypto.randomBytes(16);
-  const hash = crypto.scryptSync(String(password), salt, 64);
-  return `scrypt$${salt.toString('hex')}$${hash.toString('hex')}`;
-}
-
-// Constant-time verify against the stored scrypt$salt$hash string.
-function verifyPassword(password, stored) {
-  try {
-    const [scheme, saltHex, hashHex] = String(stored).split('$');
-    if (scheme !== 'scrypt' || !saltHex || !hashHex) return false;
-    const salt = Buffer.from(saltHex, 'hex');
-    const expected = Buffer.from(hashHex, 'hex');
-    const actual = crypto.scryptSync(String(password), salt, expected.length);
-    return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
-  } catch (_) {
-    return false;
-  }
-}
-
-const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-const COOKIE_NAME = 'rxv_sess';
-
-// Create a session row for a user, persist it, return the opaque token.
-async function createSession(userId, tenantId) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  const exp = Date.now() + SESSION_TTL_MS;
-  await mutate((d) => {
-    // Prune any already-expired sessions while we are here (cheap housekeeping).
-    d.sessions = d.sessions.filter((s) => s.exp > Date.now());
-    d.sessions.push({ tokenHash, userId, tenantId, exp });
-  });
-  return token;
-}
-
-const IMPERSONATION_TTL_MS = 30 * 60 * 1000;
-
-async function createImpersonationSession(actorUserId, targetUserId, targetTenantId, reason) {
-  const token = crypto.randomBytes(32).toString('hex');
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  const exp = Date.now() + IMPERSONATION_TTL_MS;
-  await mutate((d) => {
-    d.sessions = d.sessions.filter((s) => s.exp > Date.now());
-    d.sessions.push({ tokenHash, userId: targetUserId, tenantId: targetTenantId, exp, impersonatorUserId: actorUserId, impersonationReason: String(reason || '').slice(0, 240) });
-  });
-  return token;
-}
-
-// Build the Set-Cookie header value for a fresh session.
-function sessionCookie(token) {
-  const maxAge = Math.floor(SESSION_TTL_MS / 1000);
+// HttpOnly cookie carrying the Supabase access token so page navigation and
+// refreshes survive without exposing the token to JavaScript.
+function authCookie(token) {
   const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  return `${COOKIE_NAME}=${token}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`;
+  return `${COOKIE_NAME}=${encodeURIComponent(token)}; HttpOnly; Path=/; Max-Age=3600; SameSite=Lax${secure}`;
 }
 
 // Build the Set-Cookie header value that clears the session.
@@ -338,71 +167,76 @@ function clearCookie() {
   return `${COOKIE_NAME}=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`;
 }
 
-// Parse the request cookie header for our session token.
-function parseCookieToken(req) {
-  const raw = req.headers.cookie || '';
+function parseCookie(req, name) {
+  const raw = (req && req.headers && req.headers.cookie) || '';
   for (const part of raw.split(';')) {
     const idx = part.indexOf('=');
     if (idx === -1) continue;
-    const k = part.slice(0, idx).trim();
-    if (k === COOKIE_NAME) return part.slice(idx + 1).trim();
+    if (part.slice(0, idx).trim() === name) return decodeURIComponent(part.slice(idx + 1).trim());
   }
   return '';
 }
 
 /**
- * Resolve the session for a request. Returns { session, user, tenant } when the
- * cookie maps to a live, unexpired session whose user and tenant still exist.
- * A tampered or expired cookie resolves to null (treated as no session).
- * Expired sessions are removed as a side effect.
+ * Resolve the request's auth context via Supabase bearer token.
+ *
+ * Extracts `Authorization: Bearer <token>`, verifies it against Supabase Auth,
+ * and resolves the organization mapping from public.vaani_user_profiles.
+ * Returns null when there is no valid session.
+ *
+ * The returned ctx shape is { user, tenant, session, supabaseUserId,
+ * organization_id, role }. `session` is a compatibility shim (Supabase tokens
+ * are self-expiring; we set a far-future exp so handlers that read ctx.session
+ * keep working).
  */
 async function getSession(req) {
-  let token = parseCookieToken(req);
-  if (!token || token.length < 16) {
-    const authHeader = req.headers && req.headers['authorization'] ? req.headers['authorization'] : '';
-    if (authHeader.startsWith('Bearer ')) {
-      const candidate = authHeader.slice(7).trim();
-      if (candidate.length >= 16) token = candidate;
-    }
-  }
+  const authHeader = req.headers && req.headers['authorization'] || '';
+  const m = authHeader.match(/^\s*Bearer\s+(.+?)\s*$/);
+  let token = m && m[1];
+  if (!token) token = parseCookie(req, COOKIE_NAME);
   if (!token || token.length < 16) return null;
-  const d = db();
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  const session = d.sessions.find((s) => s.tokenHash === tokenHash || s.token === token);
-  if (!session) return null;
-  if (session.exp <= Date.now()) {
-    // Expired: drop it so the next request is clean.
-    await mutate((dd) => {
-      dd.sessions = dd.sessions.filter((s) => s.token !== token && s.tokenHash !== tokenHash);
-    });
+
+  let braivex;
+  try { braivex = require('./braivex-auth'); } catch (_) { return null; }
+
+  let user;
+  try {
+    user = await braivex.supabaseVerifyToken(token);
+  } catch (_) {
     return null;
   }
-  const user = d.users.find((u) => u.id === session.userId);
-  const tenant = d.tenants.find((t) => t.id === session.tenantId);
-  if (!user || !tenant || user.status !== 'active' || tenant.status !== 'active') return null;
-  const impersonator = session.impersonatorUserId ? d.users.find((u) => u.id === session.impersonatorUserId && u.status === 'active') : null;
-  if (session.impersonatorUserId && (!impersonator || impersonator.role !== 'super_admin')) return null;
-  return { session, user, tenant, impersonator };
-}
+  let mapping;
+  try {
+    mapping = await braivex.resolveOrgMapping(user.id);
+  } catch (_) {
+    return null;
+  }
+  if (!mapping) return null;
 
-// Remove a session by token (logout).
-async function destroySession(req) {
-  const token = parseCookieToken(req);
-  if (!token) return;
-  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-  await mutate((d) => { d.sessions = d.sessions.filter((s) => s.token !== token && s.tokenHash !== tokenHash); });
-}
+  // Tenant identity comes only from the Supabase mapping. No local store.
+  const tenant = {
+    id: mapping.tenant_id || `org_${mapping.organization_id}`,
+    name: user.email || 'Workspace',
+    slug: `org-${mapping.organization_id}`,
+    status: 'active',
+    organization_id: mapping.organization_id,
+  };
 
-const ROLE_LEVEL = { member: 1, owner: 2, admin: 3, super_admin: 4 };
-function hasRole(user, minimum) {
-  return (ROLE_LEVEL[user && user.role] || 0) >= (ROLE_LEVEL[minimum] || 99);
-}
-
-async function requireRole(req, res, minimum, handler, body) {
-  return requireAuth(req, res, (r, s, ctx) => {
-    if (!hasRole(ctx.user, minimum)) return sendJson(s, 403, { error: 'insufficient role', code: 'forbidden' });
-    return handler(r, s, ctx);
-  }, body);
+  const ctxUser = {
+    id: user.id,
+    email: user.email || '',
+    name: user.email || '',
+    role: mapping.role,
+    status: 'active',
+  };
+  return {
+    user: ctxUser,
+    tenant,
+    session: { exp: Date.now() + 7 * 24 * 60 * 60 * 1000, impersonatorUserId: null },
+    supabaseUserId: user.id,
+    organization_id: mapping.organization_id,
+    role: mapping.role,
+  };
 }
 
 /**
@@ -426,10 +260,18 @@ async function requireAuth(req, res, handler, body) {
    6. Per-IP token-bucket rate limiter (90 req / 60s, refilling)
    ========================================================================== */
 const _buckets = new Map();
+let _rateSweep = 0;
 function resetRateLimits() { _buckets.clear(); }
 function rateOk(ip, capacity = 90, perMinute = 90) {
   if (process.env.NODE_ENV === 'test') return true;
   const now = Date.now();
+  // Evict idle buckets so a long-running server does not grow without bound.
+  if (++_rateSweep % 1000 === 0) {
+    const cutoff = now - 10 * 60 * 1000;
+    for (const [key, bucket] of _buckets) {
+      if (bucket.ts < cutoff) _buckets.delete(key);
+    }
+  }
   let b = _buckets.get(ip);
   if (!b) { b = { tokens: capacity, ts: now }; _buckets.set(ip, b); }
   b.tokens = Math.min(capacity, b.tokens + ((now - b.ts) / 60000) * perMinute);
@@ -493,14 +335,12 @@ function genId(prefix) {
 }
 
 module.exports = {
-  ROOT, DATA_DIR, DB_FILE, PUBLIC_DIR,
+  ROOT, PUBLIC_DIR,
   loadEnv,
   send, sendJson, readBody, httpsPost, httpsGet,
   htmlEscape,
-  db, mutate, loadDb, defaultDb, migrateDb,
-  hashPassword, verifyPassword,
-  createSession, createImpersonationSession, destroySession, getSession, requireAuth, requireRole, hasRole,
-  sessionCookie, clearCookie, COOKIE_NAME,
+  getSession, requireAuth,
+  authCookie, clearCookie, COOKIE_NAME, parseCookie,
   rateOk, resetRateLimits,
   serveStatic, MIME,
   genId,

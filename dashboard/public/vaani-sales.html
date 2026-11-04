@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>SHYAM EARTHMOVER — Vaani AI Sales Command Center</title>
-  <meta name="description" content="Vaani AI Used Excavator Sales Command Center for Shyam Earthmover. Sourcing, Buyer Matchmaking, Machine Inventory, Follow-ups, and DNC Isolation." />
+  <title>Braivex Vaani CRM — Shyam Earthmover</title>
+  <meta name="description" content="Braivex Vaani CRM for Shyam Earthmover. Sourcing, buyer matchmaking, machine inventory, follow-ups, and DNC isolation in one command center." />
   <meta name="theme-color" content="#0c0d14" />
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
   <style>
@@ -16,13 +16,13 @@
       --bg-active: #22273d;
       --border-subtle: rgba(255, 255, 255, 0.08);
       --border-strong: rgba(255, 255, 255, 0.16);
-      --border-focus: rgba(210, 174, 89, 0.5);
+      --border-focus: rgba(245, 200, 66, 0.5);
       --text-main: #f3f4f6;
       --text-muted: #94a3b8;
       --text-dim: #64748b;
-      --gold: #d2ae59;
-      --gold-bright: #eab308;
-      --gold-dim: rgba(210, 174, 89, 0.15);
+      --gold: #f5c842;
+      --gold-bright: #ffd95a;
+      --gold-dim: rgba(245, 200, 66, 0.15);
       --green: #10b981;
       --green-dim: rgba(16, 185, 129, 0.15);
       --blue: #38bdf8;
@@ -56,7 +56,7 @@
     .glow-layer {
       position: fixed;
       top: 0; left: 0; right: 0; height: 320px;
-      background: radial-gradient(circle at 50% -15%, rgba(210, 174, 89, 0.08), transparent 70%);
+      background: radial-gradient(circle at 50% -15%, rgba(245, 200, 66, 0.08), transparent 70%);
       pointer-events: none;
       z-index: 0;
     }
@@ -85,13 +85,21 @@
       display: flex;
       align-items: center;
       gap: 14px;
+      color: inherit;
+      text-decoration: none;
     }
+    .brand-word {
+      color: var(--gold);
+      font-weight: 800;
+      letter-spacing: 0.12em;
+    }
+    .brand-sep { color: var(--text-dim); margin: 0 5px; }
     .brand-logo-badge {
       width: 42px;
       height: 42px;
       border-radius: var(--radius-sm);
       background: #1a1d2c;
-      border: 1px solid rgba(210, 174, 89, 0.35);
+      border: 1px solid rgba(245, 200, 66, 0.35);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -122,7 +130,7 @@
       border-radius: 4px;
       background: var(--gold-dim);
       color: var(--gold);
-      border: 1px solid rgba(210, 174, 89, 0.3);
+      border: 1px solid rgba(245, 200, 66, 0.3);
     }
 
     .header-actions {
@@ -150,7 +158,7 @@
     }
     .search-input:focus {
       border-color: var(--gold);
-      box-shadow: 0 0 0 2px rgba(210, 174, 89, 0.2);
+      box-shadow: 0 0 0 2px rgba(245, 200, 66, 0.2);
     }
     .search-kbd {
       position: absolute;
@@ -226,7 +234,7 @@
     .nav-tab.active {
       color: var(--gold);
       background: var(--bg-card);
-      border-color: rgba(210, 174, 89, 0.25);
+      border-color: rgba(245, 200, 66, 0.25);
     }
     .tab-badge {
       font-size: 11px;
@@ -757,7 +765,7 @@
     }
     .bubble-customer {
       background: #231f18;
-      border: 1px solid rgba(210, 174, 89, 0.25);
+      border: 1px solid rgba(245, 200, 66, 0.25);
       color: #fef08a;
       align-self: flex-end;
     }
@@ -794,7 +802,7 @@
       border-color: var(--border-strong);
     }
     .drawer-tab.active {
-      background: rgba(210, 174, 89, 0.12);
+      background: rgba(245, 200, 66, 0.12);
       border-color: var(--gold);
       color: var(--gold);
     }
@@ -809,8 +817,8 @@
 
     /* Next Action Engine Banner */
     .next-action-card {
-      background: linear-gradient(135deg, rgba(210, 174, 89, 0.08) 0%, rgba(30, 34, 56, 0.6) 100%);
-      border: 1px solid rgba(210, 174, 89, 0.35);
+      background: linear-gradient(135deg, rgba(245, 200, 66, 0.08) 0%, rgba(30, 34, 56, 0.6) 100%);
+      border: 1px solid rgba(245, 200, 66, 0.35);
       border-radius: var(--radius);
       padding: 16px;
       display: flex;
@@ -884,9 +892,9 @@
     }
     .journey-step.current {
       border-color: var(--gold);
-      background: rgba(210, 174, 89, 0.2);
+      background: rgba(245, 200, 66, 0.2);
       color: #fef08a;
-      box-shadow: 0 0 10px rgba(210, 174, 89, 0.3);
+      box-shadow: 0 0 10px rgba(245, 200, 66, 0.3);
       font-weight: 700;
     }
     .journey-arrow {
@@ -1043,7 +1051,7 @@
     .customer-quote-box {
       margin-top: 4px;
       padding: 6px 10px;
-      background: rgba(210, 174, 89, 0.08);
+      background: rgba(245, 200, 66, 0.08);
       border-left: 2px solid var(--gold);
       border-radius: 0 4px 4px 0;
       font-size: 11px;
@@ -1196,6 +1204,24 @@
       z-index: 1000;
       display: none;
     }
+
+    /* Add / import entry form */
+    .view-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .view-actions .action-btn { padding: 8px 14px; font-size: 12px; }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-field { display: flex; flex-direction: column; gap: 4px; }
+    .form-field.full { grid-column: 1 / -1; }
+    .form-field label { font-size: 11px; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
+    .form-field input, .form-field select, .form-field textarea {
+      background: var(--bg-base); border: 1px solid var(--border-subtle); color: var(--text-main);
+      padding: 8px 10px; border-radius: var(--radius-sm); font-size: 13px; outline: none; font-family: inherit;
+    }
+    .form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: var(--gold); }
+    [hidden] { display: none !important; }
+    .form-error { display: none; color: #fecdd3; font-size: 12px; margin-top: 10px; }
+    .form-error.show { display: block; }
+    .form-submit { width: 100%; margin-top: 14px; padding: 10px; }
+    .form-note { font-size: 11px; color: var(--text-dim); margin-top: 8px; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -1204,13 +1230,13 @@
   <div class="app-container">
     <!-- Header -->
     <header class="header">
-      <div class="brand-section">
-        <div class="brand-logo-badge" id="brandLogoBadge">SE</div>
+      <a class="brand-section" href="/" title="Braivex home">
+        <div class="brand-logo-badge" id="brandLogoBadge">B</div>
         <div class="brand-titles">
-          <h1><span id="tenantBrandName">SHYAM EARTHMOVER</span> <span class="brand-badge" id="tenantBrandBadge">Vaani — AI Sales Command Center</span></h1>
-          <p id="tenantBrandSub">Heavy Equipment Procurement & Resale Intelligence Console</p>
+          <h1><span class="brand-word">BRAIVEX</span> <span class="brand-badge" id="tenantBrandBadge">Vaani CRM</span></h1>
+          <p><span id="tenantBrandName">SHYAM EARTHMOVER</span> <span class="brand-sep">·</span> <span id="tenantBrandSub">AI Sales Command Center</span></p>
         </div>
-      </div>
+      </a>
 
       <div class="header-actions">
         <!-- Global Search Bar -->
@@ -1450,6 +1476,13 @@
         <button id="sellerResetFilters" class="btn-reset">Reset</button>
       </div>
 
+      <div class="view-actions">
+        <button class="action-btn" onclick="openEntryForm('seller')">+ Add Seller</button>
+        <label class="action-btn" style="cursor: pointer;">Import CSV
+          <input type="file" accept=".csv,.xlsx,.xls,text/csv" style="display: none;" onchange="importCsv(event, 'seller')">
+        </label>
+      </div>
+
       <!-- Sellers Table -->
       <div class="table-container">
         <table class="data-table" id="sellersTable">
@@ -1516,6 +1549,13 @@
         <button id="buyerResetFilters" class="btn-reset">Reset</button>
       </div>
 
+      <div class="view-actions">
+        <button class="action-btn" onclick="openEntryForm('buyer')">+ Add Buyer</button>
+        <label class="action-btn" style="cursor: pointer;">Import CSV
+          <input type="file" accept=".csv,.xlsx,.xls,text/csv" style="display: none;" onchange="importCsv(event, 'buyer')">
+        </label>
+      </div>
+
       <!-- Buyers Table -->
       <div class="table-container">
         <table class="data-table" id="buyersTable">
@@ -1558,6 +1598,13 @@
         </button>
       </div>
 
+      <div class="view-actions">
+        <button class="action-btn" onclick="openEntryForm('machine')">+ Add Machine</button>
+        <label class="action-btn" style="cursor: pointer;">Import CSV
+          <input type="file" accept=".csv,.xlsx,.xls,text/csv" style="display: none;" onchange="importCsv(event, 'machine')">
+        </label>
+      </div>
+
       <!-- Actual Verified Stock Section -->
       <div id="sectionActualStock">
         <div style="font-size: 12px; color: var(--green); margin-bottom: 14px; background: var(--green-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(16,185,129,0.3);">
@@ -1578,7 +1625,7 @@
 
       <!-- Machine Master Section -->
       <div id="sectionMachineMaster" style="display: none;">
-        <div style="font-size: 12px; color: var(--gold); margin-bottom: 14px; background: var(--gold-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(210,174,89,0.3);">
+        <div style="font-size: 12px; color: var(--gold); margin-bottom: 14px; background: var(--gold-dim); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(245,200,66,0.3);">
           📘 <strong>Industry Reference Catalog:</strong> Canonical equipment models, contractor spoken aliases, and indicative market price benchmarks across India. (Reference Taxonomy only — Not Physical Yard Stock).
         </div>
         <div class="panel-card" style="margin-bottom: 20px;">
@@ -1748,6 +1795,69 @@
       </div>
     </main>
   </div>
+
+  <!-- Add Entry Drawer -->
+  <div class="drawer-backdrop" id="entryBackdrop" onclick="closeEntryForm()"></div>
+  <aside class="drawer" id="entryDrawer" style="width: 560px;">
+    <div class="drawer-header">
+      <div>
+        <h2 id="entryTitle" style="font-size: 18px; color: #fff; margin: 0;">Add Entry</h2>
+        <div class="form-note" id="entrySubtitle"></div>
+      </div>
+      <button class="drawer-close-btn" onclick="closeEntryForm()" title="Close">&#10005;</button>
+    </div>
+    <div class="drawer-body">
+      <form id="entryForm" onsubmit="submitEntry(event)">
+        <div class="form-grid">
+          <div class="form-field" data-entry="buyer,seller"><label>Name</label><input name="name" maxlength="120"></div>
+          <div class="form-field" data-entry="buyer,seller"><label>Phone</label><input name="phone" maxlength="20"></div>
+          <div class="form-field" data-entry="buyer,seller"><label>WhatsApp</label><input name="whatsapp" maxlength="20"></div>
+          <div class="form-field" data-entry="buyer,seller"><label>Temperature</label>
+            <select name="temperature"><option value="HOT">HOT</option><option value="WARM" selected>WARM</option><option value="COLD">COLD</option></select>
+          </div>
+          <div class="form-field" data-entry="buyer,seller"><label>City</label><input name="location" maxlength="80"></div>
+          <div class="form-field" data-entry="buyer,seller"><label>State</label><input name="state" maxlength="80"></div>
+          <div class="form-field full" data-entry="buyer,seller"><label>Address</label><input name="address" maxlength="200"></div>
+
+          <div class="form-field" data-entry="buyer,seller"><label>Machine Brand</label><input name="brand" maxlength="60"></div>
+          <div class="form-field" data-entry="buyer,seller"><label>Machine Model</label><input name="model" maxlength="60"></div>
+
+          <div class="form-field" data-entry="buyer"><label>Tonnage Class</label>
+            <select name="requirement"><option value="">Any</option><option value="14_ton_class">14-Ton</option><option value="20_ton_class">20-Ton</option><option value="21_ton_class">21-Ton</option></select>
+          </div>
+          <div class="form-field" data-entry="buyer"><label>Max Budget (INR)</label><input name="budget" placeholder="1800000 or 18 Lakh"></div>
+          <div class="form-field" data-entry="buyer"><label>Purchase Timeline</label>
+            <select name="purchase_timeline"><option value="immediate_under_7d">Immediate (&lt;7 days)</option><option value="15_to_30_days" selected>15 - 30 Days</option><option value="planning_stage">Planning Stage</option></select>
+          </div>
+
+          <div class="form-field" data-entry="seller"><label>Owner / Broker</label>
+            <select name="ownership"><option value="owner">Owner</option><option value="broker">Broker / Munim</option></select>
+          </div>
+          <div class="form-field" data-entry="seller"><label>Expected Price (INR)</label><input name="expected_price" placeholder="2500000 or 25 Lakh"></div>
+          <div class="form-field" data-entry="seller"><label>Year</label><input name="year" inputmode="numeric"></div>
+          <div class="form-field" data-entry="seller"><label>Running Hours</label><input name="hours" inputmode="numeric"></div>
+          <div class="form-field" data-entry="seller"><label>Application</label>
+            <select name="application"><option value="soil_earthwork">Soil / Earthwork</option><option value="rock_breaker">Rock Breaker / Quarry</option></select>
+          </div>
+
+          <div class="form-field" data-entry="machine"><label>Brand</label><input name="brand" maxlength="60"></div>
+          <div class="form-field" data-entry="machine"><label>Model</label><input name="model" maxlength="60"></div>
+          <div class="form-field" data-entry="machine"><label>Year</label><input name="year" inputmode="numeric"></div>
+          <div class="form-field" data-entry="machine"><label>Running Hours</label><input name="hours" inputmode="numeric"></div>
+          <div class="form-field" data-entry="machine"><label>Price (INR)</label><input name="price" placeholder="2500000 or 25 Lakh"></div>
+          <div class="form-field" data-entry="machine"><label>Status</label>
+            <select name="status"><option value="in_sourcing_pipeline">Sourcing Pipeline</option><option value="certified_ready_in_yard">Certified Ready in Yard</option></select>
+          </div>
+          <div class="form-field full" data-entry="machine"><label>Location</label><input name="location" maxlength="120"></div>
+
+          <div class="form-field full" data-entry="buyer,seller"><label>Notes</label><textarea name="notes" rows="3" maxlength="500"></textarea></div>
+        </div>
+        <div class="form-error" id="entryError"></div>
+        <button type="submit" class="action-btn form-submit" id="entrySubmit">Save</button>
+        <div class="form-note">CSV import: Excel file ko "Save As &gt; CSV" karke upload karo. Headers: name, phone, city, state, brand, model, year, hours, budget/price, timeline, temperature, notes.</div>
+      </form>
+    </div>
+  </aside>
 
   <!-- Slide-Over Lead 360 Command Drawer -->
   <div class="drawer-backdrop" id="drawerBackdrop"></div>
@@ -1999,9 +2109,15 @@
 
   <script>
     // State management
+    const initialParams = new URLSearchParams(window.location.search);
+    const localHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+    // shortcut: local runs default to the demo fixture, use ?demo=0 for live DB.
+    // Auth is the server-verified HttpOnly cookie. The access token never
+    // enters the URL or web storage, so XSS cannot read it.
     const state = {
       me: null,
-      isDemo: new URLSearchParams(window.location.search).get('demo') === '1',
+      authToken: '',
+      isDemo: initialParams.has('demo') ? initialParams.get('demo') === '1' : localHost,
       activeView: 'overview',
       overview: null,
       sellers: [],
@@ -2016,7 +2132,9 @@
 
     // Centralized API fetch wrapper with 401 & 403 handling
     async function apiFetch(url, options = {}) {
-      const res = await fetch(url, options);
+      const headers = { ...(options.headers || {}) };
+      if (state.authToken) headers.Authorization = 'Bearer ' + state.authToken;
+      const res = await fetch(url, { credentials: 'same-origin', ...options, headers });
       if (res.status === 401) {
         clearSensitiveState();
         showSessionExpired('Your session has expired or is invalid. Redirecting to sign in...');
@@ -2042,17 +2160,21 @@
       state.activeDrawerItem = null;
       state.recentActivities = [];
 
-      const containerIds = [
-        'sellersTableBody', 'buyersTableBody', 'stockTableBody',
-        'masterTableBody', 'demandTableBody', 'followupsTableBody',
-        'callsTableBody', 'dncTableBody', 'activitiesTimeline'
-      ];
-      containerIds.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerHTML = '';
-      });
-      const drawer = document.getElementById('leadDrawer');
+      const containers = document.querySelectorAll(
+        '#sellersTable tbody, #buyersTable tbody, #callsTable tbody, #dncTable tbody, ' +
+        '#machineMasterTable tbody, #stockGrid, #matchingListContainer, ' +
+        '#listOverdue, #listDueToday, #listUpcoming, #overviewActivityFeed'
+      );
+      containers.forEach(el => { el.innerHTML = ''; });
+      const drawer = document.getElementById('detailDrawer');
       if (drawer) drawer.classList.remove('open');
+      const backdrop = document.getElementById('drawerBackdrop');
+      if (backdrop) backdrop.classList.remove('open');
+    }
+
+    function loginUrl() {
+      const target = window.location.pathname.startsWith('/app') ? '/app.html' : '/vaani-sales.html';
+      return '/braivex-login.html?redirect=' + encodeURIComponent(target) + '&fresh=1';
     }
 
     function showSessionExpired(msg) {
@@ -2061,7 +2183,7 @@
       if (msgEl && msg) msgEl.textContent = msg;
       if (overlay) overlay.style.display = 'flex';
       setTimeout(() => {
-        window.location.href = '/app.html?redirect=/vaani-sales';
+        window.location.href = loginUrl();
       }, 1200);
     }
 
@@ -2136,7 +2258,7 @@
         await fetch('/api/auth/logout', { method: 'POST' });
       } catch (_) {}
       clearSensitiveState();
-      window.location.href = '/app.html';
+      window.location.href = '/braivex-login.html';
     }
 
     function initAuthHandlers() {
@@ -2147,7 +2269,7 @@
       const overlayBtn = document.getElementById('sessionOverlayAction');
       if (overlayBtn) {
         overlayBtn.addEventListener('click', () => {
-          window.location.href = '/app.html?redirect=/vaani-sales';
+          window.location.href = loginUrl();
         });
       }
     }
@@ -2237,8 +2359,7 @@
 
     function switchDataMode(demo) {
       const url = new URL(window.location.href);
-      if (demo) url.searchParams.set('demo', '1');
-      else url.searchParams.delete('demo');
+      url.searchParams.set('demo', demo ? '1' : '0');
       window.location.href = url.toString();
     }
 
@@ -2446,7 +2567,9 @@
         appText = '⚠️ Rock Breaker / Quarry Used (Heavy)';
       }
       document.getElementById('drawerApplication').textContent = appText;
-      document.getElementById('drawerLocation').textContent = raw.location_city ? `${raw.location_city}${raw.location_state ? ', ' + raw.location_state : ''}` : (raw.delivery_location || raw.location || 'Location Not Specified');
+      const extraAddress = raw.address || (raw.raw_extracted_variables && raw.raw_extracted_variables.address) || '';
+      const baseLocation = raw.location_city ? `${raw.location_city}${raw.location_state ? ', ' + raw.location_state : ''}` : (raw.delivery_location || raw.location || 'Location Not Specified');
+      document.getElementById('drawerLocation').textContent = extraAddress ? `${baseLocation} — ${extraAddress}` : baseLocation;
       document.getElementById('drawerNocStatus').textContent = raw.document_status || (raw.finance_noc_status || 'Under Verification');
       document.getElementById('drawerLastActivity').textContent = l360.last_activity || 'Recent conversation logged';
 
@@ -2861,16 +2984,15 @@
         recentTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-dim); padding: 30px;">No inbound leads recorded yet.</td></tr>';
       } else {
         recentTbody.innerHTML = recent.map(lead => {
-          const tempClass = (lead.lead_temperature || 'warm').toLowerCase();
           const roleClass = lead.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer';
           return `
-            <tr onclick='openDrawer(${JSON.stringify(lead)})'>
-              <td>${lead.formatted_time || lead.created_at || 'Just Now'}</td>
+            <tr onclick="openDrawer(${jsAttr(lead)})">
+              <td>${escapeHtml(lead.formatted_time || lead.created_at || 'Just Now')}</td>
               <td><strong>${escapeHtml(lead.caller_name || lead.customer_name || 'Anonymous')}</strong></td>
               <td><span class="phone-link">${escapeHtml(lead.callback_number || lead.primary_phone || '')}</span></td>
-              <td><span class="badge ${roleClass}">${(lead.customer_type || 'lead').toUpperCase()}</span></td>
+              <td><span class="badge ${roleClass}">${escapeHtml((lead.customer_type || 'lead').toUpperCase())}</span></td>
               <td>${escapeHtml(lead.machine_model || lead.machine_brand || lead.required_tonnage_class || '20-Ton Excavator')}</td>
-              <td><span class="badge badge-${tempClass}">${lead.lead_temperature || 'WARM'}</span></td>
+              <td><span class="badge badge-${tempClass(lead.lead_temperature)}">${escapeHtml(lead.lead_temperature || 'WARM')}</span></td>
               <td><span class="badge badge-owner">${escapeHtml(lead.qualification_state || lead.conversation_outcome || 'IN_PROGRESS')}</span></td>
               <td style="color: var(--text-muted); font-size: 12px;">${escapeHtml(lead.next_action || 'Follow-up call')}</td>
             </tr>
@@ -2913,23 +3035,23 @@
         const actor = { label: actorLabel, class: actorClass };
         const timeStr = act.timestamp ? new Date(act.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (act.time_display || 'Recent');
         const quoteHtml = act.customer_quote ? `
-          <div style="font-size: 11px; font-style: italic; color: var(--gold); margin-top: 4px; padding-left: 8px; border-left: 2px solid rgba(210, 174, 89, 0.4);">
+          <div style="font-size: 11px; font-style: italic; color: var(--gold); margin-top: 4px; padding-left: 8px; border-left: 2px solid rgba(245, 200, 66, 0.4);">
             "${escapeHtml(act.customer_quote)}"
           </div>
         ` : '';
 
         const leadLink = act.lead_id ? `
-          <span style="font-size: 11px; color: var(--gold); cursor: pointer; text-decoration: underline; margin-left: 8px;" onclick="event.stopPropagation(); openDrawer('${act.lead_id}')">
+          <span style="font-size: 11px; color: var(--gold); cursor: pointer; text-decoration: underline; margin-left: 8px;" onclick="event.stopPropagation(); openDrawer(${jsAttr(String(act.lead_id))})">
             View Lead 360 →
           </span>
         ` : '';
 
         return `
-          <div class="activity-feed-row" style="cursor: pointer;" onclick="${act.lead_id ? `openDrawer('${act.lead_id}')` : ''}">
-            <div class="activity-feed-time">${timeStr}</div>
+          <div class="activity-feed-row" style="cursor: pointer;" onclick="${act.lead_id ? `openDrawer(${jsAttr(String(act.lead_id))})` : ''}">
+            <div class="activity-feed-time">${escapeHtml(timeStr)}</div>
             <div class="activity-feed-main">
               <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                <span class="actor-badge ${actor.class}">${actor.label}</span>
+                <span class="actor-badge ${actor.class}">${escapeHtml(actor.label)}</span>
                 <strong style="color: #fff; font-size: 12px;">${escapeHtml(act.title || act.activity_type || '')}</strong>
                 ${act.customer_name ? `<span style="color: var(--text-muted); font-size: 11px;">• ${escapeHtml(act.customer_name)}</span>` : ''}
                 ${leadLink}
@@ -2955,12 +3077,14 @@
       emptyState.style.display = 'none';
 
       tbody.innerHTML = list.map(s => {
-        const tempBadge = `<span class="badge badge-${(s.lead_temperature || 'warm').toLowerCase()}">${s.lead_temperature || 'WARM'}</span>`;
-        const roleBadge = `<span class="badge ${s.caller_role === 'broker' ? 'badge-broker' : 'badge-owner'}">${(s.caller_role || 'owner').toUpperCase()}</span>`;
+        const temp = tempClass(s.lead_temperature);
+        const tempBadge = `<span class="badge badge-${temp}">${escapeHtml(s.lead_temperature || 'WARM')}</span>`;
+        const roleBadge = `<span class="badge ${s.caller_role === 'broker' ? 'badge-broker' : 'badge-owner'}">${escapeHtml((s.caller_role || 'owner').toUpperCase())}</span>`;
         
         let price = 'N/A';
-        if (s.expected_price_inr) price = `₹${(s.expected_price_inr / 100000).toFixed(1)}L`;
-        else if (s.price_raw) price = s.price_raw;
+        const priceInr = s.expected_selling_price_inr || s.expected_price_inr || s.asking_price;
+        if (priceInr) price = `₹${(priceInr / 100000).toFixed(1)}L`;
+        else if (s.price_raw) price = escapeHtml(s.price_raw);
 
         const ev = s.digital_evidence || {};
         const evIcons = `
@@ -2972,13 +3096,13 @@
         `;
 
         return `
-          <tr onclick='openDrawer(${JSON.stringify(s)})'>
+          <tr onclick="openDrawer(${jsAttr(s)})">
             <td><strong>${escapeHtml(s.customer_name)}</strong></td>
             <td><span class="phone-link">${escapeHtml(s.primary_phone)}</span></td>
             <td>${roleBadge}</td>
             <td><strong>${escapeHtml(s.machine_brand || '')}</strong> ${escapeHtml(s.machine_model || '')}</td>
-            <td>${s.manufacturing_year || 'N/A'}</td>
-            <td>${s.hour_meter_reading ? s.hour_meter_reading.toLocaleString() + ' hrs' : 'N/A'}</td>
+            <td>${escapeHtml(s.manufacturing_year || 'N/A')}</td>
+            <td>${s.hour_meter_reading ? Number(s.hour_meter_reading).toLocaleString() + ' hrs' : 'N/A'}</td>
             <td><span style="font-size: 11px; color: var(--text-muted);">${s.application_history === 'breaker_quarry' ? '⚠️ Rock Breaker' : 'Soil/Mitti'}</span></td>
             <td>${escapeHtml(s.machine_location_city || s.machine_location_state || 'Rajasthan')}</td>
             <td><strong>${price}</strong></td>
@@ -3004,12 +3128,12 @@
       emptyState.style.display = 'none';
 
       tbody.innerHTML = list.map(b => {
-        const tempBadge = `<span class="badge badge-${(b.lead_temperature || 'warm').toLowerCase()}">${b.lead_temperature || 'WARM'}</span>`;
+        const tempBadge = `<span class="badge badge-${tempClass(b.lead_temperature)}">${escapeHtml(b.lead_temperature || 'WARM')}</span>`;
         let budget = 'Not stated';
         if (b.buyer_budget_max_inr) budget = `₹${(b.buyer_budget_max_inr / 100000).toFixed(1)} Lakh`;
 
         return `
-          <tr onclick='openDrawer(${JSON.stringify(b)})'>
+          <tr onclick="openDrawer(${jsAttr(b)})">
             <td><strong>${escapeHtml(b.customer_name)}</strong></td>
             <td><span class="phone-link">${escapeHtml(b.primary_phone)}</span></td>
             <td><strong>${escapeHtml(b.machine_brand || 'Any')}</strong> ${escapeHtml(b.required_tonnage_class || '')}</td>
@@ -3049,17 +3173,17 @@
               <div>
                 <span class="badge badge-qualified">CERTIFIED YARD STOCK</span>
                 <h3 style="font-size: 16px; margin-top: 6px; color: #fff;">${escapeHtml(unit.brand)} ${escapeHtml(unit.model)}</h3>
-                <div style="font-size: 12px; color: var(--text-dim); font-family: var(--mono);">${unit.machine_id}</div>
+                <div style="font-size: 12px; color: var(--text-dim); font-family: var(--mono);">${escapeHtml(unit.machine_id)}</div>
               </div>
             </div>
             <div class="drawer-field-grid" style="margin-bottom: 12px;">
               <div class="drawer-field">
                 <span class="drawer-field-label">Year & Hours</span>
-                <span class="drawer-field-value">${unit.manufacturing_year} • ${unit.hour_meter_reading.toLocaleString()} hrs</span>
+                <span class="drawer-field-value">${escapeHtml(unit.manufacturing_year || 'N/A')} • ${Number(unit.hour_meter_reading || 0).toLocaleString()} hrs</span>
               </div>
               <div class="drawer-field">
                 <span class="drawer-field-label">Target Resale Price</span>
-                <span class="drawer-field-value" style="color: var(--gold-bright);">₹${(unit.target_resale_inr / 100000).toFixed(2)} Lakh</span>
+                <span class="drawer-field-value" style="color: var(--gold-bright);">₹${(Number(unit.target_resale_inr || 0) / 100000).toFixed(2)} Lakh</span>
               </div>
               <div class="drawer-field">
                 <span class="drawer-field-label">Location</span>
@@ -3090,9 +3214,9 @@
           <td>${escapeHtml(m.tonnage_class)}</td>
           <td>${escapeHtml(m.standard_engine)}</td>
           <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(m.market_positioning)}</td>
-          <td><strong>${m.indicative_bands?.['2023_2024'] || 'N/A'}</strong></td>
-          <td><strong>${m.indicative_bands?.['2021_2022'] || 'N/A'}</strong></td>
-          <td><strong>${m.indicative_bands?.['2018_2019'] || 'N/A'}</strong></td>
+          <td><strong>${escapeHtml(m.indicative_bands?.['2023_2024'] || 'N/A')}</strong></td>
+          <td><strong>${escapeHtml(m.indicative_bands?.['2021_2022'] || 'N/A')}</strong></td>
+          <td><strong>${escapeHtml(m.indicative_bands?.['2018_2019'] || 'N/A')}</strong></td>
         </tr>
       `).join('');
     }
@@ -3154,7 +3278,7 @@
           <div class="match-card" style="border-left: 4px solid ${hasStock ? 'var(--green)' : 'var(--border-subtle)'};">
             <div class="match-header">
               <div>
-                <h4 style="font-size: 14px; color: #fff;">Buyer: ${escapeHtml(m.buyer_name)} (<span class="phone-link">${m.buyer_phone}</span>)</h4>
+                <h4 style="font-size: 14px; color: #fff;">Buyer: ${escapeHtml(m.buyer_name)} (<span class="phone-link">${escapeHtml(m.buyer_phone)}</span>)</h4>
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
                   Requested: <strong>${escapeHtml(m.requested_machine || '20-Ton Excavator')}</strong> • Budget: <strong>₹${((m.budget_max_inr || 0) / 100000).toFixed(1)}L</strong>
                 </div>
@@ -3168,7 +3292,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                   <div>
                     <strong style="color: #fff;">${escapeHtml(units[0].brand)} ${escapeHtml(units[0].model)} (${units[0].manufacturing_year})</strong>
-                    <div style="font-size: 11px; color: var(--text-muted);">${units[0].current_location} • ${units[0].hour_meter_reading.toLocaleString()} hrs</div>
+                    <div style="font-size: 11px; color: var(--text-muted);">${escapeHtml(units[0].current_location)} • ${Number(units[0].hour_meter_reading || 0).toLocaleString()} hrs</div>
                   </div>
                   <div style="text-align: right;">
                     <div style="font-weight: 700; color: var(--gold-bright);">₹${(units[0].target_resale_inr / 100000).toFixed(2)} Lakh</div>
@@ -3206,13 +3330,13 @@
       }
 
       container.innerHTML = list.map(item => `
-        <div class="drawer-card" style="margin-bottom: 8px; cursor: pointer;" onclick="openDrawer('${item.lead_id || item.primary_phone || item.id}')">
+        <div class="drawer-card" style="margin-bottom: 8px; cursor: pointer;" onclick="openDrawer(${jsAttr(String(item.lead_id || item.primary_phone || item.id || ''))})">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
             <div>
               <strong style="color: #fff; font-size: 13px;">${escapeHtml(item.customer_name)}</strong>
-              <div class="phone-link">${item.primary_phone}</div>
+              <div class="phone-link">${escapeHtml(item.primary_phone)}</div>
             </div>
-            <span class="badge ${item.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${(item.customer_type || 'lead').toUpperCase()}</span>
+            <span class="badge ${item.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${escapeHtml((item.customer_type || 'lead').toUpperCase())}</span>
           </div>
           <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
             <strong>Requirement:</strong> ${escapeHtml(item.machine_requirement || '20-Ton Excavator')}<br/>
@@ -3220,7 +3344,7 @@
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 8px;">
             <span style="font-size: 11px; color: var(--text-dim);">${item.follow_up_datetime ? new Date(item.follow_up_datetime).toLocaleDateString() : 'Scheduled'}</span>
-            <button class="action-btn" onclick="event.stopPropagation(); updateFollowupStatus('${item.id}', 'completed')">✓ Mark Done</button>
+            <button class="action-btn" onclick="event.stopPropagation(); updateFollowupStatus(${jsAttr(String(item.id || ''))}, 'completed')">✓ Mark Done</button>
           </div>
         </div>
       `).join('');
@@ -3253,16 +3377,16 @@
       }
 
       tbody.innerHTML = state.calls.map(c => `
-        <tr onclick='openDrawer(${JSON.stringify(c)})'>
-          <td>${c.formatted_time || c.created_at || 'Recent'}</td>
+        <tr onclick="openDrawer(${jsAttr(c)})">
+          <td>${escapeHtml(c.formatted_time || c.created_at || 'Recent')}</td>
           <td><strong>${escapeHtml(c.caller_name || c.customer_name || 'Caller')}</strong></td>
           <td><span class="phone-link">${escapeHtml(c.primary_phone || c.callback_number || '')}</span></td>
-          <td><span class="badge ${c.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${(c.customer_type || 'lead').toUpperCase()}</span></td>
+          <td><span class="badge ${c.customer_type === 'seller' ? 'badge-seller' : 'badge-buyer'}">${escapeHtml((c.customer_type || 'lead').toUpperCase())}</span></td>
           <td><span class="badge badge-owner">${escapeHtml(c.conversation_outcome || 'completed')}</span></td>
-          <td><span class="badge badge-${(c.lead_temperature || 'warm').toLowerCase()}">${c.lead_temperature || 'WARM'}</span></td>
+          <td><span class="badge badge-${tempClass(c.lead_temperature)}">${escapeHtml(c.lead_temperature || 'WARM')}</span></td>
           <td>${escapeHtml(c.machine_summary || '20-Ton Excavator')}</td>
           <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(c.next_action || 'Review extraction')}</td>
-          <td><button class="action-btn" onclick='event.stopPropagation(); openDrawer(${JSON.stringify(c)});'>Inspect</button></td>
+          <td><button class="action-btn" onclick="event.stopPropagation(); openDrawer(${jsAttr(c)});">Inspect</button></td>
         </tr>
       `).join('');
     }
@@ -3280,11 +3404,175 @@
           <td><span class="phone-link" style="color: var(--rose); font-weight: 700;">${escapeHtml(d.phone_number)}</span></td>
           <td><strong>${escapeHtml(d.customer_name || 'Opt-Out Request')}</strong></td>
           <td style="color: #fecdd3;">${escapeHtml(d.reason || 'Seller requested do not call')}</td>
-          <td style="font-size: 12px; color: var(--text-dim);">${d.created_at || 'Recorded'}</td>
-          <td style="font-family: var(--mono); font-size: 11px;">${d.source_run_id ? 'Run #' + d.source_run_id : 'Inbound Voice Opt-Out'}</td>
+          <td style="font-size: 12px; color: var(--text-dim);">${escapeHtml(d.created_at || 'Recorded')}</td>
+          <td style="font-family: var(--mono); font-size: 11px;">${d.source_run_id ? 'Run #' + escapeHtml(d.source_run_id) : 'Inbound Voice Opt-Out'}</td>
           <td><span class="badge badge-dnc">DO NOT CALL</span></td>
         </tr>
       `).join('');
+    }
+
+    // ---- Add / import entries ----
+    let entryType = 'buyer';
+
+    function openEntryForm(type) {
+      if (state.isDemo) {
+        showToast('Switch to Real DB to add or import records');
+        return;
+      }
+      entryType = type;
+      const form = document.getElementById('entryForm');
+      form.reset();
+      document.getElementById('entryError').classList.remove('show');
+      document.querySelectorAll('[data-entry]').forEach(el => {
+        const show = el.getAttribute('data-entry').split(',').includes(type);
+        el.hidden = !show;
+        el.querySelectorAll('input,select,textarea').forEach(i => { i.disabled = !show; });
+      });
+      const titles = { buyer: 'Add Buyer', seller: 'Add Seller', machine: 'Add Machine' };
+      document.getElementById('entryTitle').textContent = titles[type] || 'Add Entry';
+      document.getElementById('entryBackdrop').classList.add('open');
+      document.getElementById('entryDrawer').classList.add('open');
+    }
+
+    function closeEntryForm() {
+      document.getElementById('entryBackdrop').classList.remove('open');
+      document.getElementById('entryDrawer').classList.remove('open');
+    }
+
+    function showEntryError(msg) {
+      const el = document.getElementById('entryError');
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    async function submitEntry(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      data.type = entryType;
+      if (entryType === 'machine') {
+        if (!data.brand || !data.model) return showEntryError('Brand and model are required.');
+      } else if (!data.name || !data.phone) {
+        return showEntryError('Name and phone are required.');
+      }
+      const btn = document.getElementById('entrySubmit');
+      btn.disabled = true;
+      try {
+        const res = await apiFetch('/api/vaani/sales/entries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showEntryError(out.error || 'Could not save. Please try again.');
+          return;
+        }
+        closeEntryForm();
+        showToast('Saved');
+        await loadAllData();
+      } catch (err) {
+        if (err.message !== 'Unauthorized' && err.message !== 'Forbidden') showEntryError('Could not save. Please try again.');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function parseCsv(text) {
+      const rows = [];
+      let row = [];
+      let field = '';
+      let quoted = false;
+      const src = String(text || '').replace(/^\uFEFF/, '');
+      for (let i = 0; i < src.length; i++) {
+        const c = src[i];
+        if (quoted) {
+          if (c === '"' && src[i + 1] === '"') { field += '"'; i++; }
+          else if (c === '"') quoted = false;
+          else field += c;
+        } else if (c === '"') quoted = true;
+        else if (c === ',') { row.push(field); field = ''; }
+        else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+        else if (c !== '\r') field += c;
+      }
+      if (field || row.length) { row.push(field); rows.push(row); }
+      return rows.filter(r => r.some(v => String(v).trim() !== ''));
+    }
+
+    const CSV_ALIASES = {
+      name: ['name', 'customer', 'customername', 'callername', 'sellername', 'buyername'],
+      phone: ['phone', 'mobile', 'contact', 'phonenumber', 'callbacknumber', 'number'],
+      whatsapp: ['whatsapp', 'whatsappnumber'],
+      location: ['city', 'location', 'machinecity', 'machine_location_city'],
+      state: ['state', 'machinestate', 'machine_location_state'],
+      brand: ['brand', 'machinebrand', 'machine_brand'],
+      model: ['model', 'machinemodel', 'machine_model'],
+      year: ['year', 'modelyear', 'model_year', 'manufacturingyear'],
+      hours: ['hours', 'runninghours', 'running_hours', 'hmr', 'hourmeter'],
+      application: ['application', 'applicationhistory', 'application_history', 'usage'],
+      budget: ['budget', 'maxbudget', 'buyerbudgetmax', 'budgetmax'],
+      expected_price: ['price', 'expectedprice', 'expected_price', 'askingprice', 'expected_selling_price'],
+      price: ['price', 'expectedprice', 'expected_price', 'askingprice'],
+      purchase_timeline: ['timeline', 'purchasetimeline', 'purchase_timeline'],
+      temperature: ['temperature', 'temp', 'leadtemperature', 'lead_temperature'],
+      ownership: ['ownership', 'ownertype', 'ownership_type', 'role'],
+      requirement: ['tonnage', 'tonnageclass', 'requiredtonnage', 'required_tonnage_class'],
+      notes: ['notes', 'remarks', 'callnotes', 'call_notes'],
+      status: ['status']
+    };
+
+    function normalizeTimeline(v) {
+      const s = String(v || '').toLowerCase();
+      if (s.includes('immediate') || s.includes('7')) return 'immediate_under_7d';
+      if (s.includes('15') || s.includes('30')) return '15_to_30_days';
+      return 'planning_stage';
+    }
+
+    function csvEntries(text) {
+      const rows = parseCsv(text);
+      if (rows.length < 2) return [];
+      const headers = rows[0].map(h => String(h).toLowerCase().replace(/[^a-z0-9]/g, ''));
+      const map = {};
+      headers.forEach((h, i) => {
+        for (const [key, aliases] of Object.entries(CSV_ALIASES)) {
+          if (aliases.includes(h) && map[key] === undefined) map[key] = i;
+        }
+      });
+      const out = [];
+      for (let r = 1; r < rows.length; r++) {
+        const row = {};
+        for (const [key, idx] of Object.entries(map)) {
+          if (idx < rows[r].length) row[key] = String(rows[r][idx] || '').trim();
+        }
+        if (!Object.values(row).some(v => v)) continue;
+        if (row.purchase_timeline) row.purchase_timeline = normalizeTimeline(row.purchase_timeline);
+        out.push(row);
+      }
+      return out;
+    }
+
+    async function importCsv(event, type) {
+      const input = event.target;
+      const file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      if (state.isDemo) { showToast('Switch to Real DB to import records'); return; }
+      if (/\.(xlsx|xls)$/i.test(file.name)) { showToast('Excel file: save it as CSV and upload'); return; }
+      const rows = csvEntries(await file.text());
+      if (!rows.length) { showToast('No data rows found in CSV'); return; }
+      if (rows.length > 1000) { showToast('Max 1000 rows per import'); return; }
+      try {
+        const res = await apiFetch('/api/vaani/sales/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, rows })
+        });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) { showToast(out.error || 'Import failed'); return; }
+        showToast(`${out.success || 0} added, ${out.failed || 0} failed`);
+        await loadAllData();
+      } catch (err) {
+        if (err.message !== 'Unauthorized' && err.message !== 'Forbidden') showToast('Import failed');
+      }
     }
 
     function escapeHtml(str) {
@@ -3295,6 +3583,17 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    }
+
+    // JSON for an inline handler attribute. HTML-escaping the quotes keeps the
+    // attribute intact; the browser decodes them back to valid JSON.
+    function jsAttr(value) {
+      return escapeHtml(JSON.stringify(value));
+    }
+
+    function tempClass(value) {
+      const t = String(value || 'warm').toLowerCase();
+      return ['hot', 'warm', 'cold'].includes(t) ? t : 'warm';
     }
   </script>
 </body>

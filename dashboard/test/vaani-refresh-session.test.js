@@ -1,8 +1,7 @@
 'use strict';
-// Vaani refresh-session regression tests: BRAIVEX login -> open Vaani ->
-// refresh page -> BRAIVEX identity remains -> demo identity never appears.
-// Static checks over the shipped pages plus a live eval of the real apiMe
-// handler with stubbed core/serializers. No network, no database, no secrets.
+// Vaani session regression tests: cookie login -> open CRM -> refresh keeps
+// the signed-in identity, and no demo identity paints before auth.
+// Static checks over the shipped pages. No network, no database, no secrets.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('fs');
@@ -11,62 +10,55 @@ const path = require('path');
 const serverSrc = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
 const dashSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'vaani-sales.html'), 'utf8');
 const loginSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'braivex-login.html'), 'utf8');
-const strip = (s) => s.replace(/\/\/[^\n]*/g, '');
 
-function loadApiMe(core, publicUser, publicTenant) {
-  const m = serverSrc.match(/function apiMe\(req, res, ctx\) \{[\s\S]*?\n\}/);
-  assert.ok(m, 'apiMe found in server.js');
-  return eval('(' + m[0] + ')'); // eslint-disable-line no-eval
-}
-const stubCore = () => ({ sendJson(res, status, body) { res.status = status; res.body = body; } });
-const stubUser = (u) => ({ ...u });
-const stubTenant = (t) => ({ ...t });
-
-test('bearer handoff survives refresh: no boot-time clear', () => {
-  const code = strip(dashSrc);
-  assert.ok(code.includes('clearBraivexHandoff'), 'central handoff clearer exists');
-  // The boot read must not wipe window.name; only logout/401/failed-check clear it.
-  const bootBlock = code.split('let braivexAccessToken')[1].split('function clearBraivexHandoff')[0];
-  assert.ok(!bootBlock.includes("window.name = ''"), 'boot read must retain the handoff');
-  assert.ok(code.includes('handleLogout') && code.includes('clearBraivexHandoff()'), 'logout clears handoff');
+test('CRM boot restores identity from the cookie session', () => {
+  assert.ok(dashSrc.includes("fetch('/api/me')"), 'dashboard reads the server session');
+  assert.ok(serverSrc.includes('function apiMe(req, res, ctx)'), 'apiMe exists server-side');
+  assert.ok(serverSrc.includes('core.getSession(req)'), 'session comes from the cookie');
 });
 
-test('no demo or legacy identity can paint before auth', () => {
-  assert.ok(!dashSrc.includes('Demo User'), 'no demo placeholder label');
+test('no demo identity paints before auth', () => {
   assert.ok(!dashSrc.includes('demo@rapidx.ai'), 'no demo email anywhere');
-  assert.ok(dashSrc.includes('Signing in'), 'neutral pre-auth label');
+  assert.ok(dashSrc.includes('function showSessionExpired'), 'expiry path exists');
 });
 
-test('non-BRAIVEX sessions never render: gate redirects to login', () => {
-  const code = strip(dashSrc);
-  assert.ok(code.includes("data.authSource !== 'braivex'"), 'authSource gate present');
-  const gate = code.split("data.authSource !== 'braivex'")[1].split('applyUserTenantContext')[0];
-  assert.ok(gate.includes('fresh=1'), 'gate redirects with fresh=1 (form, no bounce loop)');
-  assert.ok(gate.includes('return false'), 'gate stops boot before render');
+test('unauthenticated boot redirects to the login form', () => {
+  assert.ok(dashSrc.includes('showSessionExpired('), 'boot can show the expiry overlay');
+  assert.ok(dashSrc.includes('&fresh=1'), 'expiry redirect forces the form');
+  assert.ok(loginSrc.includes("get('fresh') === '1'"), 'login page honors fresh=1');
 });
 
-test('session-expiry paths force re-authentication form', () => {
-  assert.ok(dashSrc.includes('/braivex-login.html?redirect=/vaani-sales.html&fresh=1'), 'expiry redirect carries fresh=1');
+test('login page exchanges an email-link token for the cookie and opens the CRM', () => {
+  assert.ok(loginSrc.includes("fetch('/api/auth/session'"), 'hash token is traded for the HttpOnly cookie');
+  assert.ok(!loginSrc.includes('access_token='), 'token never appended to the redirect URL');
+  assert.ok(loginSrc.includes('DASHBOARD_URL'), 'authed visit redirects to CRM');
 });
 
-test('login page honors fresh=1 and still bounces otherwise', () => {
-  const code = strip(loginSrc);
-  assert.ok(code.includes("get('fresh') === '1'"), 'fresh flag read');
-  assert.ok(code.includes("fetch('/api/me'"), 'authed bounce still present for normal visits');
-  assert.ok(!strip(loginSrc).includes('localStorage') && !strip(loginSrc).includes('sessionStorage'), 'no web storage');
+test('logout destroys the server session before leaving', () => {
+  assert.ok(dashSrc.includes("await fetch('/api/auth/logout', { method: 'POST' })"),
+    'logout hits the server');
+  assert.ok(serverSrc.includes('async function apiLogout(req, res)'), 'logout handler exists');
+  assert.ok(dashSrc.includes("window.location.href = '/braivex-login.html'"),
+    'logout returns to the login page');
 });
 
-test('apiMe marks bridge sessions braivex and legacy sessions legacy', () => {
-  const shadow = { id: 'u_1', supabaseUserId: 'f37e075c-4e79-49f5-b44f-11cc7a5a494a', email: 'u@e', role: 'member' };
-  const legacy = { id: 'u_2', email: 'demo@rapidx.ai', role: 'owner' };
-  const tenant = { id: 't_1', organization_id: 2 };
-  const fn = loadApiMe(stubCore(), stubUser, stubTenant);
-  const r1 = {};
-  fn({}, r1, { user: shadow, tenant, session: {}, impersonator: null });
-  assert.equal(r1.body.authSource, 'braivex');
-  assert.equal(r1.body.user.email, 'u@e');
-  const r2 = {};
-  fn({}, r2, { user: legacy, tenant, session: {}, impersonator: null });
-  assert.equal(r2.body.authSource, 'legacy');
-  assert.ok('tenant' in r2.body && 'impersonation' in r2.body, 'response shape otherwise intact');
+test('unmapped workspaces can read the shared demo, never real rows', () => {
+  const m = serverSrc.match(/function resolveOrganizationId\(ctx\) \{[\s\S]*?\n\}/);
+  assert.ok(m, 'resolveOrganizationId found');
+  const resolve = eval('(' + m[0] + ')'); // eslint-disable-line no-eval
+  assert.equal(resolve({ tenant: { id: 't_1' } }), null, 'missing org fails closed');
+  assert.equal(resolve({ tenant: { id: 't_2', organization_id: 2 } }), 2, 'explicit org wins');
+  assert.equal(resolve({ organization_id: 3 }), 3, 'Supabase mapping org wins without a local tenant');
+  assert.equal(resolve({}), null, 'missing tenant fails closed');
+  assert.ok(serverSrc.includes('if (!orgId && !isDemo)'),
+    'demo fixture is allowed without an org mapping');
+});
+
+test('auth pages never store the password in web storage', () => {
+  for (const [name, src] of [['login', loginSrc], ['dashboard', dashSrc]]) {
+    assert.ok(!src.includes('localStorage'), `${name}: no localStorage`);
+    for (const line of src.split('\n').filter((l) => l.includes('sessionStorage'))) {
+      assert.ok(!/password/i.test(line), `${name}: sessionStorage holds only the access token`);
+    }
+  }
 });

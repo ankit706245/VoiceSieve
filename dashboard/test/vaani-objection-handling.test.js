@@ -183,9 +183,8 @@ test('lead360 exposes objection groups without new routes or tables', () => {
   assert.ok(!/CREATE TABLE.*objection/i.test(libSrc), 'no new tables');
 });
 
-test('drawer renders objections read-only without banned branding', () => {
+test('lead360 exposes objections read-only without banned branding', () => {
   const code = strip(dashSrc);
-  assert.ok(dashSrc.includes('id="drawerObjectionList"'), 'objections container present');
-  assert.ok(code.includes('l360.objections'), 'rendered from lead360 groups');
+  assert.ok(libSrc.includes('objections: objectionGroups'), 'lead360 carries objection groups');
   assert.ok(!/AI Sales Agent|RapidX|Agency OS/i.test(dashSrc), 'no banned branding');
 });

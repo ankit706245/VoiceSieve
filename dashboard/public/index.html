@@ -1,685 +1,417 @@
-<!DOCTYPE html>
-<html lang="en" class="dark">
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Shyam Earthmover — Vaani Sales Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            ink: '#0b0f19',
-            'ink-surface': '#0b0f19',
-            'ink-card': '#111827',
-            gold: '#f5c842'
-          },
-          fontFamily: {
-            sans: ['Inter', 'system-ui', 'sans-serif']
-          }
-        }
-      }
-    };
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-  <style>
-    body { font-family: 'Inter', system-ui, sans-serif; background-color: #0b0f19; color: #f3f4f6; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.14); }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Braivex — Vaani CRM for heavy equipment</title>
+<meta name="description" content="Braivex Vaani turns every voice call into a qualified buyer, seller, inventory match, or follow-up. One command center for heavy equipment sales." />
+<meta name="theme-color" content="#0b0f19" />
+<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+<style>
+  :root {
+    --bg: #0b0f19;
+    --surface: #111827;
+    --surface-2: #0f1523;
+    --surface-3: #151d2e;
+    --line: rgba(255, 255, 255, 0.08);
+    --line-strong: rgba(255, 255, 255, 0.14);
+    --text: #f3f4f6;
+    --muted: #94a3b8;
+    --dim: #64748b;
+    --gold: #f5c842;
+    --gold-2: #d2ae59;
+    --green: #34d399;
+    --blue: #38bdf8;
+    --rose: #fb7185;
+    --radius: 18px;
+    --max: 1180px;
+    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  button, input { font: inherit; }
+  ::selection { background: rgba(245, 200, 66, 0.28); color: #fff; }
+  .wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 24px; }
+
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    background: rgba(11, 15, 25, 0.82);
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(18px);
+  }
+  .nav-inner { height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: 0.16em; font-size: 14px; }
+  .brand-mark {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: grid; place-items: center;
+    background: linear-gradient(135deg, #ffe58a, var(--gold) 55%, #b8860b);
+    color: #0b0f19; font-weight: 900; font-size: 18px;
+    box-shadow: 0 8px 22px -8px rgba(245, 200, 66, 0.65);
+  }
+  .brand em { color: var(--gold); font-style: normal; }
+  .nav-links { display: flex; align-items: center; gap: 26px; color: var(--muted); font-size: 14px; }
+  .nav-links a:hover { color: #fff; }
+  .nav-actions { display: flex; align-items: center; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    height: 42px; padding: 0 18px; border-radius: 10px;
+    border: 1px solid transparent; font-size: 14px; font-weight: 700;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  }
+  .btn:hover { transform: translateY(-1px); }
+  .btn-gold { background: var(--gold); color: #0b0f19; box-shadow: 0 10px 26px -12px rgba(245, 200, 66, 0.75); }
+  .btn-gold:hover { background: #ffd95a; }
+  .btn-ghost { background: transparent; border-color: var(--line-strong); color: var(--text); }
+  .btn-ghost:hover { border-color: rgba(245, 200, 66, 0.5); background: rgba(255, 255, 255, 0.03); }
+  .btn-link { color: var(--muted); font-weight: 600; }
+  .btn-link:hover { color: #fff; }
+
+  .hero { padding: 86px 0 34px; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ""; position: absolute; inset: -240px 0 auto 50%; width: 900px; height: 620px;
+    transform: translateX(-50%);
+    background: radial-gradient(circle, rgba(245, 200, 66, 0.14), transparent 65%);
+    pointer-events: none;
+  }
+  .hero .wrap { position: relative; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    color: var(--gold); font-size: 11px; font-weight: 800;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    padding: 7px 11px; border: 1px solid rgba(245, 200, 66, 0.28);
+    border-radius: 999px; background: rgba(245, 200, 66, 0.07);
+  }
+  .eyebrow span { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 12px var(--gold); }
+  h1 {
+    margin: 22px 0 0; max-width: 900px;
+    font-size: clamp(2.6rem, 6vw, 5.2rem);
+    line-height: 0.98; letter-spacing: -0.045em; font-weight: 800;
+  }
+  h1 .gold { color: var(--gold); }
+  .lead {
+    margin: 22px 0 0; max-width: 650px;
+    color: var(--muted); font-size: clamp(1.05rem, 1.6vw, 1.25rem); line-height: 1.55;
+  }
+  .hero-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 30px; }
+  .hero-actions .btn { height: 48px; padding: 0 22px; }
+  .hero-proof {
+    display: flex; flex-wrap: wrap; gap: 28px; margin-top: 42px; padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  .proof-item strong { display: block; font-size: 22px; letter-spacing: -0.03em; color: #fff; }
+  .proof-item span { color: var(--dim); font-size: 12px; }
+
+  .preview { padding: 28px 0 80px; }
+  .preview-window {
+    border: 1px solid var(--line-strong); border-radius: 22px; overflow: hidden;
+    background: var(--surface-2);
+    box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(245, 200, 66, 0.04) inset;
+  }
+  .preview-bar {
+    height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 16px;
+    background: #0d1220; border-bottom: 1px solid var(--line);
+    color: var(--dim); font-size: 12px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: #334155; }
+  .dot.g { background: #f87171; } .dot.y { background: #fbbf24; } .dot.k { background: #34d399; }
+  .preview-bar span { margin-left: 8px; }
+  .preview-body { display: grid; grid-template-columns: 190px 1fr; min-height: 390px; }
+  .preview-side { border-right: 1px solid var(--line); padding: 18px 12px; background: #0b101b; }
+  .preview-side .side-brand { display: flex; align-items: center; gap: 9px; padding: 0 8px 18px; font-size: 11px; font-weight: 800; letter-spacing: 0.12em; }
+  .preview-side .side-brand i { width: 24px; height: 24px; border-radius: 7px; background: var(--gold); color: #0b0f19; display: grid; place-items: center; font-style: normal; font-weight: 900; }
+  .side-item { display: flex; align-items: center; justify-content: space-between; padding: 9px 10px; border-radius: 8px; color: var(--muted); font-size: 12px; margin-bottom: 3px; }
+  .side-item.active { background: var(--gold); color: #0b0f19; font-weight: 800; }
+  .side-item b { font-size: 10px; background: rgba(255, 255, 255, 0.08); color: var(--muted); padding: 1px 6px; border-radius: 999px; }
+  .side-item.active b { background: rgba(11, 15, 25, 0.16); color: #0b0f19; }
+  .preview-main { padding: 22px 24px; min-width: 0; }
+  .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+  .preview-head h3 { margin: 0; font-size: 17px; letter-spacing: -0.02em; }
+  .preview-head p { margin: 3px 0 0; color: var(--dim); font-size: 11px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 999px; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.24); color: var(--green); font-size: 10px; font-weight: 700; }
+  .pill::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+  .preview-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+  .preview-stat { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 12px; }
+  .preview-stat span { color: var(--dim); font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+  .preview-stat strong { display: block; margin-top: 5px; font-size: 20px; letter-spacing: -0.03em; }
+  .preview-table { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .preview-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr 0.8fr; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 11px; align-items: center; }
+  .preview-row:last-child { border-bottom: 0; }
+  .preview-row.head { color: var(--dim); font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; background: rgba(255, 255, 255, 0.02); }
+  .preview-row .name { color: #e2e8f0; font-weight: 600; }
+  .tag { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 9px; font-weight: 700; }
+  .tag.hot { background: rgba(251, 113, 133, 0.12); color: var(--rose); }
+  .tag.warm { background: rgba(245, 200, 66, 0.12); color: var(--gold); }
+  .tag.new { background: rgba(56, 189, 248, 0.12); color: var(--blue); }
+
+  .section { padding: 76px 0; border-top: 1px solid var(--line); }
+  .section-head { max-width: 680px; margin-bottom: 34px; }
+  .section-head .kicker { color: var(--gold); font-size: 11px; font-weight: 800; letter-spacing: 0.18em; text-transform: uppercase; }
+  .section-head h2 { margin: 12px 0 0; font-size: clamp(1.8rem, 3.6vw, 2.8rem); letter-spacing: -0.035em; line-height: 1.05; }
+  .section-head p { margin: 14px 0 0; color: var(--muted); }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card {
+    border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface);
+    padding: 22px; transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .card:hover { border-color: rgba(245, 200, 66, 0.28); transform: translateY(-2px); }
+  .icon {
+    width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center;
+    background: rgba(245, 200, 66, 0.09); border: 1px solid rgba(245, 200, 66, 0.2);
+    color: var(--gold); font-size: 17px; margin-bottom: 16px;
+  }
+  .card h3 { margin: 0 0 8px; font-size: 16px; letter-spacing: -0.02em; }
+  .card p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: step; }
+  .step { position: relative; padding: 22px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-2); }
+  .step::before {
+    counter-increment: step; content: "0" counter(step);
+    display: block; color: var(--gold); font-size: 12px; font-weight: 800; letter-spacing: 0.12em; margin-bottom: 14px;
+  }
+  .step h3 { margin: 0 0 8px; font-size: 16px; }
+  .step p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  .cta {
+    margin: 20px 0 76px; border: 1px solid rgba(245, 200, 66, 0.22); border-radius: 24px;
+    background: linear-gradient(120deg, rgba(245, 200, 66, 0.11), rgba(17, 24, 39, 0.4) 52%, rgba(11, 15, 25, 0.9));
+    padding: 40px; display: flex; align-items: center; justify-content: space-between; gap: 28px;
+  }
+  .cta h2 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.4rem); letter-spacing: -0.035em; }
+  .cta p { margin: 8px 0 0; color: var(--muted); max-width: 560px; }
+  .cta-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  details { border-bottom: 1px solid var(--line); padding: 18px 0; }
+  details summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  details summary::-webkit-details-marker { display: none; }
+  details summary::after { content: "+"; color: var(--gold); font-size: 20px; line-height: 1; }
+  details[open] summary::after { content: "−"; }
+  details p { margin: 12px 0 0; color: var(--muted); max-width: 760px; }
+
+  footer { border-top: 1px solid var(--line); padding: 30px 0 40px; color: var(--dim); font-size: 12px; }
+  .footer-inner { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .footer-inner a { color: var(--muted); }
+  .footer-inner a:hover { color: #fff; }
+
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .preview-body { grid-template-columns: 1fr; }
+    .preview-side { display: none; }
+    .grid-3, .steps { grid-template-columns: 1fr; }
+    .cta { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 640px) {
+    .nav-inner { height: 62px; }
+    .brand { font-size: 12px; }
+    .nav-actions .btn-link { display: none; }
+    .hero { padding-top: 60px; }
+    .preview-stats { grid-template-columns: repeat(2, 1fr); }
+    .preview-row { grid-template-columns: 1.2fr 1fr 0.8fr; }
+    .preview-row .req { display: none; }
+    .cta { padding: 28px; }
+  }
+</style>
 </head>
-<body class="min-h-screen bg-ink-surface text-slate-100 antialiased selection:bg-gold selection:text-ink">
+<body>
 
-  <div class="flex min-h-screen">
-
-    <!-- LEFT SIDEBAR -->
-    <aside class="w-64 shrink-0 bg-ink border-r border-white/[0.06] flex flex-col z-40">
-      <div class="px-6 pt-8 pb-6">
-        <a href="javascript:void(0)" onclick="switchView('dashboard')" class="block">
-          <h1 class="text-[17px] font-extrabold tracking-tight text-white leading-tight">Shyam Earthmover</h1>
-          <span class="text-[11px] font-medium text-white/40 tracking-wide mt-0.5 block">Inc. by Braivex</span>
-        </a>
-      </div>
-
-      <nav class="px-3 flex-1 overflow-y-auto">
-        <ul class="space-y-1">
-          <li>
-            <a href="javascript:void(0)" onclick="switchView('dashboard')" id="nav-dashboard" class="flex items-center justify-between px-3 py-2.5 rounded-lg bg-gold text-ink font-bold text-sm shadow-[0_4px_14px_-4px_rgba(245,200,66,0.35)] transition hover:brightness-95">
-              <span>Dashboard</span>
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0)" onclick="switchView('buyers')" id="nav-buyers" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-white/[0.04] transition">
-              <span>Buyers</span>
-              <span id="badge-buyers" class="text-[10px] font-bold bg-white/[0.08] text-white/70 px-1.5 py-0.5 rounded-full">0</span>
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0)" onclick="switchView('sellers')" id="nav-sellers" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-white/[0.04] transition">
-              <span>Sellers</span>
-              <span id="badge-sellers" class="text-[10px] font-bold bg-white/[0.08] text-white/70 px-1.5 py-0.5 rounded-full">0</span>
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0)" onclick="switchView('inventory')" id="nav-inventory" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-white/[0.04] transition">
-              <span>Inventory</span>
-              <span id="badge-inventory" class="text-[10px] font-bold bg-white/[0.08] text-white/70 px-1.5 py-0.5 rounded-full">0</span>
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0)" onclick="switchView('calls')" id="nav-calls" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-white/[0.04] transition">
-              <span>Calls</span>
-              <span id="badge-calls" class="text-[10px] font-bold bg-white/[0.08] text-white/70 px-1.5 py-0.5 rounded-full">0</span>
-            </a>
-          </li>
-          <li>
-            <a href="javascript:void(0)" onclick="switchView('followups')" id="nav-followups" class="flex items-center justify-between px-3 py-2.5 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-white/[0.04] transition">
-              <span>Follow-ups</span>
-              <span id="badge-followups" class="text-[10px] font-bold bg-white/[0.08] text-white/70 px-1.5 py-0.5 rounded-full">0</span>
-            </a>
-          </li>
-          <li class="pt-2">
-            <a href="javascript:void(0)" aria-disabled="true" title="Coming soon" class="flex items-center px-3 py-2.5 rounded-lg text-sm text-slate-500 opacity-60 cursor-not-allowed">Import Data</a>
-          </li>
-          <li>
-            <a href="javascript:void(0)" aria-disabled="true" title="Coming soon" class="flex items-center px-3 py-2.5 rounded-lg text-sm text-slate-500 opacity-60 cursor-not-allowed">Settings</a>
-          </li>
-        </ul>
-      </nav>
-
-      <div class="px-5 py-6 border-t border-white/[0.06]">
-        <a href="#" class="flex items-center gap-3 mb-3 group">
-          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-gold/90 to-amber-500 flex items-center justify-center text-ink font-extrabold text-xs shadow-inner ring-1 ring-white/10">DU</div>
-          <div class="leading-none">
-            <span class="block text-xs font-semibold text-white">Demo User</span>
-            <span class="block text-[10px] text-white/30">Administrator</span>
-          </div>
-        </a>
-        <a href="#" class="inline-block text-xs font-semibold text-red-400 hover:text-red-300 transition">Logout</a>
-      </div>
-    </aside>
-
-    <!-- MAIN CONTENT -->
-    <main class="flex-1 min-w-0">
-      <div id="view-dashboard">
-
-        <!-- TOP HEADER -->
-        <header class="sticky top-0 z-30 bg-ink/70 backdrop-blur-xl border-b border-white/[0.06]">
-          <div class="max-w-7xl mx-auto px-8 h-16 flex items-center justify-between gap-6">
-            <div class="relative w-full max-w-xl">
-              <input type="text" placeholder="Search buyer, seller, machine..." class="w-full h-10 pl-10 pr-4 rounded-xl bg-white/[0.04] border border-white/[0.06] text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition shadow-inner" />
-              <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.3-4.3m0 0A7.5 7.5 0 1115.5 3.5a7.5 7.5 0 011.2 13.2z" /></svg>
-            </div>
-            <div class="flex items-center gap-3 shrink-0">
-              <a href="javascript:void(0)" onclick="openModal('modal-add-buyer')" class="h-10 px-4 rounded-xl border border-white/[0.08] text-sm font-semibold text-slate-200 hover:text-white hover:bg-white/[0.05] transition">+ Add Buyer</a>
-              <a href="javascript:void(0)" onclick="openModal('modal-add-seller')" class="h-10 px-4 rounded-xl border border-white/[0.08] text-sm font-semibold text-slate-200 hover:text-white hover:bg-white/[0.05] transition">+ Add Seller</a>
-              <a href="javascript:void(0)" onclick="openModal('modal-add-machine')" class="h-10 px-4 rounded-xl bg-gold text-ink text-sm font-extrabold shadow-[0_4px_14px_-2px_rgba(245,200,66,0.45)] hover:brightness-105 transition">+ Add Machine</a>
-            </div>
-          </div>
-        </header>
-
-        <div class="max-w-7xl mx-auto px-8 py-8 space-y-8">
-          <!-- PAGE TITLE -->
-          <div>
-            <h2 class="text-3xl font-extrabold tracking-tight text-white">Vaani Sales Dashboard</h2>
-            <p class="text-sm text-slate-400 mt-1">Manage buyers, sellers, inventory and follow-ups from one place.</p>
-          </div>
-
-          <!-- STATS ROW -->
-          <div class="grid grid-cols-6 gap-4">
-            <div id="stat-buyers" class="rounded-2xl bg-ink-card border border-white/[0.06] p-5 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Buyers</p>
-              <p id="val-buyers" class="text-4xl font-black text-white tracking-tight">0</p>
-            </div>
-            <div id="stat-sellers" class="rounded-2xl bg-ink-card border border-white/[0.06] p-5 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Sellers</p>
-              <p id="val-sellers" class="text-4xl font-black text-white tracking-tight">0</p>
-            </div>
-            <div id="stat-inventory" class="rounded-2xl bg-ink-card border border-white/[0.06] p-5 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Inventory</p>
-              <p id="val-inventory" class="text-4xl font-black text-white tracking-tight">0</p>
-            </div>
-            <div id="stat-calls" class="rounded-2xl bg-ink-card border border-white/[0.06] p-5 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Calls Today</p>
-              <p id="val-calls" class="text-4xl font-black text-white tracking-tight">0</p>
-            </div>
-            <div id="stat-hot" class="rounded-2xl bg-ink-card border border-white/[0.06] p-5 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Hot Leads</p>
-              <p id="val-hot" class="text-4xl font-black text-white tracking-tight">0</p>
-            </div>
-            <div id="stat-followups" class="rounded-2xl bg-ink-card border border-white/[0.06] p-5 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <p class="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-2">Follow-ups Due</p>
-              <p id="val-followups" class="text-4xl font-black text-white tracking-tight">0</p>
-            </div>
-          </div>
-
-          <!-- PIPELINE STAGE -->
-          <div class="rounded-2xl bg-ink-card border border-white/[0.06] p-6 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-            <div class="flex items-center justify-between mb-6">
-              <h3 class="text-sm font-extrabold text-white tracking-tight">Pipeline</h3>
-              <span class="text-xs text-slate-500">Live counts</span>
-            </div>
-            <div class="grid grid-cols-6 gap-4 text-center">
-              <div>
-                <div id="pipe-new" class="text-2xl font-black text-white">0</div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">New</div>
-              </div>
-              <div>
-                <div id="pipe-qualified" class="text-2xl font-black text-white">0</div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Qualified</div>
-              </div>
-              <div>
-                <div id="pipe-hot" class="text-2xl font-black text-white">0</div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Hot</div>
-              </div>
-              <div>
-                <div id="pipe-follow" class="text-2xl font-black text-white">0</div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Follow-up</div>
-              </div>
-              <div>
-                <div id="pipe-deal" class="text-2xl font-black text-white">0</div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Deal Ready</div>
-              </div>
-              <div>
-                <div id="pipe-closed" class="text-2xl font-black text-white">0</div>
-                <div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 mt-1">Closed</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- BOTTOM 2 COLUMNS -->
-          <div class="grid grid-cols-2 gap-6">
-            <!-- LEFT: Vaani Today -->
-            <section class="rounded-2xl bg-ink-card border border-white/[0.06] p-6 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <h3 class="text-lg font-extrabold text-white mb-4 tracking-tight">Vaani Today</h3>
-              <div class="divide-y divide-white/[0.06]">
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Calls handled</span>
-                  <span id="val-today-calls" class="text-sm font-bold text-white">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Buyers qualified</span>
-                  <span id="val-today-buyers" class="text-sm font-bold text-emerald-400">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Sellers captured</span>
-                  <span id="val-today-sellers" class="text-sm font-bold text-white">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Hot leads</span>
-                  <span id="val-today-hot" class="text-sm font-bold text-red-400">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Follow-ups due</span>
-                  <span id="val-today-followups" class="text-sm font-bold text-white">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Calls today</span>
-                  <span id="val-today-calls-today" class="text-sm font-bold text-white">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Critical / High priority</span>
-                  <span id="val-today-critical" class="text-sm font-bold text-red-400">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Ready for human</span>
-                  <span id="val-today-ready" class="text-sm font-bold text-white">0</span>
-                </div>
-                <div class="flex items-center justify-between py-2.5">
-                  <span class="text-sm text-slate-300">Matches found</span>
-                  <span id="val-today-matches" class="text-sm font-bold text-white">0</span>
-                </div>
-              </div>
-            </section>
-
-            <!-- RIGHT: Recent Vaani Calls -->
-            <section class="rounded-2xl bg-ink-card border border-white/[0.06] p-6 shadow-[0_2px_20px_-4px_rgba(0,0,0,0.4)]">
-              <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-extrabold text-white tracking-tight">Recent Vaani Calls</h3>
-                <span class="text-xs text-slate-500">Live feed</span>
-              </div>
-              <div class="overflow-x-auto rounded-xl border border-white/[0.06]">
-                <table class="w-full text-sm text-left">
-                  <thead class="bg-white/[0.04] text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
-                    <tr>
-                      <th class="px-4 py-3">Customer</th>
-                      <th class="px-4 py-3">Type</th>
-                      <th class="px-4 py-3">Requirement</th>
-                      <th class="px-4 py-3">Time</th>
-                      <th class="px-4 py-3">Status</th>
-                      <th class="px-4 py-3">Next Action</th>
-                    </tr>
-                  </thead>
-                  <tbody id="calls-table-body" class="divide-y divide-white/[0.05]">
-                    <tr class="bg-ink-surface hover:bg-white/[0.02] transition">
-                      <td class="px-4 py-4 text-slate-300">No calls recorded yet.</td>
-                      <td class="px-4 py-4 text-slate-600">—</td>
-                      <td class="px-4 py-4 text-slate-600">—</td>
-                      <td class="px-4 py-4 text-slate-600">—</td>
-                      <td class="px-4 py-4 text-slate-600">—</td>
-                      <td class="px-4 py-4 text-slate-600">—</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </div>
-      </div>
-
-      <!-- Hidden List Views -->
-      <div id="view-buyers" class="hidden w-full text-white">
-        <h2 class="text-2xl font-bold mb-4">Buyers List</h2>
-        <div class="bg-ink-card rounded-xl border border-white/[0.08] overflow-hidden">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-white/[0.02] border-b border-white/[0.08] text-slate-400">
-              <tr><th class="p-4">Name</th><th class="p-4">Phone</th><th class="p-4">Requirement</th><th class="p-4">Status</th></tr>
-            </thead>
-            <tbody id="buyers-list-body" class="divide-y divide-white/[0.04]"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="view-sellers" class="hidden w-full text-white">
-        <h2 class="text-2xl font-bold mb-4">Sellers List</h2>
-        <div class="bg-ink-card rounded-xl border border-white/[0.08] overflow-hidden">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-white/[0.02] border-b border-white/[0.08] text-slate-400">
-              <tr><th class="p-4">Name</th><th class="p-4">Phone</th><th class="p-4">Machine</th><th class="p-4">Status</th></tr>
-            </thead>
-            <tbody id="sellers-list-body" class="divide-y divide-white/[0.04]"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="view-inventory" class="hidden w-full text-white">
-        <h2 class="text-2xl font-bold mb-4">Inventory List</h2>
-        <div class="bg-ink-card rounded-xl border border-white/[0.08] overflow-hidden">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-white/[0.02] border-b border-white/[0.08] text-slate-400">
-              <tr><th class="p-4">Model</th><th class="p-4">Year</th><th class="p-4">Price</th><th class="p-4">Location</th></tr>
-            </thead>
-            <tbody id="inventory-list-body" class="divide-y divide-white/[0.04]"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="view-calls" class="hidden w-full text-white">
-        <h2 class="text-2xl font-bold mb-4">Calls Log</h2>
-        <div class="bg-ink-card rounded-xl border border-white/[0.08] overflow-hidden">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-white/[0.02] border-b border-white/[0.08] text-slate-400">
-              <tr>
-                <th class="p-4">Customer / Phone</th>
-                <th class="p-4">Call Type</th>
-                <th class="p-4">Requirement / Summary</th>
-                <th class="p-4">AI Status</th>
-                <th class="p-4">Timestamp</th>
-              </tr>
-            </thead>
-            <tbody id="calls-list-body" class="divide-y divide-white/[0.04]"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div id="view-followups" class="hidden w-full text-white">
-        <h2 class="text-2xl font-bold mb-4">Follow-ups List</h2>
-        <div class="bg-ink-card rounded-xl border border-white/[0.08] overflow-hidden">
-          <table class="w-full text-left text-sm">
-            <thead class="bg-white/[0.02] border-b border-white/[0.08] text-slate-400">
-              <tr><th class="p-4">Customer</th><th class="p-4">Phone</th><th class="p-4">Follow-up Date</th><th class="p-4">Status</th></tr>
-            </thead>
-            <tbody id="followups-list-body" class="divide-y divide-white/[0.04]"></tbody>
-          </table>
-        </div>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- Add Buyer Modal -->
-  <div id="modal-add-buyer" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
-    <div class="bg-ink-card border border-white/[0.08] rounded-2xl p-6 w-full max-w-md shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-lg font-extrabold text-white">Add Buyer</h3>
-        <button onclick="closeModal('modal-add-buyer')" class="text-slate-400 hover:text-white text-sm font-bold">×</button>
-      </div>
-      <form id="form-add-buyer" onsubmit="submitForm(event, 'buyer')" class="space-y-4">
-        <div>
-          <label for="buyer-name" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Name</label>
-          <input type="text" id="buyer-name" name="name" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Full name" />
-        </div>
-        <div>
-          <label for="buyer-phone" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</label>
-          <input type="text" id="buyer-phone" name="phone" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Phone number" />
-        </div>
-        <div>
-          <label for="buyer-requirement" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Requirement</label>
-          <textarea id="buyer-requirement" name="requirement" rows="2" class="w-full px-4 py-3 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition resize-none" placeholder="Machine / service needed"></textarea>
-        </div>
-        <div>
-          <label for="buyer-status" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Status</label>
-          <select id="buyer-status" name="status" class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition appearance-none">
-            <option>New</option>
-            <option>Qualified</option>
-            <option>Hot</option>
-            <option>Warm</option>
-            <option>Cold</option>
-          </select>
-        </div>
-        <div class="flex gap-3 pt-2">
-          <button type="button" onclick="closeModal('modal-add-buyer')" class="flex-1 h-10 rounded-xl border border-white/[0.08] text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/[0.05] transition">Cancel</button>
-          <button type="submit" class="flex-1 h-10 rounded-xl bg-gold text-ink text-sm font-extrabold shadow-[0_4px_14px_-2px_rgba(245,200,66,0.45)] hover:brightness-105 transition">Save Buyer</button>
-        </div>
-      </form>
+<header class="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="/" aria-label="Braivex home">
+      <span class="brand-mark">B</span>
+      <span>BRAIVEX<em>.</em></span>
+    </a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#platform">Platform</a>
+      <a href="#how">How it works</a>
+      <a href="#proof">Why Braivex</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-link" href="/braivex-login.html">Sign in</a>
+      <a class="btn btn-gold" href="/app.html">Open CRM</a>
     </div>
   </div>
+</header>
 
-  <!-- Add Seller Modal -->
-  <div id="modal-add-seller" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
-    <div class="bg-ink-card border border-white/[0.08] rounded-2xl p-6 w-full max-w-md shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-lg font-extrabold text-white">Add Seller</h3>
-        <button onclick="closeModal('modal-add-seller')" class="text-slate-400 hover:text-white text-sm font-bold">×</button>
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <div class="eyebrow"><span></span> Vaani CRM for heavy equipment</div>
+      <h1>Every call becomes a <span class="gold">qualified deal.</span></h1>
+      <p class="lead">Braivex Vaani turns inbound and outbound voice calls into buyers, sellers, inventory matches, and follow-ups. One command center for the whole yard, from first ring to closed deal.</p>
+      <div class="hero-actions">
+        <a class="btn btn-gold" href="/app.html">Open the CRM</a>
+        <a class="btn btn-ghost" href="/braivex-login.html?mode=signup">Create an account</a>
       </div>
-      <form id="form-add-seller" onsubmit="submitForm(event, 'seller')" class="space-y-4">
-        <div>
-          <label for="seller-name" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Name</label>
-          <input type="text" id="seller-name" name="name" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Full name" />
-        </div>
-        <div>
-          <label for="seller-phone" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Phone</label>
-          <input type="text" id="seller-phone" name="phone" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Phone number" />
-        </div>
-        <div>
-          <label for="seller-machine" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Machine Details</label>
-          <textarea id="seller-machine" name="machineDetails" rows="2" class="w-full px-4 py-3 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition resize-none" placeholder="Brand, model, year, hours"></textarea>
-        </div>
-        <div>
-          <label for="seller-status" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Status</label>
-          <select id="seller-status" name="status" class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition appearance-none">
-            <option>New</option>
-            <option>Hot</option>
-            <option>Warm</option>
-            <option>Cold</option>
-          </select>
-        </div>
-        <div class="flex gap-3 pt-2">
-          <button type="button" onclick="closeModal('modal-add-seller')" class="flex-1 h-10 rounded-xl border border-white/[0.08] text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/[0.05] transition">Cancel</button>
-          <button type="submit" class="flex-1 h-10 rounded-xl bg-gold text-ink text-sm font-extrabold shadow-[0_4px_14px_-2px_rgba(245,200,66,0.45)] hover:brightness-105 transition">Save Seller</button>
-        </div>
-      </form>
-    </div>
-  </div>
-
-  <!-- Add Machine Modal -->
-  <div id="modal-add-machine" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-6">
-    <div class="bg-ink-card border border-white/[0.08] rounded-2xl p-6 w-full max-w-md shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)]">
-      <div class="flex items-center justify-between mb-5">
-        <h3 class="text-lg font-extrabold text-white">Add Machine</h3>
-        <button onclick="closeModal('modal-add-machine')" class="text-slate-400 hover:text-white text-sm font-bold">×</button>
+      <div class="hero-proof">
+        <div class="proof-item"><strong>1 call</strong><span>One structured lead record</span></div>
+        <div class="proof-item"><strong>3 roles</strong><span>Buyer, seller, and inventory</span></div>
+        <div class="proof-item"><strong>0 blind spots</strong><span>Every follow-up has an owner</span></div>
       </div>
-      <form id="form-add-machine" onsubmit="submitForm(event, 'machine')" class="space-y-4">
-        <div>
-          <label for="machine-model" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Model</label>
-          <input type="text" id="machine-model" name="model" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Machine model" />
-        </div>
-        <div>
-          <label for="machine-year" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Year</label>
-          <input type="number" id="machine-year" name="year" required min="1980" max="2030" class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Manufacturing year" />
-        </div>
-        <div>
-          <label for="machine-price" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Price</label>
-          <input type="text" id="machine-price" name="price" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Price (e.g., ₹12,50,000)" />
-        </div>
-        <div>
-          <label for="machine-location" class="block text-xs font-bold uppercase tracking-widest text-slate-400 mb-1">Location</label>
-          <input type="text" id="machine-location" name="location" required class="w-full h-10 px-4 rounded-xl bg-ink border border-white/[0.06] text-sm text-white focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold/40 transition" placeholder="Location" />
-        </div>
-        <div class="flex gap-3 pt-2">
-          <button type="button" onclick="closeModal('modal-add-machine')" class="flex-1 h-10 rounded-xl border border-white/[0.08] text-sm font-semibold text-slate-300 hover:text-white hover:bg-white/[0.05] transition">Cancel</button>
-          <button type="submit" class="flex-1 h-10 rounded-xl bg-gold text-ink text-sm font-extrabold shadow-[0_4px_14px_-2px_rgba(245,200,66,0.45)] hover:brightness-105 transition">Save Machine</button>
-        </div>
-      </form>
     </div>
+  </section>
+
+  <section class="preview" aria-label="Product preview">
+    <div class="wrap">
+      <div class="preview-window">
+        <div class="preview-bar">
+          <span class="dot g"></span><span class="dot y"></span><span class="dot k"></span>
+          <span>Braivex Vaani CRM</span>
+        </div>
+        <div class="preview-body">
+          <aside class="preview-side">
+            <div class="side-brand"><i>B</i> BRAIVEX</div>
+            <div class="side-item active">Dashboard</div>
+            <div class="side-item">Sellers <b>3</b></div>
+            <div class="side-item">Buyers <b>6</b></div>
+            <div class="side-item">Yard stock <b>3</b></div>
+            <div class="side-item">Demand &amp; match</div>
+            <div class="side-item">Follow-ups <b>2</b></div>
+          </aside>
+          <div class="preview-main">
+            <div class="preview-head">
+              <div>
+                <h3>Sales command center</h3>
+                <p>Shyam Earthmover · demo workspace</p>
+              </div>
+              <span class="pill">Live</span>
+            </div>
+            <div class="preview-stats">
+              <div class="preview-stat"><span>Buyers</span><strong>6</strong></div>
+              <div class="preview-stat"><span>Sellers</span><strong>3</strong></div>
+              <div class="preview-stat"><span>Yard stock</span><strong>3</strong></div>
+              <div class="preview-stat"><span>Follow-ups</span><strong>2</strong></div>
+            </div>
+            <div class="preview-table">
+              <div class="preview-row head"><span>Customer</span><span class="req">Requirement</span><span>Status</span><span>Next</span></div>
+              <div class="preview-row"><span class="name">Rajesh Kumar</span><span class="req">JCB 3DX</span><span><span class="tag hot">Hot</span></span><span>Call back</span></div>
+              <div class="preview-row"><span class="name">Meena Transport</span><span class="req">Tata 200</span><span><span class="tag warm">Warm</span></span><span>Site visit</span></div>
+              <div class="preview-row"><span class="name">Suresh Yadav</span><span class="req">Hyundai 210</span><span><span class="tag new">New</span></span><span>Qualify</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="platform">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">One operating system</div>
+        <h2>Stop stitching together spreadsheets, call notes, and WhatsApp.</h2>
+        <p>Vaani writes the call outcome straight into the CRM, so the team works from one record instead of five tabs.</p>
+      </div>
+      <div class="grid-3">
+        <article class="card">
+          <div class="icon">◎</div>
+          <h3>Call-to-lead capture</h3>
+          <p>Every completed call becomes a structured lead with customer, phone, requirement, urgency, and next action.</p>
+        </article>
+        <article class="card">
+          <div class="icon">⇄</div>
+          <h3>Buyer and seller matching</h3>
+          <p>See which machines fit which buyer, which seller has the unit, and where the price or location does not line up.</p>
+        </article>
+        <article class="card">
+          <div class="icon">◷</div>
+          <h3>Follow-ups that do not slip</h3>
+          <p>Due dates, ownership, and status live next to the lead. The dashboard shows what needs action today.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">How it works</div>
+        <h2>From a ringing phone to a working pipeline.</h2>
+      </div>
+      <div class="steps">
+        <article class="step">
+          <h3>Vaani answers</h3>
+          <p>The voice agent qualifies the caller, captures the machine, budget, location, and urgency, then writes a clean summary.</p>
+        </article>
+        <article class="step">
+          <h3>The CRM updates</h3>
+          <p>The call is matched to a buyer or seller by phone. Inventory and follow-up records stay in sync automatically.</p>
+        </article>
+        <article class="step">
+          <h3>The team acts</h3>
+          <p>Sales opens one command center, sees the hottest opportunities first, and works the next action instead of searching for it.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="proof">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Built for the yard</div>
+        <h2>Heavy equipment sales is not a generic CRM problem.</h2>
+        <p>Machine model, year, hours, location, finance, and resale value all matter. Vaani keeps those details attached to the conversation.</p>
+      </div>
+      <div class="grid-3">
+        <article class="card"><div class="icon">▣</div><h3>Inventory-aware</h3><p>Track yard stock and canonical machine models side by side, with demand and match signals.</p></article>
+        <article class="card"><div class="icon">₹</div><h3>Deal-ready records</h3><p>Budget, asking price, and evidence requests stay on the lead, not buried in a call recording.</p></article>
+        <article class="card"><div class="icon">✓</div><h3>DNC isolation</h3><p>Suppressed numbers stay out of the calling workflow. The registry is explicit, not a hidden filter.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <div class="cta">
+      <div>
+        <h2>Open the command center.</h2>
+        <p>The local build opens with a grounded demo dataset. Switch to Real DB inside the CRM when your database is connected.</p>
+      </div>
+      <div class="cta-actions">
+        <a class="btn btn-gold" href="/app.html">Open CRM</a>
+        <a class="btn btn-ghost" href="/braivex-login.html">Sign in</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="faq">
+    <div class="wrap">
+      <div class="section-head">
+        <div class="kicker">Questions</div>
+        <h2>What you need to know before you start.</h2>
+      </div>
+      <details>
+        <summary>How do I sign in for the first time?</summary>
+        <p>Open the sign-in page and choose Create account. Use a work email and a password of at least 12 characters. The account is created locally and you land in the CRM.</p>
+      </details>
+      <details>
+        <summary>Why does the dashboard show demo data?</summary>
+        <p>Local runs default to the grounded demo fixture so you can test the workflow without a database. Use the Real DB button in the CRM header when your Postgres connection is configured.</p>
+      </details>
+      <details>
+        <summary>Where does the data live?</summary>
+        <p>Local accounts and sessions live in the dashboard JSON store. Sales data can come from the demo fixture or from Postgres when <code>VAANI_DATABASE_URL</code> is set.</p>
+      </details>
+      <details>
+        <summary>What is the difference between the landing page and the CRM?</summary>
+        <p>The landing page explains the product. The CRM at <code>/app.html</code> is the signed-in workspace where your team works leads, inventory, and follow-ups.</p>
+      </details>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-inner">
+    <span>© 2026 Braivex. Vaani CRM.</span>
+    <span><a href="/braivex-login.html">Sign in</a> · <a href="/app.html">Open CRM</a> · <a href="#platform">Platform</a></span>
   </div>
+</footer>
 
-  <script>
-async function loadCRMData() {
-  try {
-    const res = await fetch('/api/crm-dashboard');
-    if (!res.ok) throw new Error('Dashboard API returned ' + res.status);
-    const data = await res.json();
-
-    if (data.stats) {
-      const followUps = data.stats.followUpsDue ?? data.stats.followupsDue ?? 0;
-      updateText('val-buyers', data.stats.buyers || 0);
-      updateText('val-sellers', data.stats.sellers || 0);
-      updateText('val-inventory', data.stats.inventory || 0);
-      updateText('val-calls', data.stats.callsToday || 0);
-      updateText('val-hot', data.stats.hotLeads || 0);
-      updateText('val-followups', followUps);
-      updateText('badge-buyers', data.stats.buyers || 0);
-      updateText('badge-sellers', data.stats.sellers || 0);
-      updateText('badge-inventory', data.stats.inventory || 0);
-      updateText('badge-calls', data.stats.callsToday || 0);
-      updateText('badge-followups', followUps);
-    }
-
-    if (data.pipeline) {
-      updateText('pipe-new', data.pipeline.new || 0);
-      updateText('pipe-qualified', data.pipeline.qualified || 0);
-      updateText('pipe-hot', data.pipeline.hot || 0);
-      updateText('pipe-follow', data.pipeline.followUp || 0);
-      updateText('pipe-deal', data.pipeline.dealReady || 0);
-      updateText('pipe-closed', data.pipeline.closed || 0);
-    }
-
-    if (data.vaaniToday) {
-      updateText('val-today-calls', data.vaaniToday.callsHandled || 0);
-      updateText('val-today-buyers', data.vaaniToday.buyersQualified || 0);
-      updateText('val-today-sellers', data.vaaniToday.sellersCaptured || 0);
-      updateText('val-today-hot', data.vaaniToday.hotLeads || 0);
-      updateText('val-today-followups', data.vaaniToday.followUpsDue || 0);
-      updateText('val-today-calls-today', data.vaaniToday.callsToday || 0);
-      updateText('val-today-critical', data.vaaniToday.criticalPriority || 0);
-      updateText('val-today-ready', data.vaaniToday.readyForHuman || 0);
-      updateText('val-today-matches', data.vaaniToday.matchesFound || 0);
-    }
-
-    const tbody = document.getElementById('calls-table-body');
-    if (tbody && Array.isArray(data.recentCalls)) {
-      if (data.recentCalls.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-slate-500">No calls recorded yet.</td></tr>';
-      } else {
-        tbody.innerHTML = data.recentCalls.map(call => {
-          const name = call.customerName || call.customer || '—';
-          const urgency = call.urgency || call.status || 'Cold';
-          const statusClass = urgency.toLowerCase() === 'hot' ? 'text-rose-400 bg-rose-500/10 border-rose-500/20' : urgency.toLowerCase() === 'warm' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-          const timeStr = (call.timestamp || call.time) ? new Date(call.timestamp || call.time).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-          return `<tr class="bg-ink-surface hover:bg-white/[0.02] transition">
-            <td class="px-4 py-4 font-medium text-white">${escapeHtml(name)}</td>
-            <td class="px-4 py-4 text-slate-300">${escapeHtml(call.callType || call.type || '—')}</td>
-            <td class="px-4 py-4 text-slate-300">${escapeHtml(call.requirement || call.summary || '—')}</td>
-            <td class="px-4 py-4 text-slate-400 text-xs">${timeStr}</td>
-            <td class="px-4 py-4"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border ${statusClass}">${escapeHtml(urgency)}</span></td>
-            <td class="px-4 py-4"><button onclick="callAction('${escapeHtml(String(call.id || ''))}','${escapeHtml(name)}')" class="h-7 px-3 rounded-md bg-gold text-ink text-xs font-extrabold shadow-[0_2px_8px_-2px_rgba(245,200,66,0.45)] hover:brightness-105 transition active:scale-95">Call</button></td>
-          </tr>`;
-        }).join('');
-      }
-    }
-  } catch (err) {
-    console.error('loadCRMData error:', err);
-  }
-}
-window.loadCRMData = loadCRMData;
-
-function updateText(id, value) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = value;
-}
-
-function escapeHtml(str) {
-  if (str == null) return '';
-  const div = document.createElement('div');
-  div.textContent = String(str);
-  return div.innerHTML;
-}
-
-function callAction(callId, customerName) {
-  alert('Initiating call to ' + customerName + ' (Call ID: ' + callId + ')');
-}
-
-function closeModal(modalId) {
-  const el = document.getElementById(modalId);
-  if (el) el.classList.add('hidden');
-}
-window.closeModal = closeModal;
-
-function openModal(modalId) {
-  const el = document.getElementById(modalId);
-  if (el) el.classList.remove('hidden');
-}
-window.openModal = openModal;
-
-async function submitForm(event, type) {
-  event.preventDefault();
-  const form = event.target;
-  const data = Object.fromEntries(new FormData(form).entries());
-  const endpoint = '/api/' + (type === 'buyer' ? 'buyers' : type === 'seller' ? 'sellers' : 'inventory');
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    const json = await res.json();
-    if (json && json.success) {
-      closeModal('modal-add-' + type);
-      form.reset();
-      await loadCRMData();
-    } else {
-      alert('Failed to save ' + type + ': ' + (json ? json.error || JSON.stringify(json) : 'Unknown error'));
-    }
-  } catch (err) {
-    console.error('submitForm error:', err);
-    alert('Network error while saving ' + type);
-  }
-}
-
-function switchView(viewName) {
-  document.getElementById('view-dashboard').classList.add('hidden');
-  document.getElementById('view-buyers').classList.add('hidden');
-  document.getElementById('view-sellers').classList.add('hidden');
-  document.getElementById('view-inventory').classList.add('hidden');
-  document.getElementById('view-calls').classList.add('hidden');
-  document.getElementById('view-followups').classList.add('hidden');
-  if (viewName === 'dashboard') {
-    document.getElementById('view-dashboard').classList.remove('hidden');
-  } else if (viewName === 'buyers') {
-    document.getElementById('view-buyers').classList.remove('hidden');
-  } else if (viewName === 'sellers') {
-    document.getElementById('view-sellers').classList.remove('hidden');
-  } else if (viewName === 'inventory') {
-    document.getElementById('view-inventory').classList.remove('hidden');
-  } else if (viewName === 'calls') {
-    document.getElementById('view-calls').classList.remove('hidden');
-  } else if (viewName === 'followups') {
-    document.getElementById('view-followups').classList.remove('hidden');
-  }
-  document.querySelectorAll('aside nav a').forEach(link => {
-    link.classList.remove('bg-gold', 'text-ink', 'font-bold', 'shadow-[0_4px_14px_-4px_rgba(245,200,66,0.35)]');
-    link.classList.add('text-slate-300');
-  });
-  const activeLink = document.getElementById('nav-' + viewName);
-  if (activeLink) {
-    activeLink.classList.remove('text-slate-300');
-    activeLink.classList.add('bg-gold', 'text-ink', 'font-bold', 'shadow-[0_4px_14px_-4px_rgba(245,200,66,0.35)]');
-  }
-  if (viewName === 'calls') {
-    loadCallsData();
-  } else if (viewName === 'dashboard') {
-    loadCRMData();
-  } else {
-    loadListData();
-  }
-}
-window.switchView = switchView;
-
-window.loadCallsData = async function() {
-  try {
-    const res = await fetch('/api/calls');
-    const data = await res.json();
-    const items = Array.isArray(data) ? data : [];
-    const tbody = document.getElementById('calls-list-body');
-    if (!tbody) return;
-    if (items.length > 0) {
-      tbody.innerHTML = items.map(call => {
-        const urgencyClass = (call.urgency || 'Cold').toLowerCase() === 'hot' ? 'text-rose-400 bg-rose-500/10 border-rose-500/20' : (call.urgency || 'Cold').toLowerCase() === 'warm' ? 'text-amber-400 bg-amber-500/10 border-amber-500/20' : 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20';
-        const timeStr = call.timestamp ? new Date(call.timestamp).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
-        return `<tr class="bg-ink-surface hover:bg-white/[0.02] transition">
-          <td class="p-4">
-            <div class="text-white font-medium">${escapeHtml(call.customerName || call.customer || '—')}</div>
-            <div class="text-xs text-slate-500">${escapeHtml(call.phone || '—')}</div>
-          </td>
-          <td class="p-4 text-slate-300">${escapeHtml(call.callType || call.type || '—')}</td>
-          <td class="p-4 text-slate-300">${escapeHtml(call.requirement || call.summary || '—')}</td>
-          <td class="p-4"><span class="px-2 py-1 rounded-full bg-white/[0.05] border border-white/[0.1] text-xs ${urgencyClass}">${escapeHtml(call.urgency || call.status || '—')}</span></td>
-          <td class="p-4 text-slate-400 text-xs">${timeStr}</td>
-        </tr>`;
-      }).join('');
-    } else {
-      tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-slate-500">No call records found.</td></tr>`;
-    }
-  } catch (e) {
-    console.error("Failed to load call data:", e);
-  }
-};
-
-function showDashboard() { switchView('dashboard'); }
-function showList(type) { switchView(type); }
-
-window.loadListData = async function() {
-  try {
-    const fetchAndRender = async (endpoint, tbodyId, rowMapper, emptyMsg) => {
-      const res = await fetch(endpoint);
-      const data = await res.json();
-      const tbody = document.getElementById(tbodyId);
-      if (!tbody) return;
-      const items = Array.isArray(data) ? data : (data && Array.isArray(data.items) ? data.items : []);
-      if (items.length > 0) {
-        tbody.innerHTML = items.map(rowMapper).join('');
-      } else {
-        tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-500">${emptyMsg}</td></tr>`;
-      }
-    };
-
-    await fetchAndRender('/api/buyers', 'buyers-list-body',
-      b => `<tr><td class="p-4">${escapeHtml(b.name||'-')}</td><td class="p-4">${escapeHtml(b.phone||'-')}</td><td class="p-4">${escapeHtml(b.requirement||'-')}</td><td class="p-4"><span class="px-2 py-1 rounded-full bg-white/[0.05] border border-white/[0.1] text-xs">${escapeHtml(b.status||'New')}</span></td></tr>`,
-      'No buyers found');
-
-    await fetchAndRender('/api/sellers', 'sellers-list-body',
-      s => `<tr><td class="p-4">${escapeHtml(s.name||'-')}</td><td class="p-4">${escapeHtml(s.phone||'-')}</td><td class="p-4">${escapeHtml(s.machineDetails||'-')}</td><td class="p-4"><span class="px-2 py-1 rounded-full bg-white/[0.05] border border-white/[0.1] text-xs">${escapeHtml(s.status||'New')}</span></td></tr>`,
-      'No sellers found');
-
-    await fetchAndRender('/api/inventory', 'inventory-list-body',
-      i => `<tr><td class="p-4">${escapeHtml(i.model||'-')}</td><td class="p-4">${escapeHtml(i.year||'-')}</td><td class="p-4">${escapeHtml(i.price||'-')}</td><td class="p-4">${escapeHtml(i.location||'-')}</td></tr>`,
-      'No inventory found');
-  } catch (e) {
-    console.error("Failed to load list data:", e);
-  }
-};
-
-function loadListData(type) {
-  if (window.loadListData) window.loadListData();
-}
-
-loadCRMData();
-  </script>
 </body>
 </html>

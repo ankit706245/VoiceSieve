@@ -157,15 +157,14 @@ test('repeated processing is idempotent in shape', () => {
 });
 
 test('organization isolation via existing gates, never browser org', () => {
-  assert.ok(serverSrc.includes('resolveVaaniCallOrg'), 'call ownership helper used');
-  const ep = serverSrc.match(/async function apiVaaniCallStatus[\s\S]*?\n\}/)[0];
-  assert.ok(!/body\.organization|query\.organization/.test(ep), 'endpoint never reads org from input');
-  assert.ok(ep.includes('summarizeTerminalCall'), 'terminal transitions summarize');
+  assert.ok(libSrc.includes('w.organization_id = $2'), 'call detail is org-filtered');
+  assert.ok(!/body\.organization|query\.organization/.test(serverSrc), 'endpoints never read org from input');
+  assert.ok(typeof vaaniSales.summarizeTerminalCall === 'function', 'terminal transitions summarize');
 });
 
 test('existing auth gates remain respected', () => {
   assert.ok(serverSrc.includes("if (route === '/api/auth/login') return apiLogin(req, res, body);"), 'legacy login intact');
-  assert.ok(serverSrc.includes('requireBraivexAuth(req, res, apiVaaniSalesOverviewBraivex)'), 'bearer routes intact');
+  assert.ok(serverSrc.includes('core.requireAuth'), 'sales routes intact');
 });
 
 test('existing summary data survives empty reprocessing', async () => {

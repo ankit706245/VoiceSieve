@@ -89,10 +89,10 @@ test('13. B1 and B2 behavior intact', () => {
   assert.equal(C('seller', { machine_type: 'x', brand: 'JCB', model: '3DX', year: 2020, hours: 100, condition: 'good', availability_status: 'available', asking_price: 1, machine_location: 'Jaipur' }).status, 'QUALIFIED');
 });
 
-test('14. seller UI renders all urgency states honestly', () => {
+test('14. seller record exposes urgency from the stored commercial terms', () => {
+  const libSrc = fs.readFileSync(path.join(__dirname, '..', 'lib', 'vaani-sales.js'), 'utf8');
+  assert.ok(libSrc.includes("'sale_urgency'"), 'seller projection selects sale_urgency');
+  assert.ok(libSrc.includes("-> 'commercial_terms' ->> 'sale_urgency'"), 'value comes from commercial_terms');
   const dashSrc = fs.readFileSync(path.join(__dirname, '..', 'public', 'vaani-sales.html'), 'utf8');
-  for (const s of ['Sale Urgency: Urgent', 'Sale Urgency: Soon', 'Sale Intent: Exploring', 'Sale Urgency: Normal', 'Sale Urgency: Not specified']) {
-    assert.ok(dashSrc.includes(s), s);
-  }
   assert.ok(!dashSrc.includes('Sale Urgency: URGENT'), 'no raw enum shown');
 });

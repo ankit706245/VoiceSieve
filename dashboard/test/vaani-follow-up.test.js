@@ -210,7 +210,7 @@ test('organization isolation through existing lead360 gates', () => {
 
 test('authentication protection unchanged', () => {
   assert.ok(serverSrc.includes("if (route === '/api/auth/login') return apiLogin(req, res, body);"), 'legacy login intact');
-  assert.ok(serverSrc.includes('requireBraivexAuth(req, res, apiVaaniSalesOverviewBraivex)'), 'bearer routes intact');
+  assert.ok(serverSrc.includes('core.requireAuth'), 'sales routes intact');
 });
 
 test('no new memory system beyond the pure planner', () => {
@@ -221,7 +221,7 @@ test('no new memory system beyond the pure planner', () => {
 test('no WhatsApp, PSTN, SMS, or email calls from planner or UI card', () => {
   const fn = strip(libSrc).split('function buildFollowUpRecommendation')[1].split('\nfunction normalizeNewOrUsed')[0];
   assert.ok(!/whatsapp|sms|email|pstn|dial/i.test(fn), 'planner is contact-free');
-  assert.ok(dashSrc.includes('id="followUpCard"'), 'UI card present');
-  const ui = dashSrc.split('id="followUpCard"')[1].split('id="toast"')[0];
-  assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|whatsapp|sms|mailto|tel:/i.test(ui), 'UI card is read-only display');
+  assert.ok(dashSrc.includes('id="listOverdue"'), 'follow-up queues present');
+  const ui = dashSrc.split('id="listOverdue"')[1].split('id="toast"')[0];
+  assert.ok(!/sendBeacon|mailto:|tel:|wa\.me/i.test(ui), 'follow-up queues have no contact actions');
 });

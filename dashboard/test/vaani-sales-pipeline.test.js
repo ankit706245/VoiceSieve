@@ -165,14 +165,16 @@ test('unknown data never fabricates a progressed stage', () => {
 });
 
 test('organization isolation through ctx gates with no browser org', () => {
-  const ep = serverSrc.match(/async function apiVaaniSalesPipeline[\s\S]*?\n\}/)[0];
-  assert.ok(ep.includes('resolveOrganizationId(ctx)'), 'org from auth context');
-  assert.ok(!/body\.organization|query\.organization|searchParams/.test(ep), 'no browser org input');
-  assert.ok(ep.includes('getSalesPipeline(orgId)'), 'loader scoped by ctx org');
+  const loader = libSrc.split('async function getSalesPipeline')[1].split('\nasync function')[0];
+  assert.ok(loader.includes('Organization not linked'), 'missing org fails closed');
+  assert.ok(loader.includes('getBuyers({}, false, orgInt)'), 'buyers scoped by ctx org');
+  assert.ok(loader.includes('getSellers({}, false, orgInt)'), 'sellers scoped by ctx org');
+  assert.ok(loader.includes('loadMatchStock(orgInt)'), 'stock scoped by ctx org');
+  assert.ok(loader.includes('w.organization_id = $1'), 'calls and transcripts scoped by ctx org');
 });
 
-test('authentication protection on the pipeline route', () => {
-  assert.ok(serverSrc.includes("if (route === '/api/vaani/sales/pipeline' && req.method === 'GET') return core.requireAuth(req, res, apiVaaniSalesPipeline);"), 'route gated');
+test('authentication protection on the pipeline data', () => {
+  assert.ok(serverSrc.includes("if (route.startsWith('/api/vaani/sales/')) return core.requireAuth(req, res, apiVaaniSalesGet);"), 'sales routes are gated');
 });
 
 test('no database writes from pipeline read path', () => {
@@ -189,10 +191,10 @@ test('no fake production data in pipeline contracts', () => {
   assert.ok(!/demo|Demo|DEMO|test_|Test |sample|Sample|fake|Fake/.test(code), 'no fixture language in row builder');
 });
 
-test('no outbound calls from pipeline view', () => {
-  const dashBlock = dashSrc.split('function loadPipeline')[1].split('function renderPipeline')[0]
-    + dashSrc.split('function renderPipeline')[1].split('function pipelineRowHtml')[0];
-  assert.ok(!/fetch\(.api\/vaani\/(sales\/outbound|buyers\/\d+\/call)|Dograh|whatsapp|sms|mailto|tel:/i.test(dashBlock), 'view only reads pipeline endpoint');
+test('no outbound calls from pipeline data', () => {
+  assert.ok(!/\/api\/vaani\/(sales\/outbound|buyers\/\d+\/call)/.test(serverSrc), 'no outbound call routes');
+  const loader = libSrc.split('async function getSalesPipeline')[1].split('\nasync function')[0];
+  assert.ok(!/sendBeacon|mailto:|tel:|wa\.me|https?\.request/.test(loader), 'pipeline loader has no contact actions');
 });
 
 test('no WhatsApp, SMS, or email in pipeline code', () => {
@@ -206,8 +208,8 @@ test('no negotiation automation in pipeline', () => {
 });
 
 test('no deal-closing automation anywhere in pipeline path', () => {
-  const ep = serverSrc.match(/async function apiVaaniSalesPipeline[\s\S]*?\n\}/)[0];
-  assert.ok(!/CLOSED|close|deal/i.test(ep), 'endpoint only reads and returns');
+  const loader = libSrc.split('async function getSalesPipeline')[1].split('\nasync function')[0];
+  assert.ok(!/INSERT|UPDATE|DELETE/.test(loader), 'pipeline loader only reads');
 });
 
 test('no duplicate memory system beyond existing composers', () => {
