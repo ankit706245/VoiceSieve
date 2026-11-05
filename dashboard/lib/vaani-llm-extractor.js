@@ -29,13 +29,21 @@ async function extractFromConversationLLM(conversationLogs, leadHistory = null) 
     historyContext = `
 PREVIOUS INTERACTION HISTORY:
 ${JSON.stringify(leadHistory, null, 2)}
-(Use this to preserve the timeline, e.g. a customer moving from COLD to WARM or WARM to HOT).`;
+(Use this ONLY to preserve the timeline, e.g. a customer moving from COLD to WARM or WARM to HOT. NEVER copy customer_type or buyer/seller facts from history when this transcript states a different intent).`;
   }
 
   const prompt = `You are a strict data extraction AI for Vaani, a used excavator sales assistant.
 Your task is to extract structured data from the following call transcript and previous history.
 Do NOT guess or invent data. If a value is unknown, explicitly set it to null.
 The conversation may be in Hindi, Hinglish, or English.
+
+CLASSIFICATION RULES (critical):
+- Classify customer_type ONLY from what the caller says in THIS transcript.
+- SELLER: the caller wants to sell a machine ("machine sale karni hai", "bechna hai", "sell karna hai").
+- BUYER: the caller wants to buy a machine ("kharidna hai", "purchase karna hai", "buy karna hai").
+- The caller's latest explicit statement wins; if they correct themselves, use the correction.
+- PREVIOUS INTERACTION HISTORY is for temperature/timeline continuity only. NEVER copy customer_type or buyer/seller facts from history when this transcript states a different intent.
+- If the call was cut before any buy/sell statement, set customer_type to "unknown". Never default to buyer.
 
 TEMPERATURE RULES:
 - HOT: Strong purchase/selling intent + useful details + meaningful next action agreed. Do NOT assign HOT merely because machine details exist.

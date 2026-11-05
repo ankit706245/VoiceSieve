@@ -5577,6 +5577,10 @@ async function ingestCallComplete(payload) {
     }
   }
 
+  // A caller's own words outrank Dograh's intent, the LLM result, and history.
+  const spokenType = detectCustomerTypeFromTranscript(payload.transcript || payload.conversation);
+  if (spokenType) customerType = spokenType;
+
   applyDeterministicBackstop({
     customerType, transcript: payload.transcript, conversation: payload.conversation,
     machDetails, commTerms, payload,
@@ -6408,6 +6412,33 @@ function resolveCustomerType(payload) {
   return 'unknown';
 }
 
+// Explicit buy/sell wording in the caller's own turns is the strongest signal:
+// it survives cut calls and LLM/provider outages. The latest explicit phrase
+// wins, so a correction overrides an earlier one. Assistant turns are ignored
+// because the greeting itself asks "sale karni hai ya purchase karni hai?".
+function detectCustomerTypeFromTranscript(input) {
+  const customerText = normalizeTranscriptSegments(input)
+    .filter((s) => /customer|user|caller/i.test(s.speaker || ''))
+    .map((s) => s.message)
+    .join('\n')
+    .toLowerCase();
+  if (!customerText) return null;
+
+  const hits = [];
+  const collect = (type, re) => {
+    re.lastIndex = 0;
+    let match;
+    while ((match = re.exec(customerText)) !== null) {
+      hits.push({ type, index: match.index });
+    }
+  };
+  collect('seller', /\bbech\w*|\bsell(?:ing)?\b|\bseller\b|\bsale\s+(?:karn\w*|krn\w*)\b|बेच/g);
+  collect('buyer', /\bkharid\w*|\bkhareed\w*|\bkhreed\w*|\bkarid\w*|\bbuy(?:ing)?\b|\bbuyer\b|\bpurchas\w*|खरीद/g);
+  if (hits.length === 0) return null;
+  hits.sort((a, b) => a.index - b.index);
+  return hits[hits.length - 1].type;
+}
+
 function buildManualLeadInsert(type, data, orgId, wfId) {
   const budgetParsed = parseBudgetInr(data.budget);
   if (!budgetParsed.ok) throw new Error('Invalid budget: enter digits with optional Lakh/Crore, e.g. 1800000 or 18 Lakh');
@@ -6716,6 +6747,7 @@ module.exports = {
   normalizeApplicationHistory,
   normalizeOwnershipType,
   resolveCustomerType,
+  detectCustomerTypeFromTranscript,
   mapLeadSaveError,
   mapVoiceSessionError,
   parseBudgetInr,
