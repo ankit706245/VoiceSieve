@@ -3182,7 +3182,7 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
           ORDER BY created_at ASC
         ) t;
       `;
-      const callIdParam = isNum ? parseInt(targetId, 10) : -1;
+      const callIdParam = isNum ? parseInt(strippedId, 10) : -1;
       const tasks = await queryPostgres(taskSql, [orgInt, String(targetId), callIdParam]);
       if (Array.isArray(tasks)) {
         tasks.forEach((t) => {
@@ -3317,7 +3317,7 @@ async function getLeadTimeline(leadId, isDemo = false, organizationId = null) {
 
     // Append Digital Evidence events
     try {
-      const callIdParam = isNum ? parseInt(targetId, 10) : -1;
+      const callIdParam = isNum ? parseInt(strippedId, 10) : -1;
       const evSql = `
         SELECT COALESCE(json_agg(t), '[]'::json) FROM (
           SELECT evidence_id, evidence_type, status, source, provider_message_id,
