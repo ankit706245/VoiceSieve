@@ -2741,7 +2741,7 @@
     }
 
     function renderAudioPlayer(call) {
-      const container = document.getElementById('drawerAudioPlayer');
+      const container = document.getElementById('drawerAudioContainer');
       if (!container) return;
       const audioUrl = call.audio_url || call.recording_url || call.audio_file || null;
       if (audioUrl) {

@@ -5500,76 +5500,81 @@ async function ingestCallComplete(payload) {
   // Phase F Step 2: Auto-extract from conversation if transcript is present
   let extractionAudit = null;
   if (payload.transcript || payload.conversation) {
-    const extractionResult = await module.exports.extractFromConversation(payload.transcript || payload.conversation, leadHistory);
-    extractionAudit = {
-      provenance: {},
-      missing_info: {},
-      correction_history: [],
-      follow_up_question: null
-    };
+    try {
+      const extractionResult = await module.exports.extractFromConversation(payload.transcript || payload.conversation, leadHistory);
+      extractionAudit = {
+        provenance: {},
+        missing_info: {},
+        correction_history: [],
+        follow_up_question: null
+      };
 
-    const transType = normalizeCustomerType(extractionResult.extracted.customer_type);
-    // VAANI-001: LLM extraction may correct an explicit classification, but only
-    // when it returns a valid buyer/seller/other value. Ambiguous or unrecognized
-    // LLM output (transType === null) never silently overrides an existing
-    // classification or fabricates buyer/seller.
-    if (transType) {
-      customerType = transType;
+      const transType = normalizeCustomerType(extractionResult.extracted.customer_type);
+      // VAANI-001: LLM extraction may correct an explicit classification, but only
+      // when it returns a valid buyer/seller/other value. Ambiguous or unrecognized
+      // LLM output (transType === null) never silently overrides an existing
+      // classification or fabricates buyer/seller.
+      if (transType) {
+        customerType = transType;
+      }
+
+      if (!payload.lead_temperature && extractionResult.extracted.lead_temperature) payload.lead_temperature = extractionResult.extracted.lead_temperature;
+      if (!payload.next_action && extractionResult.extracted.next_action) payload.next_action = extractionResult.extracted.next_action;
+      if (!payload.customer_name && extractionResult.extracted.caller_name) payload.customer_name = extractionResult.extracted.caller_name;
+      if (extractionResult.extracted.follow_up_required !== null) payload.follow_up_required = extractionResult.extracted.follow_up_required;
+      if (extractionResult.extracted.dnc_requested) payload.dnc_requested = true;
+
+      // Map new Phase 3 fields to payload so they persist
+      if (extractionResult.extracted.sales_priority) payload.sales_priority = extractionResult.extracted.sales_priority;
+      if (extractionResult.extracted.priority_reason) payload.priority_reason = extractionResult.extracted.priority_reason;
+      if (extractionResult.extracted.deal_readiness) payload.deal_readiness = extractionResult.extracted.deal_readiness;
+      if (extractionResult.extracted.deal_ready_reason) payload.deal_ready_reason = extractionResult.extracted.deal_ready_reason;
+      if (extractionResult.extracted.owner_summary) payload.owner_summary = extractionResult.extracted.owner_summary;
+
+      const extMach = extractionResult.extracted.machine_details;
+      if (!machDetails.brand && extMach.brand) machDetails.brand = extMach.brand;
+      if (!machDetails.model && extMach.model) machDetails.model = extMach.model;
+      if (machDetails.model_year === undefined && extMach.model_year) machDetails.model_year = extMach.model_year;
+      if (machDetails.max_hours === undefined && extMach.max_hours !== undefined && extMach.max_hours !== null) machDetails.max_hours = extMach.max_hours;
+      if (!machDetails.condition && extMach.condition) machDetails.condition = extMach.condition;
+      if (machDetails.running_hours === undefined && extMach.running_hours) machDetails.running_hours = extMach.running_hours;
+      if ((!machDetails.tonnage_class || machDetails.tonnage_class === 'unknown') && extMach.tonnage_class !== 'unknown') machDetails.tonnage_class = extMach.tonnage_class;
+      if ((!machDetails.application_history || machDetails.application_history === 'unknown') && extMach.application_history !== 'unknown') machDetails.application_history = extMach.application_history;
+      if (!machDetails.location_city && extMach.location_city) machDetails.location_city = extMach.location_city;
+      if (!machDetails.location_state && extMach.location_state) machDetails.location_state = extMach.location_state;
+      if ((!machDetails.document_status || machDetails.document_status === 'unknown') && extMach.document_status !== 'unknown') machDetails.document_status = extMach.document_status;
+
+      const extComm = extractionResult.extracted.commercial_terms;
+      if (commTerms.expected_price_inr === undefined && extComm.expected_price_inr) commTerms.expected_price_inr = extComm.expected_price_inr;
+      if ((commTerms.price_negotiable === undefined || commTerms.price_negotiable === null) && (extComm.price_negotiable === true || extComm.price_negotiable === false)) commTerms.price_negotiable = extComm.price_negotiable;
+      if ((commTerms.sale_urgency === undefined || commTerms.sale_urgency === null) && ['URGENT', 'SOON', 'EXPLORING', 'NORMAL'].includes(extComm.sale_urgency)) commTerms.sale_urgency = extComm.sale_urgency;
+      if (commTerms.budget_max_inr === undefined && extComm.budget_max_inr) commTerms.budget_max_inr = extComm.budget_max_inr;
+      if (!commTerms.price_or_budget_raw && extComm.price_or_budget_raw) commTerms.price_or_budget_raw = extComm.price_or_budget_raw;
+      if ((!commTerms.purchase_timeline || commTerms.purchase_timeline === 'not_applicable') && extComm.purchase_timeline !== 'not_applicable') commTerms.purchase_timeline = extComm.purchase_timeline;
+      if (commTerms.yard_visit_agreed === undefined && extComm.yard_visit_agreed) commTerms.yard_visit_agreed = extComm.yard_visit_agreed;
+
+      const extEv = extractionResult.extracted.evidence_readiness;
+      if (evReadiness.photos_agreed === undefined && extEv.photos_agreed) evReadiness.photos_agreed = extEv.photos_agreed;
+      if (evReadiness.running_video_agreed === undefined && extEv.running_video_agreed) evReadiness.running_video_agreed = extEv.running_video_agreed;
+      if (evReadiness.rc_copy_agreed === undefined && extEv.rc_copy_agreed) evReadiness.rc_copy_agreed = extEv.rc_copy_agreed;
+
+      if (extractionResult.extracted.dnc_requested) {
+        payload.dnc_requested = true;
+      }
+
+      // Newer structured keys (buyer requirements / seller machine context):
+      // same only-if-present discipline, never fabricated.
+      const newStructured = extractNewStructuredFields(extractionResult.extracted);
+      Object.assign(machDetails, newStructured.mach);
+      Object.assign(commTerms, newStructured.comm);
+      if (newStructured.top.lead_status !== undefined) payload.lead_status = newStructured.top.lead_status;
+      if (newStructured.top.whatsapp_requested === true) payload.whatsapp_requested = true;
+      if (newStructured.top.whatsapp_action !== undefined) payload.whatsapp_action = newStructured.top.whatsapp_action;
+      if (newStructured.top.availability_status !== undefined) payload.availability_status = newStructured.top.availability_status;
+    } catch (extractionErr) {
+      // Extraction is an enhancement: a provider outage must not drop the call.
+      console.warn('[VAANI SALES] LLM extraction skipped:', extractionErr.message);
     }
-
-    if (!payload.lead_temperature && extractionResult.extracted.lead_temperature) payload.lead_temperature = extractionResult.extracted.lead_temperature;
-    if (!payload.next_action && extractionResult.extracted.next_action) payload.next_action = extractionResult.extracted.next_action;
-    if (!payload.customer_name && extractionResult.extracted.caller_name) payload.customer_name = extractionResult.extracted.caller_name;
-    if (extractionResult.extracted.follow_up_required !== null) payload.follow_up_required = extractionResult.extracted.follow_up_required;
-    if (extractionResult.extracted.dnc_requested) payload.dnc_requested = true;
-
-    // Map new Phase 3 fields to payload so they persist
-    if (extractionResult.extracted.sales_priority) payload.sales_priority = extractionResult.extracted.sales_priority;
-    if (extractionResult.extracted.priority_reason) payload.priority_reason = extractionResult.extracted.priority_reason;
-    if (extractionResult.extracted.deal_readiness) payload.deal_readiness = extractionResult.extracted.deal_readiness;
-    if (extractionResult.extracted.deal_ready_reason) payload.deal_ready_reason = extractionResult.extracted.deal_ready_reason;
-    if (extractionResult.extracted.owner_summary) payload.owner_summary = extractionResult.extracted.owner_summary;
-
-    const extMach = extractionResult.extracted.machine_details;
-    if (!machDetails.brand && extMach.brand) machDetails.brand = extMach.brand;
-    if (!machDetails.model && extMach.model) machDetails.model = extMach.model;
-    if (machDetails.model_year === undefined && extMach.model_year) machDetails.model_year = extMach.model_year;
-    if (machDetails.max_hours === undefined && extMach.max_hours !== undefined && extMach.max_hours !== null) machDetails.max_hours = extMach.max_hours;
-    if (!machDetails.condition && extMach.condition) machDetails.condition = extMach.condition;
-    if (machDetails.running_hours === undefined && extMach.running_hours) machDetails.running_hours = extMach.running_hours;
-    if ((!machDetails.tonnage_class || machDetails.tonnage_class === 'unknown') && extMach.tonnage_class !== 'unknown') machDetails.tonnage_class = extMach.tonnage_class;
-    if ((!machDetails.application_history || machDetails.application_history === 'unknown') && extMach.application_history !== 'unknown') machDetails.application_history = extMach.application_history;
-    if (!machDetails.location_city && extMach.location_city) machDetails.location_city = extMach.location_city;
-    if (!machDetails.location_state && extMach.location_state) machDetails.location_state = extMach.location_state;
-    if ((!machDetails.document_status || machDetails.document_status === 'unknown') && extMach.document_status !== 'unknown') machDetails.document_status = extMach.document_status;
-
-    const extComm = extractionResult.extracted.commercial_terms;
-    if (commTerms.expected_price_inr === undefined && extComm.expected_price_inr) commTerms.expected_price_inr = extComm.expected_price_inr;
-    if ((commTerms.price_negotiable === undefined || commTerms.price_negotiable === null) && (extComm.price_negotiable === true || extComm.price_negotiable === false)) commTerms.price_negotiable = extComm.price_negotiable;
-    if ((commTerms.sale_urgency === undefined || commTerms.sale_urgency === null) && ['URGENT', 'SOON', 'EXPLORING', 'NORMAL'].includes(extComm.sale_urgency)) commTerms.sale_urgency = extComm.sale_urgency;
-    if (commTerms.budget_max_inr === undefined && extComm.budget_max_inr) commTerms.budget_max_inr = extComm.budget_max_inr;
-    if (!commTerms.price_or_budget_raw && extComm.price_or_budget_raw) commTerms.price_or_budget_raw = extComm.price_or_budget_raw;
-    if ((!commTerms.purchase_timeline || commTerms.purchase_timeline === 'not_applicable') && extComm.purchase_timeline !== 'not_applicable') commTerms.purchase_timeline = extComm.purchase_timeline;
-    if (commTerms.yard_visit_agreed === undefined && extComm.yard_visit_agreed) commTerms.yard_visit_agreed = extComm.yard_visit_agreed;
-
-    const extEv = extractionResult.extracted.evidence_readiness;
-    if (evReadiness.photos_agreed === undefined && extEv.photos_agreed) evReadiness.photos_agreed = extEv.photos_agreed;
-    if (evReadiness.running_video_agreed === undefined && extEv.running_video_agreed) evReadiness.running_video_agreed = extEv.running_video_agreed;
-    if (evReadiness.rc_copy_agreed === undefined && extEv.rc_copy_agreed) evReadiness.rc_copy_agreed = extEv.rc_copy_agreed;
-
-    if (extractionResult.extracted.dnc_requested) {
-      payload.dnc_requested = true;
-    }
-
-    // Newer structured keys (buyer requirements / seller machine context):
-    // same only-if-present discipline, never fabricated.
-    const newStructured = extractNewStructuredFields(extractionResult.extracted);
-    Object.assign(machDetails, newStructured.mach);
-    Object.assign(commTerms, newStructured.comm);
-    if (newStructured.top.lead_status !== undefined) payload.lead_status = newStructured.top.lead_status;
-    if (newStructured.top.whatsapp_requested === true) payload.whatsapp_requested = true;
-    if (newStructured.top.whatsapp_action !== undefined) payload.whatsapp_action = newStructured.top.whatsapp_action;
-    if (newStructured.top.availability_status !== undefined) payload.availability_status = newStructured.top.availability_status;
   }
 
   applyDeterministicBackstop({
