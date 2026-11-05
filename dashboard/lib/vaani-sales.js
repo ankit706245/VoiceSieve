@@ -6432,7 +6432,10 @@ function detectCustomerTypeFromTranscript(input) {
       hits.push({ type, index: match.index });
     }
   };
-  collect('seller', /\bbech\w*|\bsell(?:ing)?\b|\bseller\b|\bsale\s+(?:karn\w*|krn\w*)\b|बेच/g);
+  // \bsale\b: in this domain (machine buy/sell), a customer saying "sale"
+  // means they want to sell — not a discount. Catches Hinglish like
+  // "machine sale karna hai" / "sale karna chahte hain" / "sale करना चाहते हैं".
+  collect('seller', /\bbech\w*|\bsell(?:ing)?\b|\bseller\b|\bsale\b|बेच/g);
   collect('buyer', /\bkharid\w*|\bkhareed\w*|\bkhreed\w*|\bkarid\w*|\bbuy(?:ing)?\b|\bbuyer\b|\bpurchas\w*|खरीद/g);
   if (hits.length === 0) return null;
   hits.sort((a, b) => a.index - b.index);

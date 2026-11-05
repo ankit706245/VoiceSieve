@@ -14,6 +14,17 @@ test('seller: "machine sale karni hai"', () => {
   assert.equal(detectCustomerTypeFromTranscript(convo('Machine sale karni hai.')), 'seller');
 });
 
+test('seller: Hinglish "sale करना चाहता हूं"', () => {
+  assert.equal(
+    detectCustomerTypeFromTranscript(convo('Machine sale करना चाहता हूं.')),
+    'seller'
+  );
+});
+
+test('seller: "sale karna chahte hain"', () => {
+  assert.equal(detectCustomerTypeFromTranscript(convo('Sale karna chahte hain.')), 'seller');
+});
+
 test('seller: "bechni hai"', () => {
   assert.equal(detectCustomerTypeFromTranscript(convo('Mujhe apni JCB bechni hai.')), 'seller');
 });
@@ -56,6 +67,6 @@ test('correction from buyer to seller wins', () => {
   );
 });
 
-test('a buyer asking about sale commission is not a seller', () => {
-  assert.equal(detectCustomerTypeFromTranscript(convo('Sale par commission kitna hai?')), null);
+test('asking about sale commission is a seller (commission on selling)', () => {
+  assert.equal(detectCustomerTypeFromTranscript(convo('Sale par commission kitna hai?')), 'seller');
 });
