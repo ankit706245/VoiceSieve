@@ -1209,13 +1209,15 @@ function asVarsObject(v) {
 
 // Project structured requirement fields from the raw extracted-variables
 // JSON onto buyer rows. Missing keys stay null (unknown), never fabricated.
-// View-level columns keep precedence where they already exist.
+// View-level columns keep precedence where present.
 function projectStructuredBuyerFields(b) {
   const ev = asVarsObject(b.raw_extracted_variables);
   const md = asVarsObject(ev.machine_details);
   const ct = asVarsObject(ev.commercial_terms);
   return {
     ...b,
+    // B4: read-only JSON fallbacks for stored spec fields (no SQL change).
+    application_history: b.application_history ?? md.application_history ?? null,
     machine_type: md.machine_type ?? null,
     budget_min: ct.budget_min_inr ?? null,
     budget_max: ct.budget_max_inr ?? b.buyer_budget_max_inr ?? null,
@@ -1278,7 +1280,7 @@ async function getBuyers(filters = {}, isDemo = false, organizationId = null) {
           SELECT run_id AS lead_id, run_id, created_at, to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') as formatted_time,
                  caller_name, callback_number, whatsapp_number,
                  machine_brand, machine_model, required_tonnage_class,
-                 buyer_budget_max_inr, price_raw, purchase_timeline,
+                 buyer_budget_max_inr, expected_selling_price_inr AS expected_price_inr, price_raw, purchase_timeline,
                  machine_location_city, machine_location_state,
                  yard_visit_agreed, yard_visit_schedule,
                  lead_temperature, qualification_state, conversation_outcome,
@@ -1628,40 +1630,40 @@ async function getCalls(isDemo = false, organizationId = null) {
   if (isNaN(orgInt) || orgInt <= 0) return [];
 
   try {
-    // Phase 1 (plan v2): the Calls tab reads real call records (vaani_calls)
-    // joined to the workflow run that produced them, instead of the lead view.
-    // The organization filter is unchanged: a call belongs to the organization
-    // of the workflow that owns its run.
+    // The Calls tab reads workflow_runs directly: it is the single source the
+    // Buyers/Sellers tabs and the Lead 360 drawer already use. vaani_calls is
+    // legacy and is not written by ingestion.
     const sql = `
       SELECT COALESCE(json_agg(t ORDER BY t.created_at DESC), '[]'::json) FROM (
-        SELECT vc.id AS call_id,
-               vc.dograh_call_id AS run_id,
-               vc.direction,
-               vc.status,
-               vc.mode,
-               vc.duration,
-               vc.started_at,
-               vc.ended_at,
-               vc.created_at,
-               to_char(COALESCE(vc.started_at, vc.created_at) AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') AS formatted_time,
-               COALESCE(c.name, r.gathered_context::jsonb -> 'extracted_variables' ->> 'caller_name') AS customer_name,
-               r.gathered_context::jsonb -> 'extracted_variables' ->> 'caller_name' AS caller_name,
-               COALESCE(c.phone, r.gathered_context::jsonb -> 'extracted_variables' ->> 'callback_number') AS primary_phone,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' ->> 'customer_type', 'unknown') AS customer_type,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' ->> 'conversation_outcome', 'unknown') AS conversation_outcome,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' ->> 'lead_temperature', 'unknown') AS lead_temperature,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' ->> 'qualification_state', 'unknown') AS qualification_state,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' ->> 'next_action', '') AS next_action,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' -> 'machine_details' ->> 'brand', '') AS machine_brand,
-               COALESCE(r.gathered_context::jsonb -> 'extracted_variables' -> 'machine_details' ->> 'model', '') AS machine_model,
+        SELECT r.id AS call_id,
+               r.id AS run_id,
+               r.created_at,
+               to_char(r.created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon YYYY, hh12:MI AM') AS formatted_time,
+               COALESCE(r.gc -> 'call_session' ->> 'direction', 'inbound') AS direction,
+               COALESCE(r.gc -> 'call_session' ->> 'status', 'completed') AS status,
+               COALESCE((r.gc -> 'call_session' ->> 'duration')::int, 0) AS duration,
+               r.gc -> 'call_session' ->> 'started_at' AS started_at,
+               r.gc -> 'call_session' ->> 'ended_at' AS ended_at,
+               r.gc -> 'extracted_variables' ->> 'caller_name' AS customer_name,
+               r.gc -> 'extracted_variables' ->> 'caller_name' AS caller_name,
+               r.gc -> 'extracted_variables' ->> 'callback_number' AS primary_phone,
+               COALESCE(r.gc -> 'extracted_variables' ->> 'customer_type', 'unknown') AS customer_type,
+               COALESCE(r.gc -> 'extracted_variables' ->> 'conversation_outcome', r.gc -> 'call_session' ->> 'outcome', 'unknown') AS conversation_outcome,
+               COALESCE(r.gc -> 'extracted_variables' ->> 'lead_temperature', r.gc -> 'call_session' ->> 'lead_temperature', 'unknown') AS lead_temperature,
+               COALESCE(r.gc -> 'extracted_variables' ->> 'qualification_state', 'unknown') AS qualification_state,
+               COALESCE(r.gc -> 'extracted_variables' ->> 'next_action', '') AS next_action,
+               COALESCE(r.gc -> 'extracted_variables' -> 'machine_details' ->> 'brand', '') AS machine_brand,
+               COALESCE(r.gc -> 'extracted_variables' -> 'machine_details' ->> 'model', '') AS machine_model,
                r.recording_url,
                r.transcript_url,
-               (r.recording_url IS NOT NULL AND r.recording_url <> '') AS has_audio
-        FROM vaani_calls vc
-        JOIN workflow_runs r ON r.id = (CASE WHEN vc.dograh_call_id ~ '^[0-9]+$' THEN vc.dograh_call_id::int ELSE NULL END)
-        JOIN workflows w ON w.id = r.workflow_id
-        LEFT JOIN vaani_customers c ON c.id = vc.customer_id
-        WHERE w.organization_id = $1
+               (r.recording_url IS NOT NULL AND r.recording_url <> '') AS has_audio,
+               r.gc -> 'call_session' -> 'transcript' AS transcript
+        FROM (
+          SELECT r.*, r.gathered_context::jsonb AS gc
+          FROM workflow_runs r
+          JOIN workflows w ON w.id = r.workflow_id
+          WHERE w.organization_id = $1 AND COALESCE(r.mode, '') <> 'manual'
+        ) r
       ) t;
     `;
     const result = await queryPostgres(sql, [orgInt]);
@@ -1714,6 +1716,7 @@ async function getCallDetail(runId, isDemo = false, organizationId = null) {
         'extracted_variables', r.gathered_context::jsonb -> 'extracted_variables',
         'recording_url', r.recording_url,
         'transcript_url', r.transcript_url,
+        'transcript', r.gathered_context::jsonb -> 'call_session' -> 'transcript',
         'has_audio', (r.recording_url IS NOT NULL AND r.recording_url <> ''),
         'call_id', (SELECT vc.id FROM vaani_calls vc WHERE vc.dograh_call_id = r.id::text ORDER BY vc.id DESC LIMIT 1),
         'call_status', (SELECT vc.status FROM vaani_calls vc WHERE vc.dograh_call_id = r.id::text ORDER BY vc.id DESC LIMIT 1),
@@ -1735,7 +1738,9 @@ async function getCallDetail(runId, isDemo = false, organizationId = null) {
     const [withSummary] = await attachCallSummaries([{ run_id: runKey }]);
     return {
       ...result,
-      transcript: (withTranscript && Array.isArray(withTranscript.transcript)) ? withTranscript.transcript : [],
+      transcript: (Array.isArray(result.transcript) && result.transcript.length)
+        ? result.transcript
+        : ((withTranscript && Array.isArray(withTranscript.transcript)) ? withTranscript.transcript : []),
       summary: (withSummary && withSummary.summary) ? withSummary.summary : null,
       recording_url: resolveArtifactUrl(result.recording_url),
       transcript_url: resolveArtifactUrl(result.transcript_url),
@@ -2361,7 +2366,9 @@ async function attachCallTranscripts(calls, organizationId) {
     }
     return calls.map((c) => ({
       ...c,
-      transcript: byRun[String(c.run_id)] || [],
+      transcript: Array.isArray(c.transcript) && c.transcript.length
+        ? c.transcript
+        : (byRun[String(c.run_id)] || []),
     }));
   } catch (e) {
     return calls.map((c) => ({ ...c, transcript: c.transcript || [] }));
@@ -2534,6 +2541,8 @@ async function getLead360(leadId, isDemo = false, organizationId = null) {
         'runs', json_agg(json_build_object(
           'run_id', r.id,
           'created_at', r.created_at,
+          'recording_url', r.recording_url,
+          'transcript', r.gathered_context -> 'call_session' -> 'transcript',
           'raw_extracted_variables', r.gathered_context -> 'extracted_variables',
           'caller_name', (r.gathered_context -> 'extracted_variables') ->> 'caller_name',
           'callback_number', (r.gathered_context -> 'extracted_variables') ->> 'callback_number',
@@ -2739,7 +2748,9 @@ async function getLead360(leadId, isDemo = false, organizationId = null) {
       customer_name: r.caller_name,
       primary_phone: r.callback_number,
       conversation_outcome: r.conversation_outcome,
-      has_audio: false
+      recording_url: r.recording_url || null,
+      has_audio: Boolean(r.recording_url),
+      transcript: Array.isArray(r.transcript) ? r.transcript : []
     })), organizationId));
     const brainType = isDnc ? 'dnc' : (latest.customer_type || 'unknown');
     const salesBrainData = buildSalesBrain({
@@ -5386,7 +5397,7 @@ async function ingestCallComplete(payload) {
     err.errorCode = 'INVALID_PAYLOAD';
     throw err;
   }
-  const wfId = parseInt(rawWfId, 10);
+  let wfId = parseInt(rawWfId, 10);
   if (!Number.isSafeInteger(wfId) || wfId <= 0) {
     const err = new Error('Invalid call_metadata.workflow_id (positive integer required)');
     err.statusCode = 400;
@@ -5398,18 +5409,17 @@ async function ingestCallComplete(payload) {
   // The workflow owns the run. Never trust an organization id from the
   // relay, a pre-created run, or any request parameter. The workflow row is
   // authoritative; the run context and relay value must agree with it.
-  const wfRow = await queryPostgres(
-    `SELECT row_to_json(w) FROM (SELECT organization_id FROM workflows WHERE id = $1) w;`,
-    [wfId]
-  ).catch(() => null);
-  const wfOrgId = wfRow && wfRow.organization_id ? parseInt(wfRow.organization_id, 10) : null;
-  if (!Number.isSafeInteger(wfOrgId) || wfOrgId <= 0) {
+  const ingestionTarget = await resolveIngestionWorkflow(wfId, queryPostgres);
+  if (!ingestionTarget) {
     const err = new Error('Cannot determine the workflow organization for call ingestion');
     err.statusCode = 400;
     err.code = 'unknown_workflow';
     err.errorCode = 'MISSING_TENANT';
     throw err;
   }
+  wfId = ingestionTarget.wfId;
+  const wfOrgId = ingestionTarget.wfOrgId;
+  const bridgedWorkflow = ingestionTarget.bridged;
   const runOwnerOrg = await resolveRunOwnerOrg(numericRunId, queryPostgres);
   const relayOrgId = callMeta.org_id ? parseInt(callMeta.org_id, 10) : null;
   if (Number.isSafeInteger(runOwnerOrg) && runOwnerOrg > 0 && runOwnerOrg !== wfOrgId) {
@@ -5419,7 +5429,7 @@ async function ingestCallComplete(payload) {
     err.errorCode = 'ORG_MISMATCH';
     throw err;
   }
-  if (Number.isSafeInteger(relayOrgId) && relayOrgId > 0 && relayOrgId !== wfOrgId) {
+  if (!bridgedWorkflow && Number.isSafeInteger(relayOrgId) && relayOrgId > 0 && relayOrgId !== wfOrgId) {
     const err = new Error('Relay organization does not match the workflow organization');
     err.statusCode = 403;
     err.code = 'org_mismatch';
@@ -5436,7 +5446,7 @@ async function ingestCallComplete(payload) {
   const isDuplicate = Boolean(existingRun && (existingRun.is_completed || existingRun.state === 'completed'));
 
   const leadId = payload.lead_id || `lead_${numericRunId}`;
-  const customerType = resolveCustomerType(payload);
+  let customerType = resolveCustomerType(payload);
 
   const machDetails = { ...(payload.machine_details || {}) };
   if (!machDetails.brand && payload.machine_brand) machDetails.brand = payload.machine_brand;
@@ -5459,6 +5469,7 @@ async function ingestCallComplete(payload) {
 
   const commTerms = payload.commercial_terms || {};
   const evReadiness = payload.evidence_readiness || {};
+  const extVars = payload.extracted_variables || {};
 
   // Phase 1 (plan v2): Dograh already extracted the buyer/seller facts from the
   // conversation itself. Merge them into the working set with the same
@@ -6198,6 +6209,26 @@ function firstScalarId(out) {
   return String(out).trim().split('|')[0];
 }
 
+// Resolve the Vaani workflow for an ingested call. Dograh's workflow ids come
+// from its own DB; when the id is unknown, the configured bridge org decides.
+// shortcut: single-tenant bridge, replace with an explicit Dograh->Vaani
+// workflow map before running more than one organization.
+async function resolveIngestionWorkflow(wfId, queryFn) {
+  const q = queryFn || queryPostgres;
+  const wfRow = await q(
+    `SELECT row_to_json(w) FROM (SELECT organization_id FROM workflows WHERE id = $1) w;`,
+    [wfId]
+  ).catch(() => null);
+  const wfOrgId = wfRow && wfRow.organization_id ? parseInt(wfRow.organization_id, 10) : null;
+  if (Number.isSafeInteger(wfOrgId) && wfOrgId > 0) {
+    return { wfId, wfOrgId, bridged: false };
+  }
+  const bridgeOrgId = parseInt(process.env.VAANI_INGESTION_ORG_ID || '', 10);
+  if (!Number.isSafeInteger(bridgeOrgId) || bridgeOrgId <= 0) return null;
+  const bridgedId = await resolveOrgWorkflowId(bridgeOrgId, q).catch(() => null);
+  return bridgedId ? { wfId: bridgedId, wfOrgId: bridgeOrgId, bridged: true } : null;
+}
+
 // Intended Vaani workflow. Workflow 3 is the Org 1 Vaani sales agent. The
 // environment override exists so a future deployment can move the agent
 // without editing code, but the default is the verified Org 1 workflow.
@@ -6672,6 +6703,7 @@ module.exports = {
   formatLakhINR,
   preferredWorkflowId,
   resolveOrgWorkflowId,
+  resolveIngestionWorkflow,
   addLead,
   buildManualLeadInsert,
   buildManualMachineInsert,

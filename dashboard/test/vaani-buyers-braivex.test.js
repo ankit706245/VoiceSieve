@@ -93,3 +93,101 @@ test('dashboard authenticates with the HttpOnly cookie, not web storage or the U
   assert.ok(!dashSrc.includes('access_token='), 'no token in the URL');
   assert.ok(dashSrc.includes("credentials: 'same-origin'"), 'cookie is sent with API calls');
 });
+
+test('buyer rows expose caller_name/callback_number and budget fallback fields', async () => {
+  // Simulates the DB view row shape AFTER projectStructuredBuyerFields projection
+  const projectedRow = {
+    run_id: 1001,
+    lead_id: 1001,
+    created_at: new Date().toISOString(),
+    caller_name: 'Test Buyer',
+    callback_number: '919876543210',
+    whatsapp_number: '',
+    machine_brand: 'CAT',
+    machine_model: '320D',
+    required_tonnage_class: '20_ton_class',
+    buyer_budget_max_inr: null,          // intentionally null (CSV import had price only)
+    expected_price_inr: 2300000,        // from CSV 'price' column
+    price_raw: '23 Lakh',
+    purchase_timeline: 'immediate_under_7d',
+    machine_location_city: 'Jaipur',
+    machine_location_state: 'Rajasthan',
+    yard_visit_agreed: true,
+    yard_visit_schedule: null,
+    lead_temperature: 'HOT',
+    qualification_state: 'QUALIFIED',
+    conversation_outcome: 'lead_qualified',
+    next_action: 'Share yard inventory',
+    follow_up_required: false,
+    follow_up_datetime: null,
+    call_notes: '',
+    dnc_requested: false,
+    application_history: 'soil_earthwork',  // projected from raw_extracted_variables
+    raw_extracted_variables: JSON.stringify({
+      machine_details: { application_history: 'soil_earthwork' }
+    })
+  };
+  const fn = loadHandler(stubCore(), { getBuyers: async () => [projectedRow] });
+  const res = mockRes();
+  await fn(mockReq('/api/vaani/sales/buyers'), res, mockCtx(2));
+  assert.equal(res.status, 200);
+  const buyer = res.body.buyers[0];
+  // Frontend reads these exact names
+  assert.equal(buyer.caller_name, 'Test Buyer');
+  assert.equal(buyer.callback_number, '919876543210');
+  // Budget fallback: expected_price_inr should be present when budget is null
+  assert.equal(buyer.expected_price_inr, 2300000);
+  assert.equal(buyer.price_raw, '23 Lakh');
+  // Application history from extracted variables (projected)
+  assert.equal(buyer.application_history, 'soil_earthwork');
+  // Location fields
+  assert.equal(buyer.machine_location_city, 'Jaipur');
+  assert.equal(buyer.machine_location_state, 'Rajasthan');
+  assert.equal(buyer.yard_visit_agreed, true);
+});
+
+test('seller rows expose caller_name/callback_number/model_year/running_hours and rock_breaker label', async () => {
+  const rawRow = {
+    run_id: 2001,
+    lead_id: 2001,
+    created_at: new Date().toISOString(),
+    caller_name: 'Test Seller',
+    callback_number: '919876543211',
+    whatsapp_number: '',
+    ownership_type: 'owner',
+    machine_brand: 'JCB',
+    machine_model: '3DX',
+    model_year: 2022,
+    running_hours: 3500,
+    application_history: 'rock_breaker',
+    machine_location_city: 'Udaipur',
+    machine_location_state: 'Rajasthan',
+    document_status: 'Verified',
+    expected_selling_price_inr: 1800000,
+    price_raw: null,
+    photos_agreed: false,
+    running_video_agreed: false,
+    rc_copy_agreed: false,
+    lead_temperature: 'WARM',
+    qualification_state: 'IN_PROGRESS',
+    conversation_outcome: 'inquiry',
+    next_action: 'WhatsApp summary',
+    follow_up_required: false,
+    follow_up_datetime: null,
+    call_notes: '',
+    dnc_requested: false,
+    raw_extracted_variables: JSON.stringify({})
+  };
+  const fn = loadHandler(stubCore(), { getSellers: async () => [rawRow] });
+  const res = mockRes();
+  await fn(mockReq('/api/vaani/sales/sellers'), res, mockCtx(2));
+  assert.equal(res.status, 200);
+  const seller = res.body.sellers[0];
+  assert.equal(seller.caller_name, 'Test Seller');
+  assert.equal(seller.callback_number, '919876543211');
+  assert.equal(seller.model_year, 2022);
+  assert.equal(seller.running_hours, 3500);
+  assert.equal(seller.application_history, 'rock_breaker');
+  assert.equal(seller.machine_location_city, 'Udaipur');
+  assert.equal(seller.machine_location_state, 'Rajasthan');
+});

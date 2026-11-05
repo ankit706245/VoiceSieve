@@ -1501,6 +1501,7 @@
               <th>Temp</th>
               <th>Stage</th>
               <th>Next Action</th>
+              <th>Call</th>
             </tr>
           </thead>
           <tbody>
@@ -1573,6 +1574,7 @@
               <th>Temp</th>
               <th>Stage</th>
               <th>Next Action</th>
+              <th>Call</th>
             </tr>
           </thead>
           <tbody>
@@ -2738,6 +2740,53 @@
       renderTranscript(primaryCall.transcript || raw.transcript || []);
     }
 
+    function renderAudioPlayer(call) {
+      const container = document.getElementById('drawerAudioPlayer');
+      if (!container) return;
+      const audioUrl = call.audio_url || call.recording_url || call.audio_file || null;
+      if (audioUrl) {
+        container.innerHTML = `
+          <audio controls style="width:100%;max-width:400px;">
+            <source src="${escapeHtml(audioUrl)}">
+            Your browser does not support the audio element.
+          </audio>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:4px;">Recorded call (${call.duration_seconds ? Math.round(call.duration_seconds) + 's' : 'duration unknown'})</div>
+        `;
+      } else {
+        container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);padding:8px;">No audio recording available for this call.</div>';
+      }
+    }
+
+    function renderTranscript(segments) {
+      const container = document.getElementById('drawerTranscript');
+      if (!container) return;
+      if (!Array.isArray(segments) || !segments.length) {
+        container.innerHTML = '<div style="font-size:11px;color:var(--text-dim);padding:8px;">No transcript segments available.</div>';
+        return;
+      }
+      container.innerHTML = segments.map(s => {
+        const speaker = String(s.speaker || s.role || 'system').toLowerCase();
+        const label = ['customer', 'user'].includes(speaker) ? '📞 CUSTOMER'
+          : ['agent', 'assistant', 'bot'].includes(speaker) ? '🤖 VAANI'
+          : '⚙️ SYSTEM';
+        let msg = s.message || s.text || s.transcript_text || '';
+        // Strip embedded reasoning delay markers and show them as small meta tags
+        let delayHtml = '';
+        msg = String(msg).replace(/Reasoning Delay:\s*\d+ms/g, (match) => {
+          delayHtml = `<span style="font-size:9px;color:var(--gold);font-family:var(--mono);margin-left:6px;">${match}</span>`;
+          return '';
+        });
+        // Clean up leftover metadata lines like "Seller Flow", "Objection Handling", etc.
+        msg = msg.replace(/^(Seller Flow|Buyer Flow|Objection Handling|Details)\s*$/gm, '').trim();
+        return `
+          <div style="margin-bottom:6px;padding:6px;background:rgba(255,255,255,0.02);border-radius:4px;border-left:2px solid var(--gold);">
+            <div style="font-size:10px;font-weight:600;color:var(--gold);margin-bottom:2px;display:flex;align-items:center;gap:6px;">${label}${delayHtml}</div>
+            <div style="font-size:12px;color:#fff;line-height:1.4;">${escapeHtml(msg)}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
     function renderLead360Fallback(item) {
       populateDrawerHeader(item);
       document.getElementById('drawerCurrentStatus').textContent = item.current_status || 'Under review';
@@ -2754,10 +2803,17 @@
       document.getElementById('drawerPrice').textContent = priceDisplay;
 
       document.getElementById('drawerMachine').textContent = `${item.machine_brand || ''} ${item.machine_model || item.required_tonnage_class || 'Excavator'}`.trim();
-      document.getElementById('drawerYearHours').textContent = `${item.manufacturing_year || 'Year N/A'} • ${item.hour_meter_reading ? item.hour_meter_reading.toLocaleString() + ' hrs' : 'Hours N/A'}`;
-      document.getElementById('drawerApplication').textContent = item.application_history || 'Standard Soil/Earthwork';
-      document.getElementById('drawerLocation').textContent = item.location_city || item.location || 'Location Not Specified';
-      document.getElementById('drawerNocStatus').textContent = item.finance_noc_status || 'Under Verification';
+      document.getElementById('drawerYearHours').textContent = `${item.model_year || item.manufacturing_year || 'Year N/A'} • ${item.running_hours ? item.running_hours.toLocaleString() + ' hrs' : (item.hour_meter_reading ? item.hour_meter_reading.toLocaleString() + ' hrs' : 'Hours N/A')}`;
+
+      let appText = 'Standard Soil/Earthwork';
+      if (item.application_history && (item.application_history.includes('breaker') || item.application_history.includes('rock') || item.application_history === 'rock_breaker')) {
+        appText = '⚠️ Rock Breaker / Quarry Used (Heavy)';
+      }
+      document.getElementById('drawerApplication').textContent = appText;
+      const extraAddress = item.address || (item.raw_extracted_variables && item.raw_extracted_variables.address) || '';
+      const baseLocation = item.machine_location_city ? `${item.machine_location_city}${item.machine_location_state ? ', ' + item.machine_location_state : ''}` : (item.delivery_location || item.location || 'Location Not Specified');
+      document.getElementById('drawerLocation').textContent = extraAddress ? `${baseLocation} — ${extraAddress}` : baseLocation;
+      document.getElementById('drawerNocStatus').textContent = item.document_status || (item.finance_noc_status || 'Under Verification');
       document.getElementById('drawerLastActivity').textContent = 'Inbound conversation logged';
 
       renderAudioPlayer(item);
@@ -3079,7 +3135,7 @@
       tbody.innerHTML = list.map(s => {
         const temp = tempClass(s.lead_temperature);
         const tempBadge = `<span class="badge badge-${temp}">${escapeHtml(s.lead_temperature || 'WARM')}</span>`;
-        const roleBadge = `<span class="badge ${s.caller_role === 'broker' ? 'badge-broker' : 'badge-owner'}">${escapeHtml((s.caller_role || 'owner').toUpperCase())}</span>`;
+        const roleBadge = `<span class="badge ${s.ownership_type === 'broker' ? 'badge-broker' : 'badge-owner'}">${escapeHtml((s.ownership_type || 'owner').toUpperCase())}</span>`;
         
         let price = 'N/A';
         const priceInr = s.expected_selling_price_inr || s.expected_price_inr || s.asking_price;
@@ -3095,21 +3151,26 @@
           </div>
         `;
 
+        const appText = (s.application_history === 'rock_breaker' || s.application_history === 'breaker_quarry') ? '⚠️ Rock Breaker' : 'Soil/Mitti';
+
         return `
           <tr onclick="openDrawer(${jsAttr(s)})">
-            <td><strong>${escapeHtml(s.customer_name)}</strong></td>
-            <td><span class="phone-link">${escapeHtml(s.primary_phone)}</span></td>
+            <td><strong>${escapeHtml(s.caller_name || s.customer_name || 'Anonymous')}</strong></td>
+            <td><span class="phone-link">${escapeHtml(s.callback_number || s.primary_phone || '')}</span></td>
             <td>${roleBadge}</td>
             <td><strong>${escapeHtml(s.machine_brand || '')}</strong> ${escapeHtml(s.machine_model || '')}</td>
-            <td>${escapeHtml(s.manufacturing_year || 'N/A')}</td>
-            <td>${s.hour_meter_reading ? Number(s.hour_meter_reading).toLocaleString() + ' hrs' : 'N/A'}</td>
-            <td><span style="font-size: 11px; color: var(--text-muted);">${s.application_history === 'breaker_quarry' ? '⚠️ Rock Breaker' : 'Soil/Mitti'}</span></td>
+            <td>${escapeHtml(s.model_year || s.manufacturing_year || 'N/A')}</td>
+            <td>${s.running_hours ? Number(s.running_hours).toLocaleString() + ' hrs' : (s.hour_meter_reading ? Number(s.hour_meter_reading).toLocaleString() + ' hrs' : 'N/A')}</td>
+            <td><span style="font-size: 11px; color: var(--text-muted);">${appText}</span></td>
             <td>${escapeHtml(s.machine_location_city || s.machine_location_state || 'Rajasthan')}</td>
             <td><strong>${price}</strong></td>
             <td>${evIcons}</td>
             <td>${tempBadge}</td>
             <td><span class="badge badge-owner">${escapeHtml(s.qualification_state || 'IN_PROGRESS')}</span></td>
             <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(s.next_action || 'WhatsApp summary')}</td>
+            <td style="text-align:center;">
+              <button onclick="event.stopPropagation(); manualCallLead(${jsAttr(s.callback_number || s.primary_phone || '')}, ${jsAttr(s.caller_name || s.customer_name || 'Lead')})" style="background:var(--gold);color:#000;border:none;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;" title="Call this lead">📞 Call</button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -3131,21 +3192,32 @@
         const tempBadge = `<span class="badge badge-${tempClass(b.lead_temperature)}">${escapeHtml(b.lead_temperature || 'WARM')}</span>`;
         let budget = 'Not stated';
         if (b.buyer_budget_max_inr) budget = `₹${(b.buyer_budget_max_inr / 100000).toFixed(1)} Lakh`;
+        else if (b.expected_price_inr) budget = `₹${(b.expected_price_inr / 100000).toFixed(1)} Lakh`;
+        else if (b.price_raw) budget = escapeHtml(b.price_raw);
+
+        const appText = b.application_history || 'General earthwork';
+        const locationText = (b.machine_location_city || b.machine_location_state) ? 
+          `${b.machine_location_city || ''}${b.machine_location_state ? ', ' + b.machine_location_state : ''}` : 
+          (b.delivery_location || 'Rajasthan');
+        const yardText = b.yard_visit_agreed ? '<span class="badge badge-qualified">✓ Interested</span>' : '<span style="color: var(--text-dim);">No</span>';
 
         return `
           <tr onclick="openDrawer(${jsAttr(b)})">
-            <td><strong>${escapeHtml(b.customer_name)}</strong></td>
-            <td><span class="phone-link">${escapeHtml(b.primary_phone)}</span></td>
+            <td><strong>${escapeHtml(b.caller_name || b.customer_name || 'Anonymous')}</strong></td>
+            <td><span class="phone-link">${escapeHtml(b.callback_number || b.primary_phone || '')}</span></td>
             <td><strong>${escapeHtml(b.machine_brand || 'Any')}</strong> ${escapeHtml(b.required_tonnage_class || '')}</td>
             <td>${escapeHtml(b.required_tonnage_class || '20-Ton Class')}</td>
-            <td>${escapeHtml(b.intended_application || 'General earthwork')}</td>
+            <td>${escapeHtml(appText)}</td>
             <td><strong style="color: var(--gold);">${budget}</strong></td>
-            <td>${escapeHtml(b.delivery_location || 'Rajasthan')}</td>
+            <td>${escapeHtml(locationText)}</td>
             <td><span class="badge badge-owner">${escapeHtml(b.purchase_timeline || 'Immediate')}</span></td>
-            <td>${b.yard_visit_interest ? '<span class="badge badge-qualified">✓ Interested</span>' : '<span style="color: var(--text-dim);">No</span>'}</td>
+            <td>${yardText}</td>
             <td>${tempBadge}</td>
             <td><span class="badge badge-owner">${escapeHtml(b.qualification_state || 'QUALIFIED')}</span></td>
             <td style="font-size: 12px; color: var(--text-muted);">${escapeHtml(b.next_action || 'Share yard inventory')}</td>
+            <td style="text-align:center;">
+              <button onclick="event.stopPropagation(); manualCallLead(${jsAttr(b.callback_number || b.primary_phone || '')}, ${jsAttr(b.caller_name || b.customer_name || 'Lead')})" style="background:var(--gold);color:#000;border:none;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer;" title="Call this lead">📞 Call</button>
+            </td>
           </tr>
         `;
       }).join('');
@@ -3348,6 +3420,21 @@
           </div>
         </div>
       `).join('');
+    }
+
+    async function manualCallLead(phone, name) {
+      const cleanPhone = String(phone || '').replace(/\D/g, '').trim();
+      if (!cleanPhone || cleanPhone.length < 8) {
+        showToast('No valid phone number for this lead');
+        return;
+      }
+      try {
+        // Open direct call link (tel:) for manual dialing
+        window.open('tel:+91' + cleanPhone.slice(-10), '_blank');
+        showToast('Calling ' + (name || 'lead') + ' at ' + cleanPhone);
+      } catch (e) {
+        showToast('Could not initiate call for ' + (name || 'lead'));
+      }
     }
 
     async function updateFollowupStatus(id, newStatus) {

@@ -572,6 +572,7 @@ const server = http.createServer(async (req, res) => {
         }
         try {
           const rawBody = await core.readBody(req);
+          console.log('[VAANI WEBHOOK] /api/v1/vaani/calls/complete payload received:', JSON.stringify({ has_transcript: !!(rawBody ? (rawBody.transcript || rawBody.conversation) : false), has_phone: !!(rawBody ? (rawBody.primary_phone || rawBody.callback_number) : false), has_run_id: !!(rawBody ? (rawBody.call_metadata ? (rawBody.call_metadata.run_id || rawBody.run_id) : (rawBody.run_id || false)) : false), has_workflow_id: !!(rawBody ? (rawBody.call_metadata ? (rawBody.call_metadata.workflow_id || rawBody.workflow_id) : (rawBody.workflow_id || false)) : false) }));
           const result = await vaaniSales.ingestCallComplete(rawBody);
           return core.sendJson(res, 201, result);
         } catch (err) {

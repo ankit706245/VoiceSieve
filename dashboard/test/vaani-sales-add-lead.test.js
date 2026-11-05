@@ -370,6 +370,51 @@ test('resolveOrgWorkflowId rejects an invalid organization without querying', as
   assert.equal(queried, false);
 });
 
+test('resolveIngestionWorkflow keeps a known Vaani workflow and its org', async () => {
+  const q = async (sql) => {
+    if (/SELECT organization_id FROM workflows WHERE id = \$1/.test(sql)) return { organization_id: 5 };
+    throw new Error('unexpected query');
+  };
+  assert.deepEqual(
+    await vaaniSales.resolveIngestionWorkflow(7, q),
+    { wfId: 7, wfOrgId: 5, bridged: false }
+  );
+});
+
+test('resolveIngestionWorkflow bridges an unknown Dograh workflow to the configured org', async () => {
+  const previous = process.env.VAANI_INGESTION_ORG_ID;
+  process.env.VAANI_INGESTION_ORG_ID = '5';
+  try {
+    const q = async (sql, params) => {
+      if (/SELECT organization_id FROM workflows WHERE id = \$1/.test(sql)) return null;
+      if (/WHERE id = \$1 AND organization_id = \$2/.test(sql)) return null;
+      if (/WHERE organization_id = \$1 AND status = 'active'/.test(sql)) {
+        assert.deepEqual(params, [5], 'bridge must resolve the configured org only');
+        return { id: 7 };
+      }
+      return null;
+    };
+    assert.deepEqual(
+      await vaaniSales.resolveIngestionWorkflow(3, q),
+      { wfId: 7, wfOrgId: 5, bridged: true }
+    );
+  } finally {
+    if (previous === undefined) delete process.env.VAANI_INGESTION_ORG_ID;
+    else process.env.VAANI_INGESTION_ORG_ID = previous;
+  }
+});
+
+test('resolveIngestionWorkflow refuses to bridge without a configured org', async () => {
+  const previous = process.env.VAANI_INGESTION_ORG_ID;
+  delete process.env.VAANI_INGESTION_ORG_ID;
+  try {
+    const q = async () => null;
+    assert.equal(await vaaniSales.resolveIngestionWorkflow(3, q), null);
+  } finally {
+    if (previous !== undefined) process.env.VAANI_INGESTION_ORG_ID = previous;
+  }
+});
+
 test('duplicate guard resolves the caller workflow before checking (zero-write)', { skip: !hasDb }, async (t) => {
   const raw = await vaaniSales.queryPostgres(
     "SELECT row_to_json(t) FROM (SELECT callback_number FROM public.vaani_excavator_sales_leads WHERE callback_number IS NOT NULL AND callback_number <> '' LIMIT 1) t",

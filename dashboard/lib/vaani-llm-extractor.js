@@ -1,7 +1,7 @@
 const https = require('https');
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const GROQ_MODEL = process.env.GROQ_MODEL || 'llama3-8b-8192';
+const GROQ_MODEL = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
 
 async function extractFromConversationLLM(conversationLogs, leadHistory = null) {
   if (!GROQ_API_KEY) {
@@ -99,10 +99,15 @@ Schema:
     "price_or_budget_raw": string | null (the buyer's original budget wording, verbatim),
     "budget_qualifier": "exact" | "range" | "max" | "approximate" | null,
     "finance_required": boolean | null (true only if buyer asks for finance/loan, false only for explicit cash/full-payment, else null),
-    "whatsapp_requested": boolean | null (true only if buyer asks Vaani to SEND details on WhatsApp),
+    "whatsapp_requested": boolean | null (true ONLY if buyer asks Vaani to SEND details on WhatsApp; also request and capture the customer's WhatsApp number when it is offered, e.g. "mera WhatsApp number 98765..." or "WhatsApp pe bhej do"),
+    "whatsapp_number": string | null (the WhatsApp/contact number spoken by the customer, same format as callback_number; separate from budget/price),
     "purchase_location": string | null,
     "purchase_timeline": "immediate_within_7_days" | "within_15_30_days" | "future_1_3_months" | "exploring_market" | "not_applicable" | null (use exploring_market when the buyer is only browsing/researching, not ready to buy)
   },
+
+MODEL / YEAR RULES (critical):
+- When a seller says brand + number (e.g., "Komatsu do hajar barah" / "JCB 2012" / "Tata 210"), interpret the number as 'machine_model' first (e.g., "2012" could mean model name/year), and 'machine_year' as 'model_year' only when explicitly stated as manufacturing year. If ambiguous (e.g., "do hajar barah" without context), prefer 'machine_model' for the number and ask or leave 'model_year' null. Do NOT ask the same question twice.
+- "Do hajar barah" without brand context usually means model year 2012. With brand ("Komatsu do hajar barah") it may mean model or year — capture both possibilities in separate fields.
 
 BUDGET RULES (Hindi/Hinglish/English):
 - "20 lakh" -> budget 2000000, qualifier exact, raw verbatim.
@@ -124,6 +129,11 @@ BUDGET RULES (Hindi/Hinglish/English):
     "price_negotiable": boolean | null (true ONLY if the seller explicitly says the price is flexible/negotiable; false ONLY for explicit final/fixed/no-negotiation wording; null otherwise — never infer from price level or uncertainty),
     "photos_available": boolean | null
   }
+
+NUMBER / PHONE RULES (critical — never confuse these):
+- 'callback_number': A spoken phone/contact number (e.g., "mera number 9198...", "call me at 98765...", "+91 98765"). Indian mobile numbers are 10 digits, often start with 9/8/7, and are NEVER monetary values. A number like "919876543210" or "9876543210" is ALWAYS the callback_number, NEVER a budget/price.
+- Budget/price: Numbers mentioned with currency words ("lakh", "crore", "rupees", "rupay", "paise", "paisa", "budget", "price", "cost", "amount", "kitna", "kitne") are monetary. Numbers without currency context that sound like phone numbers (10-12 digits, start with 91/9/8/7) are ALWAYS callback_number.
+- Never put a 10-12 digit number into any budget/price field. Never put a currency amount into callback_number.
 }
 
 Return ONLY valid JSON matching the schema above. Do not include markdown formatting or extra text.
@@ -225,6 +235,14 @@ function _mapLLMResultToVaaniFormat(llmData) {
   
   if (llmData.lead_temperature === 'DO_NOT_CALL') {
     ext.dnc_requested = true;
+  }
+
+  if (llmData.whatsapp_number) {
+    ext.whatsapp_number = String(llmData.whatsapp_number).trim();
+  }
+  if (llmData.whatsapp_requested === true) {
+    ext.whatsapp_requested = true;
+    ext.whatsapp_action = 'PENDING';
   }
 
   if (ext.customer_type === 'buyer' && llmData.buyer_info) {
