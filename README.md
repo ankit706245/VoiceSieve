@@ -1,4 +1,4 @@
-# RapidX Voice Agent Stack
+# VoiceSeive by Braivex
 
 A self-hosted AI phone agent that answers and places real calls, for roughly
 **2 rupees a minute** against 15 to 20 on an ElevenLabs plus Twilio plus GPT stack.
